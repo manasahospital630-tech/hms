@@ -1,0 +1,248 @@
+import React from 'react';
+import { NavLink } from 'react-router-dom';
+import { useAuth } from '../../hooks/useAuth';
+import { Home, Users, Calendar, UserPlus, Stethoscope, Pill, DollarSign, Settings, Activity, Heart, ClipboardList, FileText, Package, BarChart3, TrendingUp, Menu, X, ShoppingCart, Beaker } from 'lucide-react';
+
+interface NavItem {
+  icon: any;
+  label: string;
+  path?: string;
+  children?: { label: string; path: string }[];
+}
+
+const navByRole: Record<string, NavItem[]> = {
+  Admin: [
+    { icon: Home, label: 'Dashboard', path: '/admin/dashboard' },
+    { icon: Users, label: 'User Management', path: '/admin/users' },
+    { icon: Users, label: 'Patients', path: '/reception/patients' },
+    { icon: UserPlus, label: 'OP Check-in', path: '/reception/opcheckin' },
+    { icon: UserPlus, label: 'Registration', path: '/reception/register' },
+    { icon: Calendar, label: 'Appointments', path: '/reception/appointments' },
+    { icon: ClipboardList, label: 'Check-in Queue', path: '/reception/queue' },
+    {
+      icon: Heart,
+      label: 'IP Department',
+      children: [
+        { label: 'IP Admissions', path: '/inpatient/admission' },
+        { label: 'IP Patients', path: '/inpatient/dashboard' },
+        { label: 'Rooms & Wards', path: '/inpatient/beds' }
+      ]
+    },
+    { icon: Stethoscope, label: 'EMR', path: '/doctor/dashboard' },
+    { icon: Stethoscope, label: 'Doctor Consultations', path: '/admin/consultations' },
+    {
+      icon: Beaker,
+      label: 'Diagnostics',
+      children: [
+        { label: 'Dashboard', path: '/diagnostics/dashboard' },
+        { label: 'Workspaces', path: '/diagnostics/workspaces' },
+        { label: 'Service Catalog', path: '/diagnostics/catalog' },
+        { label: 'Billing & Referrals', path: '/diagnostics/billing' },
+        { label: 'Equipment & QC', path: '/diagnostics/equipment' }
+      ]
+    },
+    { icon: Pill, label: 'Pharmacy', path: '/pharmacy/inventory' },
+    { icon: ShoppingCart, label: 'Medicine Sales', path: '/pharmacy/sales' },
+    { icon: DollarSign, label: 'Billing', path: '/billing/invoices' },
+    { icon: Settings, label: 'Settings', path: '/admin/settings' },
+  ],
+  Doctor: [
+    { icon: Home, label: 'Dashboard', path: '/doctor/dashboard' },
+    { icon: Users, label: 'Patients', path: '/reception/patients' },
+    { icon: Calendar, label: 'Appointments', path: '/reception/queue' },
+    {
+      icon: Heart,
+      label: 'IP Department',
+      children: [
+        { label: 'IP Admissions', path: '/inpatient/admission' },
+        { label: 'IP Patients', path: '/inpatient/dashboard' },
+        { label: 'Rooms & Wards', path: '/inpatient/beds' }
+      ]
+    },
+    { icon: Stethoscope, label: 'Consultations', path: '/doctor/dashboard' },
+    { icon: ClipboardList, label: 'Patient History', path: '/doctor/history' },
+    {
+      icon: Beaker,
+      label: 'Diagnostics',
+      children: [
+        { label: 'Dashboard', path: '/diagnostics/dashboard' },
+        { label: 'Workspaces', path: '/diagnostics/workspaces' },
+        { label: 'Service Catalog', path: '/diagnostics/catalog' },
+        { label: 'Billing & Referrals', path: '/diagnostics/billing' },
+        { label: 'Equipment & QC', path: '/diagnostics/equipment' }
+      ]
+    },
+  ],
+  Nurse: [
+    { icon: Activity, label: 'Triage Queue', path: '/nurse/triage' },
+    { icon: Heart, label: 'Vitals', path: '/nurse/vitals' },
+    {
+      icon: Heart,
+      label: 'IP Department',
+      children: [
+        { label: 'IP Admissions', path: '/inpatient/admission' },
+        { label: 'IP Patients', path: '/inpatient/dashboard' },
+        { label: 'Rooms & Wards', path: '/inpatient/beds' }
+      ]
+    },
+    { icon: Users, label: 'Patients', path: '/reception/patients' },
+  ],
+  Receptionist: [
+    { icon: UserPlus, label: 'Registration', path: '/reception/register' },
+    { icon: Calendar, label: 'Appointments', path: '/reception/appointments' },
+    { icon: ClipboardList, label: 'Check-in Queue', path: '/reception/queue' },
+    {
+      icon: Heart,
+      label: 'IP Department',
+      children: [
+        { label: 'IP Admissions', path: '/inpatient/admission' },
+        { label: 'IP Patients', path: '/inpatient/dashboard' },
+        { label: 'Rooms & Wards', path: '/inpatient/beds' }
+      ]
+    },
+    { icon: Users, label: 'Patients', path: '/reception/patients' },
+    { icon: UserPlus, label: 'OP Check-in', path: '/reception/opcheckin' },
+  ],
+  Pharmacist: [
+    { icon: Pill, label: 'Dispense', path: '/pharmacy/dispense' },
+    { icon: Package, label: 'Inventory', path: '/pharmacy/inventory' },
+    { icon: ShoppingCart, label: 'Medicine Sales', path: '/pharmacy/sales' },
+  ],
+  Biller: [
+    { icon: FileText, label: 'Invoices', path: '/billing/invoices' },
+    { icon: DollarSign, label: 'Payments', path: '/billing/payments' },
+    { icon: Users, label: 'Patients', path: '/reception/patients' },
+    { icon: UserPlus, label: 'OP Check-in', path: '/reception/opcheckin' },
+    { icon: Stethoscope, label: 'Doctor Consultations', path: '/admin/consultations' },
+  ],
+  Patient: [
+    { icon: Heart, label: 'Health Summary', path: '/patient-portal/health' },
+    { icon: Calendar, label: 'My Appointments', path: '/patient-portal/appointments' },
+  ],
+  Management: [
+    { icon: BarChart3, label: 'Dashboard', path: '/admin/dashboard' },
+    { icon: TrendingUp, label: 'Reports', path: '/admin/dashboard' },
+  ],
+  Incharge: [
+    { icon: Home, label: 'Dashboard', path: '/admin/dashboard' },
+    { icon: Users, label: 'Patients', path: '/reception/patients' },
+    { icon: UserPlus, label: 'OP Check-in', path: '/reception/opcheckin' },
+    { icon: UserPlus, label: 'Registration', path: '/reception/register' },
+    { icon: Calendar, label: 'Appointments', path: '/reception/appointments' },
+    { icon: ClipboardList, label: 'Check-in Queue', path: '/reception/queue' },
+    {
+      icon: Heart,
+      label: 'IP Department',
+      children: [
+        { label: 'IP Admissions', path: '/inpatient/admission' },
+        { label: 'IP Patients', path: '/inpatient/dashboard' },
+        { label: 'Rooms & Wards', path: '/inpatient/beds' }
+      ]
+    },
+    { icon: Stethoscope, label: 'EMR', path: '/doctor/dashboard' },
+    {
+      icon: Beaker,
+      label: 'Diagnostics',
+      children: [
+        { label: 'Dashboard', path: '/diagnostics/dashboard' },
+        { label: 'Workspaces', path: '/diagnostics/workspaces' },
+        { label: 'Service Catalog', path: '/diagnostics/catalog' },
+        { label: 'Billing & Referrals', path: '/diagnostics/billing' },
+        { label: 'Equipment & QC', path: '/diagnostics/equipment' }
+      ]
+    },
+    { icon: Pill, label: 'Pharmacy', path: '/pharmacy/inventory' },
+    { icon: ShoppingCart, label: 'Medicine Sales', path: '/pharmacy/sales' },
+    { icon: DollarSign, label: 'Billing', path: '/billing/invoices' },
+  ],
+};
+
+interface SidebarProps { collapsed: boolean; onToggle: () => void; }
+
+export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
+  const { user } = useAuth();
+  const items = navByRole[user?.role || 'Patient'] || [];
+  
+  // Track expanded state of dropdown items
+  const [expandedMenus, setExpandedMenus] = React.useState<Record<string, boolean>>({
+    'IP Department': true,
+    'Diagnostics': true
+  });
+
+  const toggleSubmenu = (label: string) => {
+    setExpandedMenus((prev) => ({
+      ...prev,
+      [label]: !prev[label]
+    }));
+  };
+
+  return (
+    <aside className={`sidebar ${collapsed ? '' : 'open'}`}>
+      <div className="sidebar-header">
+        <div className="sidebar-logo">M</div>
+        {!collapsed && <span className="sidebar-brand">Manasa HMS</span>}
+        {!collapsed && (
+          <button className="btn btn-ghost btn-sm" onClick={onToggle} style={{ marginLeft: 'auto' }}>
+            <X size={18} />
+          </button>
+        )}
+      </div>
+      <nav className="sidebar-nav" style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        {items.map((item) => {
+          const hasChildren = item.children && item.children.length > 0;
+          const isExpanded = !!expandedMenus[item.label];
+
+          if (hasChildren) {
+            return (
+              <div key={item.label} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                <div 
+                  className="sidebar-item" 
+                  onClick={() => toggleSubmenu(item.label)}
+                  style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-md)' }}>
+                    <item.icon size={20} />
+                    {!collapsed && <span>{item.label}</span>}
+                  </div>
+                  {!collapsed && (
+                    <span style={{ fontSize: '9px', color: 'var(--text-secondary)', transition: 'transform 0.2s', transform: isExpanded ? 'rotate(90deg)' : 'none' }}>
+                      ▶
+                    </span>
+                  )}
+                </div>
+                {isExpanded && !collapsed && (
+                  <div style={{ paddingLeft: '16px', display: 'flex', flexDirection: 'column', gap: '2px', borderLeft: '1px solid var(--border-primary)', marginLeft: '22px', marginBottom: '4px' }}>
+                    {item.children!.map((child) => (
+                      <NavLink 
+                        key={child.path} 
+                        to={child.path} 
+                        className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}
+                        style={{ padding: '8px 12px', fontSize: '13px', minHeight: 'auto' }}
+                        onClick={() => { if (window.innerWidth <= 1024) onToggle(); }}
+                      >
+                        {child.label}
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          }
+
+          return (
+            <NavLink 
+              key={item.path! + item.label} 
+              to={item.path!} 
+              className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`} 
+              onClick={() => { if (window.innerWidth <= 1024) onToggle(); }}
+            >
+              <item.icon size={20} />
+              {!collapsed && <span>{item.label}</span>}
+            </NavLink>
+          );
+        })}
+      </nav>
+      {!collapsed && <div className="sidebar-overlay open" onClick={onToggle} />}
+    </aside>
+  );
+};

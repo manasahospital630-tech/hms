@@ -1,0 +1,594 @@
+import { query } from '../../config/database';
+import { AppError } from '../../middleware/errorHandler';
+
+// 1. Dashboard Statistics
+export const getDashboardStats = async () => {
+  const today = new Date().toISOString().split('T')[0];
+
+  // Total Orders today
+  const ordersToday = await query(
+    `SELECT COUNT(*) as count FROM test_orders WHERE DATE(created_at) = $1`, 
+    [today]
+  );
+
+  // Pending Samples count
+  const pendingSamples = await query(
+    `SELECT COUNT(*) as count FROM test_order_items 
+     WHERE status = 'Ordered' AND service_id IN (SELECT service_id FROM diagnostic_services WHERE sample_required IS NOT NULL AND sample_required != 'None')`
+  );
+
+  // Collected Samples count
+  const collectedSamples = await query(
+    `SELECT COUNT(*) as count FROM test_order_items WHERE status = 'SampleCollected'`
+  );
+
+  // Running/Processing Tests count
+  const processingTests = await query(
+    `SELECT COUNT(*) as count FROM test_order_items WHERE status = 'Processing'`
+  );
+
+  // Completed & Verified Reports count
+  const completedReports = await query(
+    `SELECT COUNT(*) as count FROM test_order_items WHERE status = 'Completed' OR status = 'Verified'`
+  );
+
+  // Pending Doctor Verification count
+  const pendingVerification = await query(
+    `SELECT COUNT(*) as count FROM test_order_items WHERE status = 'Resulted'`
+  );
+
+  // Today's Revenue
+  const revenueToday = await query(
+    `SELECT COALESCE(SUM(total_amount), 0) as total FROM diagnostic_billing WHERE DATE(created_at) = $1`,
+    [today]
+  );
+
+  // Emergency Cases count
+  const emergencyCases = await query(
+    `SELECT COUNT(*) as count FROM test_orders WHERE priority = 'Emergency' AND DATE(created_at) = $1`,
+    [today]
+  );
+
+  // Daily Test Volume Chart Data (last 7 days)
+  const volumeChart = await query(`
+    SELECT DATE(created_at) as date, COUNT(*) as count 
+    FROM test_orders 
+    GROUP BY DATE(created_at) 
+    ORDER BY DATE(created_at) DESC 
+    LIMIT 7
+  `);
+
+  // Department-wise breakdown
+  const deptBreakdown = await query(`
+    SELECT c.name as department, COUNT(toi.item_id) as count
+    FROM test_order_items toi
+    JOIN diagnostic_services s ON toi.service_id = s.service_id
+    JOIN diagnostic_categories c ON s.category_id = c.category_id
+    GROUP BY c.name
+  `);
+
+  return {
+    todayOrders: parseInt(ordersToday.rows[0].count || '0'),
+    pendingSamples: parseInt(pendingSamples.rows[0].count || '0'),
+    collectedSamples: parseInt(collectedSamples.rows[0].count || '0'),
+    runningTests: parseInt(processingTests.rows[0].count || '0'),
+    completedReports: parseInt(completedReports.rows[0].count || '0'),
+    pendingVerification: parseInt(pendingVerification.rows[0].count || '0'),
+    todayRevenue: parseFloat(revenueToday.rows[0].total || '0'),
+    emergencyCases: parseInt(emergencyCases.rows[0].count || '0'),
+    charts: {
+      volume: volumeChart.rows.reverse(),
+      departments: deptBreakdown.rows
+    }
+  };
+};
+
+// 2. Diagnostic Categories
+export const getCategories = async () => {
+  const result = await query('SELECT * FROM diagnostic_categories ORDER BY name');
+  return result.rows;
+};
+
+// 3. Diagnostic Services (Catalog)
+export const getServices = async () => {
+  const result = await query(`
+    SELECT s.*, c.name as category_name 
+    FROM diagnostic_services s
+    LEFT JOIN diagnostic_categories c ON s.category_id = c.category_id
+    ORDER BY c.name, s.name
+  `);
+  return result.rows;
+};
+
+export const addService = async (input: any) => {
+  const result = await query(`
+    INSERT INTO diagnostic_services 
+    (name, category_id, service_code, price, gst_percentage, duration_minutes, sample_required, normal_range, machine_required, home_collection_available, emergency_available, is_active)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    RETURNING *
+  `, [
+    input.name, input.categoryId, input.serviceCode.toUpperCase(), input.price, input.gstPercentage,
+    input.durationMinutes, input.sampleRequired || 'None', input.normalRange || '', input.machineRequired || '',
+    input.homeCollectionAvailable, input.emergencyAvailable, input.isActive
+  ]);
+  return result.rows[0];
+};
+
+export const editService = async (serviceId: string, input: any) => {
+  const result = await query(`
+    UPDATE diagnostic_services 
+    SET name = $1, category_id = $2, service_code = $3, price = $4, gst_percentage = $5, 
+        duration_minutes = $6, sample_required = $7, normal_range = $8, machine_required = $9, 
+        home_collection_available = $10, emergency_available = $11, is_active = $12
+    WHERE service_id = $13
+    RETURNING *
+  `, [
+    input.name, input.categoryId, input.serviceCode.toUpperCase(), input.price, input.gstPercentage,
+    input.durationMinutes, input.sampleRequired || 'None', input.normalRange || '', input.machineRequired || '',
+    input.homeCollectionAvailable, input.emergencyAvailable, input.isActive, serviceId
+  ]);
+  return result.rows[0];
+};
+
+export const deleteService = async (serviceId: string) => {
+  await query('DELETE FROM diagnostic_services WHERE service_id = $1', [serviceId]);
+  return { success: true };
+};
+
+// 4. Packages
+export const getPackages = async () => {
+  const result = await query(`
+    SELECT dp.*, COALESCE(json_agg(s.*) FILTER (WHERE s.service_id IS NOT NULL), '[]') as services
+    FROM diagnostic_packages dp
+    LEFT JOIN diagnostic_package_items dpi ON dp.package_id = dpi.package_id
+    LEFT JOIN diagnostic_services s ON dpi.service_id = s.service_id
+    GROUP BY dp.package_id
+    ORDER BY dp.name
+  `);
+  return result.rows;
+};
+
+export const addPackage = async (input: any) => {
+  await query('BEGIN');
+  try {
+    const pkgRes = await query(`
+      INSERT INTO diagnostic_packages (name, price, discount, validity_days, is_active)
+      VALUES ($1, $2, $3, $4, true)
+      RETURNING *
+    `, [input.name, input.price, input.discount, input.validityDays]);
+
+    const packageId = pkgRes.rows[0].package_id;
+
+    for (const serviceId of input.services) {
+      await query(`
+        INSERT INTO diagnostic_package_items (package_id, service_id)
+        VALUES ($1, $2)
+      `, [packageId, serviceId]);
+    }
+
+    await query('COMMIT');
+    return pkgRes.rows[0];
+  } catch (error) {
+    await query('ROLLBACK');
+    throw error;
+  }
+};
+
+// 5. Test Orders
+export const getOrders = async () => {
+  const result = await query(`
+    SELECT o.*, p.first_name, p.last_name, p.medical_record_number, p.phone as patient_phone,
+           u.first_name as doc_first, u.last_name as doc_last,
+           rd.name as referral_name,
+           (
+             SELECT json_agg(json_build_object(
+               'item_id', toi.item_id,
+               'service_id', toi.service_id,
+               'service_name', ds.name,
+               'service_code', ds.service_code,
+               'category_name', c.name,
+               'sample_required', ds.sample_required,
+               'normal_range', ds.normal_range,
+               'price', ds.price,
+               'status', toi.status,
+               'sample', (SELECT json_build_object('sample_id', sc.sample_id, 'container_type', sc.container_type, 'barcode', sc.barcode, 'status', sc.status) FROM sample_collections sc WHERE sc.order_item_id = toi.item_id LIMIT 1),
+               'lab_result', (SELECT row_to_json(lr) FROM lab_results lr WHERE lr.order_item_id = toi.item_id LIMIT 1),
+               'radiology_report', (SELECT row_to_json(rr) FROM radiology_reports rr WHERE rr.order_item_id = toi.item_id LIMIT 1),
+               'ultrasound_report', (SELECT row_to_json(ur) FROM ultrasound_reports ur WHERE ur.order_item_id = toi.item_id LIMIT 1),
+               'ecg_report', (SELECT row_to_json(er) FROM ecg_reports er WHERE er.order_item_id = toi.item_id LIMIT 1),
+               'verification', (SELECT row_to_json(rv) FROM report_verifications rv WHERE rv.order_item_id = toi.item_id LIMIT 1),
+               'parameters', (
+                 SELECT json_agg(json_build_object(
+                   'parameter_id', dp.parameter_id,
+                   'name', dp.name,
+                   'unit', dp.unit,
+                   'reference_range', dp.reference_range
+                 ) ORDER BY dp.display_order)
+                 FROM diagnostic_parameters dp 
+                 WHERE dp.service_id = toi.service_id
+               ),
+               'result_parameters', (
+                 SELECT json_agg(json_build_object(
+                   'result_parameter_id', lrp.result_parameter_id,
+                   'parameter_id', lrp.parameter_id,
+                   'name', lrp.parameter_name,
+                   'unit', lrp.unit,
+                   'reference_range', lrp.reference_range,
+                   'actual_value', lrp.actual_value,
+                   'status', lrp.status
+                 ) ORDER BY lrp.created_at)
+                 FROM lab_result_parameters lrp
+                 WHERE lrp.order_item_id = toi.item_id
+               )
+             ))
+             FROM test_order_items toi
+             JOIN diagnostic_services ds ON toi.service_id = ds.service_id
+             JOIN diagnostic_categories c ON ds.category_id = c.category_id
+             WHERE toi.order_id = o.order_id
+           ) as items
+    FROM test_orders o
+    JOIN patients p ON o.patient_id = p.patient_id
+    JOIN users u ON o.doctor_id = u.user_id
+    LEFT JOIN referral_doctors rd ON o.referral_id = rd.referral_id
+    ORDER BY o.created_at DESC
+  `);
+  return result.rows;
+};
+
+export const createOrder = async (input: any) => {
+  await query('BEGIN');
+  try {
+    // Generate order number
+    const orderNum = `LAB-${Date.now()}`;
+
+    // 1. Create order
+    const orderRes = await query(`
+      INSERT INTO test_orders (order_number, patient_id, doctor_id, referral_id, priority, clinical_notes, diagnosis, payment_status, status)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, 'Unpaid', 'Ordered')
+      RETURNING *
+    `, [orderNum, input.patientId, input.doctorId, input.referralId || null, input.priority, input.clinicalNotes || '', input.diagnosis || '']);
+
+    const orderId = orderRes.rows[0].order_id;
+    let subtotal = 0.00;
+
+    // 2. Add services items
+    for (const serviceId of input.services) {
+      const sRes = await query('SELECT price, gst_percentage FROM diagnostic_services WHERE service_id = $1', [serviceId]);
+      if (sRes.rows.length > 0) {
+        subtotal += parseFloat(sRes.rows[0].price);
+      }
+      await query(`
+        INSERT INTO test_order_items (order_id, service_id, status)
+        VALUES ($1, $2, 'Ordered')
+      `, [orderId, serviceId]);
+    }
+
+    // 3. Add packages items if any
+    if (input.packages && input.packages.length > 0) {
+      for (const packageId of input.packages) {
+        const pRes = await query('SELECT price FROM diagnostic_packages WHERE package_id = $1', [packageId]);
+        if (pRes.rows.length > 0) {
+          subtotal += parseFloat(pRes.rows[0].price);
+        }
+        // Fetch services in package
+        const pServices = await query('SELECT service_id FROM diagnostic_package_items WHERE package_id = $1', [packageId]);
+        for (const ps of pServices.rows) {
+          await query(`
+            INSERT INTO test_order_items (order_id, service_id, package_id, status)
+            VALUES ($1, $2, $3, 'Ordered')
+          `, [orderId, ps.service_id, packageId]);
+        }
+      }
+    }
+
+    // Calculate billing
+    const gst = subtotal * 0.18;
+    const totalAmount = subtotal + gst;
+
+    // Calculate Referral Doctor commission if any
+    let commissionAmount = 0.00;
+    if (input.referralId) {
+      const refRes = await query('SELECT commission_percentage FROM referral_doctors WHERE referral_id = $1', [input.referralId]);
+      if (refRes.rows.length > 0) {
+        const commPct = parseFloat(refRes.rows[0].commission_percentage);
+        commissionAmount = subtotal * (commPct / 100);
+      }
+    }
+
+    // 4. Create invoice
+    await query(`
+      INSERT INTO diagnostic_billing (order_id, subtotal, discount, gst, total_amount, referral_commission_amount)
+      VALUES ($1, $2, 0.00, $3, $4, $5)
+    `, [orderId, subtotal, gst, totalAmount, commissionAmount]);
+
+    await query('COMMIT');
+    return { ...orderRes.rows[0], totalAmount };
+  } catch (error) {
+    await query('ROLLBACK');
+    throw error;
+  }
+};
+
+export const payOrder = async (orderId: string) => {
+  await query(`UPDATE test_orders SET payment_status = 'Paid' WHERE order_id = $1`, [orderId]);
+  return { success: true };
+};
+
+// 6. Sample Collection
+export const collectSample = async (input: any, userId: string) => {
+  await query('BEGIN');
+  try {
+    // Insert collection
+    const result = await query(`
+      INSERT INTO sample_collections (order_item_id, collected_by, container_type, barcode, status, remarks)
+      VALUES ($1, $2, $3, $4, 'Collected', $5)
+      RETURNING *
+    `, [input.itemId, userId, input.containerType, input.barcode, input.remarks || '']);
+
+    // Update item status
+    await query(`UPDATE test_order_items SET status = 'SampleCollected' WHERE item_id = $1`, [input.itemId]);
+
+    await query('COMMIT');
+    return result.rows[0];
+  } catch (error) {
+    await query('ROLLBACK');
+    throw error;
+  }
+};
+
+// 7. Results Submissions
+export const submitLabResult = async (input: any, userId: string) => {
+  await query('BEGIN');
+  try {
+    const result = await query(`
+      INSERT INTO lab_results (order_item_id, entered_by, actual_result, reference_range, status, machine_reading, remarks, machine_id)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *
+    `, [input.itemId, userId, input.actualResult || 'Multiple Values', input.referenceRange || '', input.status, input.machineReading || '', input.remarks || '', input.machineId || null]);
+
+    if (input.parameters && Array.isArray(input.parameters)) {
+      await query(`DELETE FROM lab_result_parameters WHERE order_item_id = $1`, [input.itemId]);
+      for (const p of input.parameters) {
+        await query(
+          `INSERT INTO lab_result_parameters (order_item_id, parameter_id, parameter_name, unit, reference_range, actual_value, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [
+            input.itemId, 
+            p.parameter_id || p.parameterId || null, 
+            p.name || p.parameterName, 
+            p.unit || '', 
+            p.reference_range || p.referenceRange || '', 
+            p.actual_value || p.actualValue || '', 
+            p.status || 'Normal'
+          ]
+        );
+      }
+    }
+
+    await query(`UPDATE test_order_items SET status = 'Resulted' WHERE item_id = $1`, [input.itemId]);
+    await query('COMMIT');
+    return result.rows[0];
+  } catch (error) {
+    await query('ROLLBACK');
+    throw error;
+  }
+};
+
+export const submitRadiologyReport = async (input: any, userId: string) => {
+  await query('BEGIN');
+  try {
+    const result = await query(`
+      INSERT INTO radiology_reports (order_item_id, radiographer_id, radiologist_id, image_urls, findings, impression, conclusion)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+    `, [input.itemId, userId, input.radiologistId || userId, input.imageUrls || [], input.findings, input.impression, input.conclusion || '']);
+
+    await query(`UPDATE test_order_items SET status = 'Resulted' WHERE item_id = $1`, [input.itemId]);
+    await query('COMMIT');
+    return result.rows[0];
+  } catch (error) {
+    await query('ROLLBACK');
+    throw error;
+  }
+};
+
+export const submitUltrasoundReport = async (input: any, userId: string) => {
+  await query('BEGIN');
+  try {
+    const result = await query(`
+      INSERT INTO ultrasound_reports (order_item_id, sonologist_id, clinical_history, findings, impression, recommendations)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+    `, [input.itemId, input.sonologistId || userId, input.clinicalHistory || '', input.findings, input.impression, input.recommendations || '']);
+
+    await query(`UPDATE test_order_items SET status = 'Resulted' WHERE item_id = $1`, [input.itemId]);
+    await query('COMMIT');
+    return result.rows[0];
+  } catch (error) {
+    await query('ROLLBACK');
+    throw error;
+  }
+};
+
+export const submitEcgReport = async (input: any, userId: string) => {
+  await query('BEGIN');
+  try {
+    const result = await query(`
+      INSERT INTO ecg_reports (order_item_id, operator_id, doctor_id, graph_url, findings, interpretation, recommendation)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      RETURNING *
+    `, [input.itemId, userId, input.doctorId || userId, input.graphUrl || '', input.findings, input.interpretation, input.recommendation || '']);
+
+    if (input.parameters && Array.isArray(input.parameters)) {
+      await query(`DELETE FROM lab_result_parameters WHERE order_item_id = $1`, [input.itemId]);
+      for (const p of input.parameters) {
+        await query(
+          `INSERT INTO lab_result_parameters (order_item_id, parameter_id, parameter_name, unit, reference_range, actual_value, status)
+           VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+          [
+            input.itemId, 
+            p.parameter_id || p.parameterId || null, 
+            p.name || p.parameterName, 
+            p.unit || '', 
+            p.reference_range || p.referenceRange || '', 
+            p.actual_value || p.actualValue || '', 
+            p.status || 'Normal'
+          ]
+        );
+      }
+    }
+
+    await query(`UPDATE test_order_items SET status = 'Resulted' WHERE item_id = $1`, [input.itemId]);
+    await query('COMMIT');
+    return result.rows[0];
+  } catch (error) {
+    await query('ROLLBACK');
+    throw error;
+  }
+};
+
+// 8. Verification (Approve / Reject)
+export const verifyReport = async (input: any, userId: string) => {
+  await query('BEGIN');
+  try {
+    const result = await query(`
+      INSERT INTO report_verifications (order_item_id, verified_by, digital_signature_used, status, notes)
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `, [input.itemId, userId, input.digitalSignatureUsed || 'Verified digitally', input.status, input.notes || '']);
+
+    const finalStatus = input.status === 'Approved' ? 'Verified' : 'Ordered';
+    await query(`UPDATE test_order_items SET status = $1 WHERE item_id = $2`, [finalStatus, input.itemId]);
+    await query('COMMIT');
+    return result.rows[0];
+  } catch (error) {
+    await query('ROLLBACK');
+    throw error;
+  }
+};
+
+// 9. Machines
+export const getMachines = async () => {
+  const result = await query('SELECT * FROM machines ORDER BY name');
+  return result.rows;
+};
+
+export const addMachine = async (input: any) => {
+  const result = await query(`
+    INSERT INTO machines (name, manufacturer, model, serial_number, calibration_date, maintenance_date, department, status)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    RETURNING *
+  `, [
+    input.name, input.manufacturer || '', input.model || '', input.serialNumber,
+    input.calibrationDate || null, input.maintenanceDate || null, input.department || 'Laboratory', input.status
+  ]);
+  return result.rows[0];
+};
+
+// 10. Referral Doctors
+export const getReferrals = async () => {
+  const result = await query('SELECT * FROM referral_doctors ORDER BY name');
+  return result.rows;
+};
+
+export const addReferral = async (input: any) => {
+  const result = await query(`
+    INSERT INTO referral_doctors (name, hospital, commission_percentage, phone, email)
+    VALUES ($1, $2, $3, $4, $5)
+    RETURNING *
+  `, [input.name, input.hospital || '', input.commissionPercentage, input.phone || '', input.email || '']);
+  return result.rows[0];
+};
+
+// 11. Quality Control Logs
+export const getQcLogs = async () => {
+  const result = await query(`
+    SELECT qc.*, m.name as machine_name, u.first_name, u.last_name
+    FROM quality_control_logs qc
+    JOIN machines m ON qc.machine_id = m.machine_id
+    LEFT JOIN users u ON qc.logged_by = u.user_id
+    ORDER BY qc.created_at DESC
+  `);
+  return result.rows;
+};
+
+export const addQcLog = async (input: any, userId: string) => {
+  const result = await query(`
+    INSERT INTO quality_control_logs (machine_id, qc_parameter, expected_value, actual_value, status, logged_by)
+    VALUES ($1, $2, $3, $4, $5, $6)
+    RETURNING *
+  `, [input.machineId, input.qcParameter, input.expectedValue || '', input.actualValue || '', input.status, userId]);
+  return result.rows[0];
+};
+
+export const updateOrderItemStatus = async (itemId: string, status: string) => {
+  await query('UPDATE test_order_items SET status = $1 WHERE item_id = $2', [status, itemId]);
+  
+  const itemRes = await query('SELECT order_id FROM test_order_items WHERE item_id = $1', [itemId]);
+  if (itemRes.rows.length > 0) {
+    const orderId = itemRes.rows[0].order_id;
+    const allItems = await query('SELECT status FROM test_order_items WHERE order_id = $1', [orderId]);
+    const allCompleted = allItems.rows.every((i: any) => i.status === 'Completed' || i.status === 'Verified');
+    const allCancelled = allItems.rows.every((i: any) => i.status === 'Cancelled');
+    
+    let newOrderStatus = 'Ordered';
+    if (allCompleted) newOrderStatus = 'Completed';
+    else if (allCancelled) newOrderStatus = 'Cancelled';
+    else if (allItems.rows.some((i: any) => i.status !== 'Ordered')) newOrderStatus = 'Processing';
+    
+    await query('UPDATE test_orders SET status = $1 WHERE order_id = $2', [newOrderStatus, orderId]);
+  }
+  return { success: true };
+};
+
+export const getPublicReport = async (itemId: string) => {
+  const result = await query(`
+    SELECT 
+      toi.item_id,
+      toi.service_id,
+      toi.status,
+      toi.created_at,
+      ds.name as service_name,
+      ds.service_code,
+      c.name as category_name,
+      ds.sample_required,
+      ds.normal_range,
+      ds.price,
+      o.order_number,
+      o.created_at as order_created_at,
+      p.first_name || ' ' || p.last_name AS patient_name,
+      p.medical_record_number AS patient_mrn,
+      p.gender,
+      p.date_of_birth as birth_date,
+      p.phone as patient_phone,
+      u.first_name as doc_first,
+      u.last_name as doc_last,
+      (SELECT row_to_json(lr) FROM lab_results lr WHERE lr.order_item_id = toi.item_id LIMIT 1) as lab_result,
+      (SELECT row_to_json(rr) FROM radiology_reports rr WHERE rr.order_item_id = toi.item_id LIMIT 1) as radiology_report,
+      (SELECT row_to_json(ur) FROM ultrasound_reports ur WHERE ur.order_item_id = toi.item_id LIMIT 1) as ultrasound_report,
+      (SELECT row_to_json(er) FROM ecg_reports er WHERE er.order_item_id = toi.item_id LIMIT 1) as ecg_report,
+      (SELECT row_to_json(rv) FROM report_verifications rv WHERE rv.order_item_id = toi.item_id LIMIT 1) as verification,
+      (
+        SELECT json_agg(json_build_object(
+          'result_parameter_id', lrp.result_parameter_id,
+          'parameter_id', lrp.parameter_id,
+          'name', lrp.parameter_name,
+          'unit', lrp.unit,
+          'reference_range', lrp.reference_range,
+          'actual_value', lrp.actual_value,
+          'status', lrp.status
+        ) ORDER BY lrp.created_at)
+        FROM lab_result_parameters lrp
+        WHERE lrp.order_item_id = toi.item_id
+      ) as result_parameters
+    FROM test_order_items toi
+    JOIN test_orders o ON toi.order_id = o.order_id
+    JOIN patients p ON o.patient_id = p.patient_id
+    JOIN users u ON o.doctor_id = u.user_id
+    JOIN diagnostic_services ds ON toi.service_id = ds.service_id
+    JOIN diagnostic_categories c ON ds.category_id = c.category_id
+    WHERE toi.item_id = $1 AND (toi.status = 'Completed' OR toi.status = 'Verified' OR toi.status = 'Resulted')
+    LIMIT 1
+  `, [itemId]);
+  return result.rows[0];
+};

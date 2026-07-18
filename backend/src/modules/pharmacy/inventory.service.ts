@@ -1,0 +1,304 @@
+import { query } from '../../config/database';
+import { CreateInventoryItemInput, UpdateInventoryItemInput, CreateSaleInput } from './pharmacy.schema';
+import { AppError } from '../../middleware/errorHandler';
+
+export const getInventory = async (options: { search?: string; lowStock?: boolean; limit?: number; offset?: number }) => {
+  let whereClause = 'WHERE 1=1';
+  const params: any[] = [];
+
+  if (options.search) {
+    params.push(`%${options.search}%`);
+    whereClause += ` AND (item_name ILIKE $${params.length} OR sku ILIKE $${params.length} OR category ILIKE $${params.length})`;
+  }
+  if (options.lowStock) {
+    whereClause += ` AND stock_quantity <= reorder_level`;
+  }
+
+  const countResult = await query(`SELECT COUNT(*) as total FROM inventory_items ${whereClause}`, params);
+
+  const dataParams = [...params];
+  let limitClause = '';
+  if (options.limit) { dataParams.push(options.limit); limitClause += ` LIMIT $${dataParams.length}`; }
+  if (options.offset) { dataParams.push(options.offset); limitClause += ` OFFSET $${dataParams.length}`; }
+
+  const result = await query(
+    `SELECT * FROM inventory_items ${whereClause} ORDER BY item_name ASC ${limitClause}`, dataParams
+  );
+
+  return { items: result.rows, total: parseInt(countResult.rows[0].total, 10) };
+};
+
+export const getInventoryItemById = async (id: string) => {
+  const result = await query('SELECT * FROM inventory_items WHERE item_id = $1', [id]);
+  if (result.rows.length === 0) throw new AppError('Inventory item not found.', 404);
+  return result.rows[0];
+};
+
+export const createInventoryItem = async (input: CreateInventoryItemInput) => {
+  const result = await query(
+    `INSERT INTO inventory_items (item_name, sku, category, manufacturer, stock_quantity, reorder_level, unit_price, expiry_date, generic_name, batch_no, rack_no, purchase_price, is_sheet, tablets_per_sheet, hsn_code)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
+    [
+      input.itemName, input.sku, input.category, input.manufacturer || null, input.stockQuantity, input.reorderLevel, input.unitPrice, input.expiryDate,
+      input.genericName, input.batchNo, input.rackNo, input.purchasePrice, input.isSheet || false, input.tabletsPerSheet || 1, input.hsnCode || '30049099'
+    ]
+  );
+  return result.rows[0];
+};
+
+export const updateInventoryItem = async (id: string, input: UpdateInventoryItemInput) => {
+  const fieldMap: Record<string, string> = {
+    itemName: 'item_name', category: 'category', manufacturer: 'manufacturer',
+    stockQuantity: 'stock_quantity', reorderLevel: 'reorder_level', unitPrice: 'unit_price', expiryDate: 'expiry_date',
+    genericName: 'generic_name', batchNo: 'batch_no', rackNo: 'rack_no', purchasePrice: 'purchase_price',
+    isSheet: 'is_sheet', tabletsPerSheet: 'tablets_per_sheet', hsnCode: 'hsn_code',
+  };
+  const fields: string[] = [];
+  const values: any[] = [];
+  let idx = 1;
+  for (const [key, col] of Object.entries(fieldMap)) {
+    if ((input as any)[key] !== undefined) { fields.push(`${col} = $${idx}`); values.push((input as any)[key]); idx++; }
+  }
+  if (fields.length === 0) throw new AppError('No fields to update.', 400);
+  values.push(id);
+  const result = await query(`UPDATE inventory_items SET ${fields.join(', ')} WHERE item_id = $${idx} RETURNING *`, values);
+  if (result.rows.length === 0) throw new AppError('Inventory item not found.', 404);
+  return result.rows[0];
+};
+
+export const getLowStockItems = async () => {
+  const result = await query('SELECT * FROM inventory_items WHERE stock_quantity <= reorder_level ORDER BY stock_quantity ASC');
+  return result.rows;
+};
+
+export const createSale = async (pharmacistId: string, input: CreateSaleInput) => {
+  const { patientId, paymentMethod, items } = input;
+  
+  await query('BEGIN');
+  try {
+    let subtotal = 0;
+    let totalDiscount = 0;
+    const itemDetails: Array<{
+      item_id: string;
+      item_name: string;
+      charge_price: number;
+      quantity: number;
+      unit_label: string;
+      hsn_code: string;
+      batch_no: string;
+      expiry_date: Date;
+      composition: string;
+      discount: number;
+    }> = [];
+
+    for (const item of items) {
+      const itemRes = await query(
+        'SELECT item_id, item_name, stock_quantity, unit_price, is_sheet, tablets_per_sheet, hsn_code, batch_no, expiry_date, generic_name FROM inventory_items WHERE item_id = $1',
+        [item.itemId]
+      );
+      if (itemRes.rows.length === 0) {
+        throw new AppError(`Item with ID ${item.itemId} not found.`, 404);
+      }
+      
+      const dbItem = itemRes.rows[0];
+      const sheetPrice = parseFloat(dbItem.unit_price);
+      const isSheet = dbItem.is_sheet;
+      const tabletsPerSheet = parseInt(dbItem.tablets_per_sheet, 10) || 1;
+      const sellLoose = item.sellLoose && isSheet;
+
+      let chargePrice: number;
+      let stockDeduction: number;
+      let unitLabel: string;
+
+      if (sellLoose) {
+        chargePrice = parseFloat((sheetPrice / tabletsPerSheet).toFixed(2));
+        stockDeduction = parseFloat((item.quantity / tabletsPerSheet).toFixed(4));
+        unitLabel = item.quantity === 1 ? 'Tablet' : 'Tablets';
+      } else {
+        chargePrice = sheetPrice;
+        stockDeduction = item.quantity;
+        unitLabel = isSheet ? (item.quantity === 1 ? 'Sheet' : 'Sheets') : 'Unit';
+      }
+
+      if (parseFloat(dbItem.stock_quantity) < stockDeduction) {
+        throw new AppError(
+          `Insufficient stock for ${dbItem.item_name}. Available: ${dbItem.stock_quantity}, Requested: ${stockDeduction}`,
+          400
+        );
+      }
+      
+      await query(
+        'UPDATE inventory_items SET stock_quantity = stock_quantity - $1 WHERE item_id = $2',
+        [stockDeduction, item.itemId]
+      );
+      
+      const itemDiscount = item.discount || 0;
+      const rowDiscountTotal = itemDiscount * item.quantity;
+      totalDiscount += rowDiscountTotal;
+      
+      subtotal += chargePrice * item.quantity;
+      itemDetails.push({
+        item_id: item.itemId,
+        item_name: dbItem.item_name,
+        charge_price: chargePrice,
+        quantity: item.quantity,
+        unit_label: unitLabel,
+        hsn_code: dbItem.hsn_code || '30049099',
+        batch_no: dbItem.batch_no,
+        expiry_date: dbItem.expiry_date,
+        composition: dbItem.generic_name,
+        discount: itemDiscount,
+      });
+    }
+
+    const taxableAmount = subtotal - totalDiscount;
+    const taxRate = 0.05; // 5% GST (2.5% CGST + 2.5% SGST)
+    const tax = parseFloat((taxableAmount * taxRate).toFixed(2));
+    const total = parseFloat((taxableAmount + tax).toFixed(2));
+
+    // First, check if patient is inpatient
+    let isIp = false;
+    let ipAdmissionId = null;
+    
+    if (patientId) {
+       const pRes = await query('SELECT is_inpatient FROM patients WHERE patient_id = $1', [patientId]);
+       if (pRes.rows.length > 0 && pRes.rows[0].is_inpatient) {
+           isIp = true;
+           const ipRes = await query(`SELECT ip_admission_id FROM ip_admissions WHERE patient_id = $1 AND status != 'Discharged' ORDER BY admitted_at DESC LIMIT 1`, [patientId]);
+           if (ipRes.rows.length > 0) {
+               ipAdmissionId = ipRes.rows[0].ip_admission_id;
+           }
+       }
+    }
+
+    let finalStatus = 'Paid';
+    let finalAmountPaid = total;
+    let finalPaymentMethod = paymentMethod;
+
+    if (isIp && ipAdmissionId) {
+        finalStatus = 'Unpaid';
+        finalAmountPaid = 0;
+        finalPaymentMethod = 'IP Ledger';
+    }
+
+    const invoiceRes = await query(
+      `INSERT INTO invoices (patient_id, total_amount, discount, tax, patient_responsibility, amount_paid, status, payment_method, notes, created_by, ip_admission_id)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING *`,
+      [patientId, total, totalDiscount, tax, total, finalAmountPaid, finalStatus, finalPaymentMethod, 'Direct pharmacy sale recorded by pharmacist', pharmacistId, ipAdmissionId]
+    );
+    const invoice = invoiceRes.rows[0];
+
+    for (const details of itemDetails) {
+      await query(
+        `INSERT INTO invoice_items (invoice_id, description, category, quantity, unit_price, hsn_code, batch_no, expiry_date, composition, discount, unit)
+         VALUES ($1, $2, 'Medication', $3, $4, $5, $6, $7, $8, $9, $10)`,
+        [
+          invoice.invoice_id, 
+          `${details.item_name} (${details.unit_label})`, 
+          details.quantity, 
+          details.charge_price,
+          details.hsn_code,
+          details.batch_no,
+          details.expiry_date,
+          details.composition,
+          details.discount,
+          details.unit_label
+        ]
+      );
+    }
+
+    await query('COMMIT');
+    return invoice;
+  } catch (error) {
+    await query('ROLLBACK');
+    throw error;
+  }
+};
+
+export const getSalesHistory = async () => {
+  const salesQuery = `
+    SELECT DISTINCT 
+      i.invoice_id,
+      i.total_amount,
+      i.discount,
+      i.tax,
+      i.payment_method,
+      i.created_at,
+      i.notes,
+      p.first_name as patient_first_name,
+      p.last_name as patient_last_name,
+      p.phone as patient_phone,
+      p.medical_record_number as patient_mrn,
+      u.first_name as pharmacist_first_name,
+      u.last_name as pharmacist_last_name,
+      u.email as pharmacist_email
+    FROM invoices i
+    LEFT JOIN patients p ON i.patient_id = p.patient_id
+    LEFT JOIN users u ON i.created_by = u.user_id
+    JOIN invoice_items ii ON i.invoice_id = ii.invoice_id
+    WHERE ii.category = 'Medication' OR i.notes LIKE '%pharmacy sale%'
+    ORDER BY i.created_at DESC
+  `;
+  const salesRes = await query(salesQuery);
+  const sales = salesRes.rows;
+
+  const now = new Date();
+  const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  
+  // Start of week (Sunday)
+  const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - now.getDay());
+  
+  // Start of month
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  const createEmptyStats = () => ({
+    count: 0,
+    amount: 0,
+    byMethod: {
+      UPI: { count: 0, amount: 0 },
+      Card: { count: 0, amount: 0 },
+      Cash: { count: 0, amount: 0 },
+      Insurance: { count: 0, amount: 0 },
+      'Bank Transfer': { count: 0, amount: 0 },
+    }
+  });
+
+  const stats = {
+    day: createEmptyStats(),
+    week: createEmptyStats(),
+    month: createEmptyStats()
+  };
+
+  for (const sale of sales) {
+    const saleDate = new Date(sale.created_at);
+    const amt = parseFloat(sale.total_amount) || 0;
+    const method = sale.payment_method;
+
+    const updateStats = (periodStats: any) => {
+      periodStats.count++;
+      periodStats.amount += amt;
+      if (method === 'UPI') {
+        periodStats.byMethod.UPI.count++;
+        periodStats.byMethod.UPI.amount += amt;
+      } else if (method === 'Card') {
+        periodStats.byMethod.Card.count++;
+        periodStats.byMethod.Card.amount += amt;
+      } else if (method === 'Cash') {
+        periodStats.byMethod.Cash.count++;
+        periodStats.byMethod.Cash.amount += amt;
+      } else if (method === 'Insurance') {
+        periodStats.byMethod.Insurance.count++;
+        periodStats.byMethod.Insurance.amount += amt;
+      } else if (method === 'Bank Transfer') {
+        periodStats.byMethod['Bank Transfer'].count++;
+        periodStats.byMethod['Bank Transfer'].amount += amt;
+      }
+    };
+
+    if (saleDate >= startOfDay) updateStats(stats.day);
+    if (saleDate >= startOfWeek) updateStats(stats.week);
+    if (saleDate >= startOfMonth) updateStats(stats.month);
+  }
+
+  return { sales, stats };
+};
