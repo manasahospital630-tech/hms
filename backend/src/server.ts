@@ -60,13 +60,16 @@ app.use('/api/diagnostics', diagnosticsRoutes);
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {
-  // Find the frontend build folder dynamically
+  // Find the frontend build folder dynamically by checking where index.html is located
   let frontendPath = path.join(__dirname, '../../frontend/dist');
-  if (!fs.existsSync(frontendPath)) {
+  if (!fs.existsSync(path.join(frontendPath, 'index.html'))) {
     frontendPath = path.join(__dirname, '../frontend/dist');
   }
-  if (!fs.existsSync(frontendPath)) {
+  if (!fs.existsSync(path.join(frontendPath, 'index.html'))) {
     frontendPath = path.join(__dirname, './frontend/dist');
+  }
+  if (!fs.existsSync(path.join(frontendPath, 'index.html'))) {
+    frontendPath = __dirname;
   }
 
   app.use(express.static(frontendPath));
