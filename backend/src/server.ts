@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import path from 'path';
+import fs from 'fs';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -59,13 +60,21 @@ app.use('/api/diagnostics', diagnosticsRoutes);
 
 // Serve static assets in production
 if (process.env.NODE_ENV === 'production') {
-  // Serve the frontend build folder
-  app.use(express.static(path.join(__dirname, '../../frontend/dist')));
+  // Find the frontend build folder dynamically
+  let frontendPath = path.join(__dirname, '../../frontend/dist');
+  if (!fs.existsSync(frontendPath)) {
+    frontendPath = path.join(__dirname, '../frontend/dist');
+  }
+  if (!fs.existsSync(frontendPath)) {
+    frontendPath = path.join(__dirname, './frontend/dist');
+  }
+
+  app.use(express.static(frontendPath));
 
   // For any non-API routes, serve index.html (React routing)
   app.get('*', (req, res, next) => {
     if (!req.path.startsWith('/api')) {
-      res.sendFile(path.join(__dirname, '../../frontend/dist/index.html'));
+      res.sendFile(path.join(frontendPath, 'index.html'));
     } else {
       next();
     }
