@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -55,6 +56,21 @@ app.use('/api/billing', billingRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/inpatient', ipRoutes);
 app.use('/api/diagnostics', diagnosticsRoutes);
+
+// Serve static assets in production
+if (process.env.NODE_ENV === 'production') {
+  // Serve the frontend build folder
+  app.use(express.static(path.join(__dirname, '../../frontend/dist')));
+
+  // For any non-API routes, serve index.html (React routing)
+  app.get('*', (req, res, next) => {
+    if (!req.path.startsWith('/api')) {
+      res.sendFile(path.join(__dirname, '../../frontend/dist/index.html'));
+    } else {
+      next();
+    }
+  });
+}
 
 // 404 handler
 app.use((_req, res) => {

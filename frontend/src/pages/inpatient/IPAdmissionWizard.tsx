@@ -4,7 +4,6 @@ import { Steps, Button, Form, Input, Select, Card, message } from 'antd';
 import { ArrowLeft, ArrowRight, CheckCircle, Bed, Printer, LayoutDashboard, Grid } from 'lucide-react';
 import api from '../../api/client';
 
-const { Step } = Steps;
 const { Option } = Select;
 
 export const IPAdmissionWizard: React.FC = () => {
@@ -297,11 +296,16 @@ export const IPAdmissionWizard: React.FC = () => {
                     borderRadius: '12px'
                 }}
             >
-                <Steps current={currentStep} style={{ marginBottom: 30 }} className="custom-steps">
-                    <Step title={<span style={{ color: 'var(--text-primary)' }}>Intake Profile</span>} />
-                    <Step title={<span style={{ color: 'var(--text-primary)' }}>Ward & Bed</span>} />
-                    <Step title={<span style={{ color: 'var(--text-primary)' }}>Verification</span>} />
-                </Steps>
+                <Steps 
+                    current={currentStep} 
+                    style={{ marginBottom: 30 }} 
+                    className="custom-steps"
+                    items={[
+                        { title: <span style={{ color: 'var(--text-primary)' }}>Intake Profile</span> },
+                        { title: <span style={{ color: 'var(--text-primary)' }}>Ward & Bed</span> },
+                        { title: <span style={{ color: 'var(--text-primary)' }}>Verification</span> }
+                    ]}
+                />
 
                 <Form form={form} layout="vertical" onFinish={handleFormSubmission} requiredMark={false}>
                     {/* STEP 0: Intake Profile */}

@@ -143,7 +143,7 @@ export const InpatientBeds: React.FC = () => {
     try {
       await api.delete(`/inpatient/beds/${bedId}`);
       fetchData();
-      message.success('Bed removed from census.');
+      alert('Bed removed from census.');
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed to delete bed configuration.');
     }

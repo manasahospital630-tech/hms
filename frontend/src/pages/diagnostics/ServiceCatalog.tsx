@@ -973,7 +973,7 @@ export const ServiceCatalog: React.FC = () => {
                         <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                           <Button 
                             variant="primary" 
-                            size="small" 
+                            size="sm" 
                             icon={<Printer size={13} />}
                             onClick={() => handlePrintReport(r)}
                           >

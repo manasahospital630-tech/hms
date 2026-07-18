@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   ClipboardList, Beaker, CheckSquare, Play, Award, 
-  AlertTriangle, DollarSign, RefreshCw, Layers, Tool, 
+  AlertTriangle, DollarSign, RefreshCw, Layers, 
   Users, Activity, ChevronRight 
 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';

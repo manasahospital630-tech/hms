@@ -327,7 +327,7 @@ const Home: React.FC = () => {
         <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 'var(--space-2xl)' }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', marginBottom: 'var(--space-md)' }}>
-              <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-sm)', background: 'linear-gradient(135deg, var(--accent-primary), #0284c7)', display: 'flex', alignItems: 'center', justifycenter: 'center', justifyContent: 'center' }}>
+              <div style={{ width: '32px', height: '32px', borderRadius: 'var(--radius-sm)', background: 'linear-gradient(135deg, var(--accent-primary), #0284c7)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                 <Heart size={18} color="white" />
               </div>
               <h3 style={{ color: 'white', fontSize: 'var(--font-base)', fontWeight: 700 }}>Manasa Hospital</h3>

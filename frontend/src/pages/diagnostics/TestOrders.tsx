@@ -233,36 +233,36 @@ export const TestOrders: React.FC = () => {
           {filteredOrders.map((order) => (
             <Card 
               key={order.order_id} 
-              title={
-                <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                    <span style={{ fontWeight: 700, fontSize: '16px' }}>{order.order_number}</span>
-                    <span style={{ 
-                      fontSize: '11px', padding: '2px 8px', borderRadius: '50px', fontWeight: 600,
-                      background: order.priority === 'Emergency' ? 'rgba(244,63,94,0.15)' : order.priority === 'Urgent' ? 'rgba(245,158,11,0.15)' : 'rgba(100,116,139,0.1)',
-                      color: order.priority === 'Emergency' ? 'var(--accent-danger)' : order.priority === 'Urgent' ? 'var(--accent-warning)' : 'var(--text-secondary)'
-                    }}>
-                      {order.priority}
-                    </span>
-                  </div>
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                    <span style={{ 
-                      fontSize: '11px', padding: '2px 8px', borderRadius: '50px', fontWeight: 600,
-                      background: order.payment_status === 'Paid' ? 'rgba(16,185,129,0.15)' : 'rgba(244,63,94,0.15)',
-                      color: order.payment_status === 'Paid' ? 'var(--accent-success)' : 'var(--accent-danger)'
-                    }}>
-                      Bill: {order.payment_status}
-                    </span>
-                    {order.payment_status !== 'Paid' && (
-                      <Button size="small" variant="primary" onClick={() => handlePayOrder(order.order_id)}>
-                        Collect Payment
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              }
               style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: '12px' }}
             >
+              {/* Custom Header */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center', flexWrap: 'wrap', gap: '10px', borderBottom: '1px solid var(--border-primary)', paddingBottom: '12px', marginBottom: '12px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <span style={{ fontWeight: 700, fontSize: '16px' }}>{order.order_number}</span>
+                  <span style={{ 
+                    fontSize: '11px', padding: '2px 8px', borderRadius: '50px', fontWeight: 600,
+                    background: order.priority === 'Emergency' ? 'rgba(244,63,94,0.15)' : order.priority === 'Urgent' ? 'rgba(245,158,11,0.15)' : 'rgba(100,116,139,0.1)',
+                    color: order.priority === 'Emergency' ? 'var(--accent-danger)' : order.priority === 'Urgent' ? 'var(--accent-warning)' : 'var(--text-secondary)'
+                  }}>
+                    {order.priority}
+                  </span>
+                </div>
+                <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                  <span style={{ 
+                    fontSize: '11px', padding: '2px 8px', borderRadius: '50px', fontWeight: 600,
+                    background: order.payment_status === 'Paid' ? 'rgba(16,185,129,0.15)' : 'rgba(244,63,94,0.15)',
+                    color: order.payment_status === 'Paid' ? 'var(--accent-success)' : 'var(--accent-danger)'
+                  }}>
+                    Bill: {order.payment_status}
+                  </span>
+                  {order.payment_status !== 'Paid' && (
+                    <Button size="sm" variant="primary" onClick={() => handlePayOrder(order.order_id)}>
+                      Collect Payment
+                    </Button>
+                  )}
+                </div>
+              </div>
+
               {/* Order Meta details */}
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginTop: '12px', borderBottom: '1px solid var(--border-primary)', paddingBottom: '12px', fontSize: '13px' }}>
                 <div>

@@ -152,7 +152,7 @@ export const IPDashboard: React.FC = () => {
 
             {/* Active Inpatients List */}
             <Card 
-              title={<span style={{ color: 'var(--text-primary)', fontSize: '16px', fontWeight: 600 }}>Active Inpatients Registry</span>}
+              title="Active Inpatients Registry"
               style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: '12px' }}
             >
                 <div style={{ marginTop: '16px' }}>

@@ -332,7 +332,7 @@ export const Workspaces: React.FC = () => {
                       {item.diagnosis || item.clinical_notes || 'Routine checkup'}
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                      <Button variant="primary" size="small" onClick={() => openActionModal(item)}>
+                      <Button variant="primary" size="sm" onClick={() => openActionModal(item)}>
                         {activeWorkspace === 'collection' && 'Collect Sample'}
                         {activeWorkspace === 'lab' && 'Enter Results'}
                         {activeWorkspace === 'imaging' && 'Perform & Document'}
