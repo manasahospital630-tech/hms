@@ -89,13 +89,15 @@ app.use((_req, res) => {
 });
 // Global error handler
 app.use(errorHandler_1.errorHandler);
-// Start server
-const PORT = environment_1.env.PORT || 5000;
-app.listen(PORT, () => {
-    console.log(`\n🏥 Manasa HMS API Server`);
-    console.log(`   Environment: ${environment_1.env.NODE_ENV}`);
-    console.log(`   Port: ${PORT}`);
-    console.log(`   Health: http://localhost:${PORT}/api/health\n`);
-});
+// Start server if not running on Vercel Serverless
+if (!process.env.VERCEL) {
+    const PORT = environment_1.env.PORT || 5000;
+    app.listen(PORT, () => {
+        console.log(`\n🏥 Manasa HMS API Server`);
+        console.log(`   Environment: ${environment_1.env.NODE_ENV}`);
+        console.log(`   Port: ${PORT}`);
+        console.log(`   Health: http://localhost:${PORT}/api/health\n`);
+    });
+}
 exports.default = app;
 //# sourceMappingURL=server.js.map
