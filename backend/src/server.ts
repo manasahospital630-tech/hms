@@ -58,20 +58,19 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/inpatient', ipRoutes);
 app.use('/api/diagnostics', diagnosticsRoutes);
 
-// Serve static assets in production
-if (process.env.NODE_ENV === 'production') {
-  // Find the frontend build folder dynamically by checking where index.html is located
-  let frontendPath = path.join(__dirname, '../../frontend/dist');
-  if (!fs.existsSync(path.join(frontendPath, 'index.html'))) {
-    frontendPath = path.join(__dirname, '../frontend/dist');
-  }
-  if (!fs.existsSync(path.join(frontendPath, 'index.html'))) {
-    frontendPath = path.join(__dirname, './frontend/dist');
-  }
-  if (!fs.existsSync(path.join(frontendPath, 'index.html'))) {
-    frontendPath = __dirname;
-  }
+// Serve static assets dynamically whenever index.html is available
+let frontendPath = path.join(__dirname, '../../frontend/dist');
+if (!fs.existsSync(path.join(frontendPath, 'index.html'))) {
+  frontendPath = path.join(__dirname, '../frontend/dist');
+}
+if (!fs.existsSync(path.join(frontendPath, 'index.html'))) {
+  frontendPath = path.join(__dirname, './frontend/dist');
+}
+if (!fs.existsSync(path.join(frontendPath, 'index.html'))) {
+  frontendPath = __dirname;
+}
 
+if (fs.existsSync(path.join(frontendPath, 'index.html'))) {
   app.use(express.static(frontendPath));
 
   // For any non-API routes, serve index.html (React routing)

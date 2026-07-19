@@ -56,19 +56,18 @@ app.use('/api/billing', billing_routes_1.default);
 app.use('/api/admin', admin_routes_1.default);
 app.use('/api/inpatient', ip_routes_1.default);
 app.use('/api/diagnostics', diagnostics_routes_1.default);
-// Serve static assets in production
-if (process.env.NODE_ENV === 'production') {
-    // Find the frontend build folder dynamically by checking where index.html is located
-    let frontendPath = path_1.default.join(__dirname, '../../frontend/dist');
-    if (!fs_1.default.existsSync(path_1.default.join(frontendPath, 'index.html'))) {
-        frontendPath = path_1.default.join(__dirname, '../frontend/dist');
-    }
-    if (!fs_1.default.existsSync(path_1.default.join(frontendPath, 'index.html'))) {
-        frontendPath = path_1.default.join(__dirname, './frontend/dist');
-    }
-    if (!fs_1.default.existsSync(path_1.default.join(frontendPath, 'index.html'))) {
-        frontendPath = __dirname;
-    }
+// Serve static assets dynamically whenever index.html is available
+let frontendPath = path_1.default.join(__dirname, '../../frontend/dist');
+if (!fs_1.default.existsSync(path_1.default.join(frontendPath, 'index.html'))) {
+    frontendPath = path_1.default.join(__dirname, '../frontend/dist');
+}
+if (!fs_1.default.existsSync(path_1.default.join(frontendPath, 'index.html'))) {
+    frontendPath = path_1.default.join(__dirname, './frontend/dist');
+}
+if (!fs_1.default.existsSync(path_1.default.join(frontendPath, 'index.html'))) {
+    frontendPath = __dirname;
+}
+if (fs_1.default.existsSync(path_1.default.join(frontendPath, 'index.html'))) {
     app.use(express_1.default.static(frontendPath));
     // For any non-API routes, serve index.html (React routing)
     app.get('*', (req, res, next) => {
