@@ -11,11 +11,9 @@ if (fs.existsSync(rootDistServer)) {
 } else if (fs.existsSync(backendDistServer)) {
   appModule = require(backendDistServer);
 } else {
-  appModule = require('../backend/src/server');
+  appModule = require('../backend/dist/server.js');
 }
 
 const app = appModule.default || appModule;
 
-module.exports = (req, res) => {
-  return app(req, res);
-};
+module.exports = app;
