@@ -7,7 +7,7 @@ import axios from 'axios';
 function App() {
   useEffect(() => {
     const fetchTheme = () => {
-      axios.get('http://localhost:5000/api/admin/hospital-settings/public')
+      axios.get('/api/admin/hospital-settings/public')
         .then(res => {
           if (res.data.success && res.data.data) {
             const theme = res.data.data.theme || 'dark';
