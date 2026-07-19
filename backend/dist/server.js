@@ -57,18 +57,28 @@ app.use('/api/admin', admin_routes_1.default);
 app.use('/api/inpatient', ip_routes_1.default);
 app.use('/api/diagnostics', diagnostics_routes_1.default);
 // Serve static assets dynamically whenever index.html is available
-let frontendPath = path_1.default.join(__dirname, '../../frontend/dist');
-if (!fs_1.default.existsSync(path_1.default.join(frontendPath, 'index.html'))) {
-    frontendPath = path_1.default.join(__dirname, '../frontend/dist');
+const staticCandidates = [
+    path_1.default.join(__dirname, '../../dist'),
+    path_1.default.join(__dirname, '../dist'),
+    path_1.default.join(__dirname, './dist'),
+    __dirname,
+    path_1.default.join(process.cwd(), 'dist'),
+    path_1.default.join(process.cwd(), 'frontend/dist'),
+    path_1.default.join(__dirname, '../../frontend/dist')
+];
+let frontendPath = '';
+for (const cand of staticCandidates) {
+    if (fs_1.default.existsSync(path_1.default.join(cand, 'index.html'))) {
+        frontendPath = cand;
+        break;
+    }
 }
-if (!fs_1.default.existsSync(path_1.default.join(frontendPath, 'index.html'))) {
-    frontendPath = path_1.default.join(__dirname, './frontend/dist');
-}
-if (!fs_1.default.existsSync(path_1.default.join(frontendPath, 'index.html'))) {
-    frontendPath = __dirname;
-}
-if (fs_1.default.existsSync(path_1.default.join(frontendPath, 'index.html'))) {
+if (frontendPath) {
     app.use(express_1.default.static(frontendPath));
+    // Explicit root route handler
+    app.get('/', (_req, res) => {
+        res.sendFile(path_1.default.join(frontendPath, 'index.html'));
+    });
     // For any non-API routes, serve index.html (React routing)
     app.get('*', (req, res, next) => {
         if (!req.path.startsWith('/api')) {

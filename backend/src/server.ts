@@ -59,19 +59,31 @@ app.use('/api/inpatient', ipRoutes);
 app.use('/api/diagnostics', diagnosticsRoutes);
 
 // Serve static assets dynamically whenever index.html is available
-let frontendPath = path.join(__dirname, '../../frontend/dist');
-if (!fs.existsSync(path.join(frontendPath, 'index.html'))) {
-  frontendPath = path.join(__dirname, '../frontend/dist');
-}
-if (!fs.existsSync(path.join(frontendPath, 'index.html'))) {
-  frontendPath = path.join(__dirname, './frontend/dist');
-}
-if (!fs.existsSync(path.join(frontendPath, 'index.html'))) {
-  frontendPath = __dirname;
+const staticCandidates = [
+  path.join(__dirname, '../../dist'),
+  path.join(__dirname, '../dist'),
+  path.join(__dirname, './dist'),
+  __dirname,
+  path.join(process.cwd(), 'dist'),
+  path.join(process.cwd(), 'frontend/dist'),
+  path.join(__dirname, '../../frontend/dist')
+];
+
+let frontendPath = '';
+for (const cand of staticCandidates) {
+  if (fs.existsSync(path.join(cand, 'index.html'))) {
+    frontendPath = cand;
+    break;
+  }
 }
 
-if (fs.existsSync(path.join(frontendPath, 'index.html'))) {
+if (frontendPath) {
   app.use(express.static(frontendPath));
+
+  // Explicit root route handler
+  app.get('/', (_req, res) => {
+    res.sendFile(path.join(frontendPath, 'index.html'));
+  });
 
   // For any non-API routes, serve index.html (React routing)
   app.get('*', (req, res, next) => {
