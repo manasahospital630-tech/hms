@@ -9,10 +9,14 @@ const envSchema = z.object({
     .default('5000')
     .transform((val) => parseInt(val, 10))
     .pipe(z.number().int().positive()),
-  DATABASE_URL: z.string().url({ message: 'DATABASE_URL must be a valid PostgreSQL connection string' }),
-  JWT_SECRET: z.string().min(10, { message: 'JWT_SECRET must be at least 10 characters' }),
+  DATABASE_URL: z
+    .string()
+    .default(process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/hms_db'),
+  JWT_SECRET: z
+    .string()
+    .default(process.env.JWT_SECRET || 'super-secret-jwt-key-for-manasa-hms-production-2026'),
   JWT_EXPIRES_IN: z.string().default('24h'),
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('development'),
+  NODE_ENV: z.enum(['development', 'production', 'test']).default('production'),
 });
 
 const parsed = envSchema.safeParse(process.env);

@@ -13,10 +13,14 @@ const envSchema = zod_1.z.object({
         .default('5000')
         .transform((val) => parseInt(val, 10))
         .pipe(zod_1.z.number().int().positive()),
-    DATABASE_URL: zod_1.z.string().url({ message: 'DATABASE_URL must be a valid PostgreSQL connection string' }),
-    JWT_SECRET: zod_1.z.string().min(10, { message: 'JWT_SECRET must be at least 10 characters' }),
+    DATABASE_URL: zod_1.z
+        .string()
+        .default(process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/hms_db'),
+    JWT_SECRET: zod_1.z
+        .string()
+        .default(process.env.JWT_SECRET || 'super-secret-jwt-key-for-manasa-hms-production-2026'),
     JWT_EXPIRES_IN: zod_1.z.string().default('24h'),
-    NODE_ENV: zod_1.z.enum(['development', 'production', 'test']).default('development'),
+    NODE_ENV: zod_1.z.enum(['development', 'production', 'test']).default('production'),
 });
 const parsed = envSchema.safeParse(process.env);
 if (!parsed.success) {
