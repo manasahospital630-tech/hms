@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Beaker, Layers, Plus, Edit, Trash2, X, RefreshCw, Info, CheckCircle, Printer, Search } from 'lucide-react';
+import { Beaker, Layers, Plus, Edit, Trash2, X, RefreshCw, Info, CheckCircle, Printer, Search, List, Eye } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import api from '../../api/client';
@@ -23,7 +23,24 @@ export const ServiceCatalog: React.FC = () => {
   // Service Modal States
   const [serviceModalOpen, setServiceModalOpen] = useState(false);
   const [editingService, setEditingService] = useState<any | null>(null);
-  const [serviceForm, setServiceForm] = useState({
+  const [paramViewModalOpen, setParamViewModalOpen] = useState(false);
+  const [selectedParamService, setSelectedParamService] = useState<any | null>(null);
+
+  const [serviceForm, setServiceForm] = useState<{
+    name: string;
+    categoryId: string;
+    serviceCode: string;
+    price: string;
+    gstPercentage: string;
+    durationMinutes: string;
+    sampleRequired: string;
+    normalRange: string;
+    machineRequired: string;
+    homeCollectionAvailable: boolean;
+    emergencyAvailable: boolean;
+    isActive: boolean;
+    parameters: Array<{ name: string; unit: string; referenceRange: string }>;
+  }>({
     name: '',
     categoryId: '',
     serviceCode: '',
@@ -35,7 +52,8 @@ export const ServiceCatalog: React.FC = () => {
     machineRequired: '',
     homeCollectionAvailable: false,
     emergencyAvailable: false,
-    isActive: true
+    isActive: true,
+    parameters: []
   });
 
   // Package Modal States
@@ -618,7 +636,8 @@ export const ServiceCatalog: React.FC = () => {
       machineRequired: '',
       homeCollectionAvailable: false,
       emergencyAvailable: false,
-      isActive: true
+      isActive: true,
+      parameters: []
     });
     setModalError('');
     setServiceModalOpen(true);
@@ -638,10 +657,42 @@ export const ServiceCatalog: React.FC = () => {
       machineRequired: s.machine_required || '',
       homeCollectionAvailable: !!s.home_collection_available,
       emergencyAvailable: !!s.emergency_available,
-      isActive: !!s.is_active
+      isActive: !!s.is_active,
+      parameters: (s.parameters || []).map((p: any) => ({
+        name: p.name || '',
+        unit: p.unit || '',
+        referenceRange: p.reference_range || p.referenceRange || ''
+      }))
     });
     setModalError('');
     setServiceModalOpen(true);
+  };
+
+  const handleAddParameterRow = () => {
+    setServiceForm(prev => ({
+      ...prev,
+      parameters: [...(prev.parameters || []), { name: '', unit: '', referenceRange: '' }]
+    }));
+  };
+
+  const handleParameterChange = (index: number, field: 'name' | 'unit' | 'referenceRange', value: string) => {
+    setServiceForm(prev => {
+      const updated = [...(prev.parameters || [])];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, parameters: updated };
+    });
+  };
+
+  const handleRemoveParameterRow = (index: number) => {
+    setServiceForm(prev => ({
+      ...prev,
+      parameters: (prev.parameters || []).filter((_, i) => i !== index)
+    }));
+  };
+
+  const openParamViewModal = (s: any) => {
+    setSelectedParamService(s);
+    setParamViewModalOpen(true);
   };
 
   const handleDeleteService = async (serviceId: string) => {
@@ -843,9 +894,9 @@ export const ServiceCatalog: React.FC = () => {
                   <th style={{ padding: '12px 16px' }}>Code</th>
                   <th style={{ padding: '12px 16px' }}>Test / Service Name</th>
                   <th style={{ padding: '12px 16px' }}>Department</th>
+                  <th style={{ padding: '12px 16px' }}>Parameters</th>
                   <th style={{ padding: '12px 16px' }}>Sample Type</th>
                   <th style={{ padding: '12px 16px' }}>Price (Rs.)</th>
-                  <th style={{ padding: '12px 16px' }}>Reference Ranges</th>
                   <th style={{ padding: '12px 16px' }}>Status</th>
                   <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
                 </tr>
@@ -860,11 +911,30 @@ export const ServiceCatalog: React.FC = () => {
                         {s.category_name}
                       </span>
                     </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <button
+                        onClick={() => openParamViewModal(s)}
+                        style={{
+                          background: s.parameters && s.parameters.length > 0 ? 'rgba(59, 130, 246, 0.12)' : 'var(--bg-primary)',
+                          color: s.parameters && s.parameters.length > 0 ? '#3b82f6' : 'var(--text-muted)',
+                          border: `1px solid ${s.parameters && s.parameters.length > 0 ? 'rgba(59, 130, 246, 0.3)' : 'var(--border-primary)'}`,
+                          padding: '4px 10px',
+                          borderRadius: '20px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '5px'
+                        }}
+                        title="Click to view or edit parameters"
+                      >
+                        <List size={12} />
+                        {s.parameters && s.parameters.length > 0 ? `${s.parameters.length} Parameters` : '+ Add Parameters'}
+                      </button>
+                    </td>
                     <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>{s.sample_required || 'None'}</td>
                     <td style={{ padding: '12px 16px', fontWeight: 600 }}>Rs. {parseFloat(s.price).toFixed(2)}</td>
-                    <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-muted)', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={s.normal_range}>
-                      {s.normal_range || 'N/A'}
-                    </td>
                     <td style={{ padding: '12px 16px' }}>
                       <span style={{ 
                         fontSize: '11px', padding: '2px 8px', borderRadius: '50px', fontWeight: 600,
@@ -1022,7 +1092,7 @@ export const ServiceCatalog: React.FC = () => {
       {/* Service Modal */}
       {serviceModalOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '12px', width: '100%', maxWidth: '500px', padding: '24px', position: 'relative' }}>
+          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '12px', width: '100%', maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', padding: '24px', position: 'relative' }}>
             <button onClick={() => setServiceModalOpen(false)} style={{ position: 'absolute', right: '16px', top: '16px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
             <h2 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 16px 0', color: 'var(--text-primary)' }}>
               {editingService ? 'Edit Diagnostic Service' : 'Add New Diagnostic Service'}
@@ -1072,8 +1142,8 @@ export const ServiceCatalog: React.FC = () => {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Normal / Reference Range</label>
-                  <input type="text" className="input" value={serviceForm.normalRange} onChange={(e) => setServiceForm({ ...serviceForm, normalRange: e.target.value })} placeholder="e.g. TSH: 0.4 - 4.0 uIU/mL" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                  <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>General Reference Range (Summary)</label>
+                  <input type="text" className="input" value={serviceForm.normalRange} onChange={(e) => setServiceForm({ ...serviceForm, normalRange: e.target.value })} placeholder="e.g. See parameters list below" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
@@ -1091,12 +1161,146 @@ export const ServiceCatalog: React.FC = () => {
                   </label>
                 </div>
 
+                {/* Test Parameters Configuration Section */}
+                <div style={{ marginTop: '16px', borderTop: '1px solid var(--border-primary)', paddingTop: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                    <label style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <List size={14} color="var(--accent-primary)" />
+                      Individual Test Parameters ({serviceForm.parameters?.length || 0})
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleAddParameterRow}
+                      style={{
+                        background: 'var(--bg-primary)',
+                        color: 'var(--accent-primary)',
+                        border: '1px solid var(--border-primary)',
+                        borderRadius: '6px',
+                        padding: '4px 10px',
+                        fontSize: '11px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px'
+                      }}
+                    >
+                      <Plus size={12} />
+                      Add Parameter
+                    </button>
+                  </div>
+
+                  {serviceForm.parameters && serviceForm.parameters.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto', paddingRight: '4px' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 2fr 30px', gap: '8px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', paddingBottom: '2px' }}>
+                        <div>Parameter Name *</div>
+                        <div>Unit</div>
+                        <div>Reference Range</div>
+                        <div></div>
+                      </div>
+                      {serviceForm.parameters.map((p, pIdx) => (
+                        <div key={pIdx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 2fr 30px', gap: '8px', alignItems: 'center' }}>
+                          <input
+                            type="text"
+                            className="input"
+                            value={p.name}
+                            onChange={(e) => handleParameterChange(pIdx, 'name', e.target.value)}
+                            placeholder="e.g. Blood Urea"
+                            required
+                            style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px' }}
+                          />
+                          <input
+                            type="text"
+                            className="input"
+                            value={p.unit}
+                            onChange={(e) => handleParameterChange(pIdx, 'unit', e.target.value)}
+                            placeholder="e.g. mg/dL"
+                            style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px' }}
+                          />
+                          <input
+                            type="text"
+                            className="input"
+                            value={p.referenceRange}
+                            onChange={(e) => handleParameterChange(pIdx, 'referenceRange', e.target.value)}
+                            placeholder="e.g. 15–40"
+                            style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px' }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveParameterRow(pIdx)}
+                            style={{ background: 'transparent', border: 'none', color: 'var(--accent-danger)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                            title="Remove parameter"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ background: 'var(--bg-primary)', border: '1px dashed var(--border-primary)', borderRadius: '6px', padding: '12px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>
+                      No specific parameters configured yet. Click <strong>+ Add Parameter</strong> to specify test parameters (e.g. Hemoglobin, Bilirubin, Creatinine).
+                    </div>
+                  )}
+                </div>
+
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', borderTop: '1px solid var(--border-primary)', paddingTop: '16px' }}>
                   <Button variant="secondary" type="button" onClick={() => setServiceModalOpen(false)}>Cancel</Button>
-                  <Button variant="primary" type="submit" loading={modalLoading}>Save Service</Button>
+                  <Button variant="primary" type="submit" loading={modalLoading}>Save Service & Parameters</Button>
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Parameter View Modal */}
+      {paramViewModalOpen && selectedParamService && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '12px', width: '100%', maxWidth: '560px', padding: '24px', position: 'relative' }}>
+            <button onClick={() => setParamViewModalOpen(false)} style={{ position: 'absolute', right: '16px', top: '16px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+              <List size={20} color="var(--accent-primary)" />
+              <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0, color: 'var(--text-primary)' }}>
+                {selectedParamService.name}
+              </h2>
+            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '12px', margin: '0 0 16px 0' }}>
+              Service Code: <strong>{selectedParamService.service_code}</strong> | Department: <strong>{selectedParamService.category_name}</strong>
+            </p>
+
+            {selectedParamService.parameters && selectedParamService.parameters.length > 0 ? (
+              <div style={{ border: '1px solid var(--border-primary)', borderRadius: '8px', overflow: 'hidden', marginBottom: '16px', maxHeight: '300px', overflowY: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                  <thead>
+                    <tr style={{ background: 'var(--bg-primary)', borderBottom: '1px solid var(--border-primary)', textAlign: 'left' }}>
+                      <th style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--text-secondary)' }}>#</th>
+                      <th style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--text-secondary)' }}>Parameter Name</th>
+                      <th style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--text-secondary)' }}>Unit</th>
+                      <th style={{ padding: '8px 12px', fontWeight: 700, color: 'var(--text-secondary)' }}>Reference Range</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedParamService.parameters.map((p: any, idx: number) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid var(--border-primary)' }}>
+                        <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>{idx + 1}</td>
+                        <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</td>
+                        <td style={{ padding: '8px 12px', color: 'var(--text-secondary)' }}>{p.unit || '—'}</td>
+                        <td style={{ padding: '8px 12px', fontFamily: 'monospace', color: 'var(--accent-primary)' }}>{p.reference_range || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div style={{ background: 'var(--bg-primary)', border: '1px dashed var(--border-primary)', borderRadius: '8px', padding: '20px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', marginBottom: '16px' }}>
+                No individual parameters configured for this test service yet.
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+              <Button variant="secondary" onClick={() => setParamViewModalOpen(false)}>Close</Button>
+              <Button variant="primary" icon={<Edit size={14} />} onClick={() => { setParamViewModalOpen(false); openEditServiceModal(selectedParamService); }}>Edit Service & Parameters</Button>
+            </div>
           </div>
         </div>
       )}
