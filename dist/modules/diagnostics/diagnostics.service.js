@@ -64,7 +64,18 @@ exports.getCategories = getCategories;
 // 3. Diagnostic Services (Catalog)
 const getServices = async () => {
     const result = await (0, database_1.query)(`
-    SELECT s.*, c.name as category_name 
+    SELECT s.*, c.name as category_name,
+           COALESCE((
+             SELECT json_agg(json_build_object(
+               'parameter_id', dp.parameter_id,
+               'name', dp.name,
+               'unit', dp.unit,
+               'reference_range', dp.reference_range,
+               'display_order', dp.display_order
+             ) ORDER BY dp.display_order)
+             FROM diagnostic_parameters dp
+             WHERE dp.service_id = s.service_id
+           ), '[]'::json) as parameters
     FROM diagnostic_services s
     LEFT JOIN diagnostic_categories c ON s.category_id = c.category_id
     ORDER BY c.name, s.name
@@ -73,36 +84,77 @@ const getServices = async () => {
 };
 exports.getServices = getServices;
 const addService = async (input) => {
-    const result = await (0, database_1.query)(`
-    INSERT INTO diagnostic_services 
-    (name, category_id, service_code, price, gst_percentage, duration_minutes, sample_required, normal_range, machine_required, home_collection_available, emergency_available, is_active)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
-    RETURNING *
-  `, [
-        input.name, input.categoryId, input.serviceCode.toUpperCase(), input.price, input.gstPercentage,
-        input.durationMinutes, input.sampleRequired || 'None', input.normalRange || '', input.machineRequired || '',
-        input.homeCollectionAvailable, input.emergencyAvailable, input.isActive
-    ]);
-    return result.rows[0];
+    await (0, database_1.query)('BEGIN');
+    try {
+        const result = await (0, database_1.query)(`
+      INSERT INTO diagnostic_services 
+      (name, category_id, service_code, price, gst_percentage, duration_minutes, sample_required, normal_range, machine_required, home_collection_available, emergency_available, is_active)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      RETURNING *
+    `, [
+            input.name, input.categoryId, input.serviceCode.toUpperCase(), input.price, input.gstPercentage || 0,
+            input.durationMinutes || 30, input.sampleRequired || 'None', input.normalRange || '', input.machineRequired || '',
+            input.homeCollectionAvailable || false, input.emergencyAvailable || false, input.isActive !== false
+        ]);
+        const service = result.rows[0];
+        if (input.parameters && Array.isArray(input.parameters)) {
+            for (let i = 0; i < input.parameters.length; i++) {
+                const p = input.parameters[i];
+                if (p.name && p.name.trim()) {
+                    await (0, database_1.query)(`
+            INSERT INTO diagnostic_parameters (service_id, name, unit, reference_range, display_order)
+            VALUES ($1, $2, $3, $4, $5)
+          `, [service.service_id, p.name.trim(), p.unit || '', p.referenceRange || p.reference_range || '', i + 1]);
+                }
+            }
+        }
+        await (0, database_1.query)('COMMIT');
+        return service;
+    }
+    catch (err) {
+        await (0, database_1.query)('ROLLBACK');
+        throw err;
+    }
 };
 exports.addService = addService;
 const editService = async (serviceId, input) => {
-    const result = await (0, database_1.query)(`
-    UPDATE diagnostic_services 
-    SET name = $1, category_id = $2, service_code = $3, price = $4, gst_percentage = $5, 
-        duration_minutes = $6, sample_required = $7, normal_range = $8, machine_required = $9, 
-        home_collection_available = $10, emergency_available = $11, is_active = $12
-    WHERE service_id = $13
-    RETURNING *
-  `, [
-        input.name, input.categoryId, input.serviceCode.toUpperCase(), input.price, input.gstPercentage,
-        input.durationMinutes, input.sampleRequired || 'None', input.normalRange || '', input.machineRequired || '',
-        input.homeCollectionAvailable, input.emergencyAvailable, input.isActive, serviceId
-    ]);
-    return result.rows[0];
+    await (0, database_1.query)('BEGIN');
+    try {
+        const result = await (0, database_1.query)(`
+      UPDATE diagnostic_services 
+      SET name = $1, category_id = $2, service_code = $3, price = $4, gst_percentage = $5, 
+          duration_minutes = $6, sample_required = $7, normal_range = $8, machine_required = $9, 
+          home_collection_available = $10, emergency_available = $11, is_active = $12
+      WHERE service_id = $13
+      RETURNING *
+    `, [
+            input.name, input.categoryId, input.serviceCode.toUpperCase(), input.price, input.gstPercentage || 0,
+            input.durationMinutes || 30, input.sampleRequired || 'None', input.normalRange || '', input.machineRequired || '',
+            input.homeCollectionAvailable || false, input.emergencyAvailable || false, input.isActive !== false, serviceId
+        ]);
+        if (input.parameters && Array.isArray(input.parameters)) {
+            await (0, database_1.query)('DELETE FROM diagnostic_parameters WHERE service_id = $1', [serviceId]);
+            for (let i = 0; i < input.parameters.length; i++) {
+                const p = input.parameters[i];
+                if (p.name && p.name.trim()) {
+                    await (0, database_1.query)(`
+            INSERT INTO diagnostic_parameters (service_id, name, unit, reference_range, display_order)
+            VALUES ($1, $2, $3, $4, $5)
+          `, [serviceId, p.name.trim(), p.unit || '', p.referenceRange || p.reference_range || '', i + 1]);
+                }
+            }
+        }
+        await (0, database_1.query)('COMMIT');
+        return result.rows[0];
+    }
+    catch (err) {
+        await (0, database_1.query)('ROLLBACK');
+        throw err;
+    }
 };
 exports.editService = editService;
 const deleteService = async (serviceId) => {
+    await (0, database_1.query)('DELETE FROM diagnostic_parameters WHERE service_id = $1', [serviceId]);
     await (0, database_1.query)('DELETE FROM diagnostic_services WHERE service_id = $1', [serviceId]);
     return { success: true };
 };
