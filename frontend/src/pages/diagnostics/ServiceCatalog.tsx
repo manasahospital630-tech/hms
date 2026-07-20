@@ -323,6 +323,8 @@ export const ServiceCatalog: React.FC = () => {
         'ERYTHROCYTE SEDIMENTATION RATE': '0-15 (Male)',
         'RANDOM BLOOD SUGAR': '70-140 mg/dL',
         'FASTING BLOOD SUGAR': '70-99 mg/dL',
+        'POST LUNCH BLOOD SUGAR': '<140',
+        'POST PRANDIAL BLOOD SUGAR': '<140',
         // RFT parameters
         'BLOOD UREA': '15–40',
         'BLOOD UREA NITROGEN': '7–20',
