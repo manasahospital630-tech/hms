@@ -4,8 +4,12 @@ export declare const createUserSchema: z.ZodObject<{
     password: z.ZodString;
     firstName: z.ZodString;
     lastName: z.ZodString;
-    phone: z.ZodOptional<z.ZodString>;
+    phone: z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>;
     role: z.ZodEnum<["Admin", "Management", "Doctor", "Nurse", "Receptionist", "Pharmacist", "Biller", "Patient", "Incharge"]>;
+    department: z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>;
+    specialization: z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>;
+    licenseNumber: z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>;
+    consultationFee: z.ZodOptional<z.ZodUnion<[z.ZodNumber, z.ZodString]>>;
 }, "strip", z.ZodTypeAny, {
     email: string;
     password: string;
@@ -13,6 +17,10 @@ export declare const createUserSchema: z.ZodObject<{
     lastName: string;
     role: "Admin" | "Management" | "Doctor" | "Nurse" | "Receptionist" | "Pharmacist" | "Biller" | "Patient" | "Incharge";
     phone?: string | undefined;
+    department?: string | undefined;
+    specialization?: string | undefined;
+    licenseNumber?: string | undefined;
+    consultationFee?: string | number | undefined;
 }, {
     email: string;
     password: string;
@@ -20,24 +28,46 @@ export declare const createUserSchema: z.ZodObject<{
     lastName: string;
     role: "Admin" | "Management" | "Doctor" | "Nurse" | "Receptionist" | "Pharmacist" | "Biller" | "Patient" | "Incharge";
     phone?: string | undefined;
+    department?: string | undefined;
+    specialization?: string | undefined;
+    licenseNumber?: string | undefined;
+    consultationFee?: string | number | undefined;
 }>;
 export declare const updateUserSchema: z.ZodObject<{
+    email: z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>;
+    password: z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>;
     role: z.ZodOptional<z.ZodEnum<["Admin", "Management", "Doctor", "Nurse", "Receptionist", "Pharmacist", "Biller", "Patient", "Incharge"]>>;
     isActive: z.ZodOptional<z.ZodBoolean>;
     firstName: z.ZodOptional<z.ZodString>;
     lastName: z.ZodOptional<z.ZodString>;
-    phone: z.ZodOptional<z.ZodString>;
+    phone: z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>;
+    department: z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>;
+    specialization: z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>;
+    licenseNumber: z.ZodUnion<[z.ZodOptional<z.ZodString>, z.ZodLiteral<"">]>;
+    consultationFee: z.ZodOptional<z.ZodUnion<[z.ZodNumber, z.ZodString]>>;
 }, "strip", z.ZodTypeAny, {
+    email?: string | undefined;
+    password?: string | undefined;
     firstName?: string | undefined;
     lastName?: string | undefined;
     phone?: string | undefined;
     role?: "Admin" | "Management" | "Doctor" | "Nurse" | "Receptionist" | "Pharmacist" | "Biller" | "Patient" | "Incharge" | undefined;
+    department?: string | undefined;
+    specialization?: string | undefined;
+    licenseNumber?: string | undefined;
+    consultationFee?: string | number | undefined;
     isActive?: boolean | undefined;
 }, {
+    email?: string | undefined;
+    password?: string | undefined;
     firstName?: string | undefined;
     lastName?: string | undefined;
     phone?: string | undefined;
     role?: "Admin" | "Management" | "Doctor" | "Nurse" | "Receptionist" | "Pharmacist" | "Biller" | "Patient" | "Incharge" | undefined;
+    department?: string | undefined;
+    specialization?: string | undefined;
+    licenseNumber?: string | undefined;
+    consultationFee?: string | number | undefined;
     isActive?: boolean | undefined;
 }>;
 export type CreateUserInput = z.infer<typeof createUserSchema>;

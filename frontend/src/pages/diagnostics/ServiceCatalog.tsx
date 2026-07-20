@@ -104,13 +104,14 @@ export const ServiceCatalog: React.FC = () => {
         if (item.status === 'Completed' || item.status === 'Verified') {
           list.push({
             ...item,
-            patient_name: `${o.first_name} ${o.last_name}`,
-            patient_mrn: o.medical_record_number,
-            patient_gender: o.gender,
-            patient_birth_date: o.birth_date,
-            patient_phone: o.patient_phone,
+            patient_name: o.first_name || o.last_name ? `${o.first_name || ''} ${o.last_name || ''}`.trim() : (o.patient_name || 'Patient'),
+            patient_mrn: o.medical_record_number || o.patient_mrn || '—',
+            patient_gender: o.patient_gender || o.gender || 'Male',
+            patient_birth_date: o.patient_birth_date || o.birth_date || o.date_of_birth,
+            patient_age: o.patient_age !== undefined ? o.patient_age : o.age,
+            patient_phone: o.patient_phone || o.phone,
             order_number: o.order_number,
-            doctor_name: o.doc_first ? `Dr. ${o.doc_first} ${o.doc_last}` : 'Dr. Priya Nair',
+            doctor_name: o.doc_first ? `Dr. ${o.doc_first} ${o.doc_last}` : (o.doctor_name || 'Dr. S Tarundas'),
             created_at: o.created_at,
             order: o
           });
@@ -543,7 +544,7 @@ export const ServiceCatalog: React.FC = () => {
                 </tr>
                 <tr>
                   <td style="padding: 3px 0; font-weight: 600; color: #475569;">Age/Gender:</td>
-                  <td style="padding: 3px 0; font-weight: 700;">${ageStr} / ${(item.patient_gender || 'F').toUpperCase()}</td>
+                  <td style="padding: 3px 0; font-weight: 700;">${ageStr} / ${(item.patient_gender || item.gender || 'Male').toUpperCase()}</td>
                   <td style="padding: 3px 0; font-weight: 600; color: #475569;">Reporting Date & time:</td>
                   <td style="padding: 3px 0; font-weight: 700;">${verifiedDate}</td>
                 </tr>

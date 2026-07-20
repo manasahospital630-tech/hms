@@ -10,13 +10,13 @@ const errorHandler_1 = require("../../middleware/errorHandler");
 const s3Upload_1 = require("../../utils/s3Upload");
 const SALT_ROUNDS = 12;
 const getAllUsers = async (options) => {
-    let whereClause = "WHERE role != 'Patient'";
+    let whereClause = "WHERE u.role != 'Patient'";
     const params = [];
     if (options.search) {
         params.push(`%${options.search}%`);
-        whereClause += ` AND (first_name ILIKE $1 OR last_name ILIKE $1 OR email ILIKE $1)`;
+        whereClause += ` AND (u.first_name ILIKE $1 OR u.last_name ILIKE $1 OR u.email ILIKE $1 OR u.employee_department ILIKE $1 OR dp.department ILIKE $1)`;
     }
-    const countResult = await (0, database_1.query)(`SELECT COUNT(*) as total FROM users ${whereClause}`, params);
+    const countResult = await (0, database_1.query)(`SELECT COUNT(*) as total FROM users u LEFT JOIN doctor_profiles dp ON u.user_id = dp.doctor_id ${whereClause}`, params);
     const dataParams = [...params];
     let limitClause = '';
     if (options.limit) {
@@ -27,8 +27,14 @@ const getAllUsers = async (options) => {
         dataParams.push(options.offset);
         limitClause += ` OFFSET $${dataParams.length}`;
     }
-    const result = await (0, database_1.query)(`SELECT user_id, email, first_name, last_name, phone, role, is_active, created_at, updated_at
-     FROM users ${whereClause} ORDER BY created_at DESC ${limitClause}`, dataParams);
+    const result = await (0, database_1.query)(`SELECT u.user_id, u.email, u.first_name, u.last_name, u.phone, u.role, u.is_active, 
+            u.employee_department, u.employee_specialization, u.license_number,
+            COALESCE(dp.department, u.employee_department, '') as department,
+            COALESCE(dp.consultation_fee, 0.00) as consultation_fee,
+            u.created_at, u.updated_at
+     FROM users u
+     LEFT JOIN doctor_profiles dp ON u.user_id = dp.doctor_id
+     ${whereClause} ORDER BY u.created_at DESC ${limitClause}`, dataParams);
     return { users: result.rows, total: parseInt(countResult.rows[0].total, 10) };
 };
 exports.getAllUsers = getAllUsers;
@@ -37,14 +43,40 @@ const createUser = async (input) => {
     if (existing.rows.length > 0)
         throw new errorHandler_1.AppError('Email already exists.', 409);
     const passwordHash = await bcryptjs_1.default.hash(input.password, SALT_ROUNDS);
-    const result = await (0, database_1.query)(`INSERT INTO users (email, password_hash, first_name, last_name, phone, role)
-     VALUES ($1,$2,$3,$4,$5,$6) RETURNING user_id, email, first_name, last_name, phone, role, is_active, created_at`, [input.email, passwordHash, input.firstName, input.lastName, input.phone || null, input.role]);
-    return result.rows[0];
+    const dept = input.department || '';
+    const spec = input.specialization || '';
+    const lic = input.licenseNumber || '';
+    const fee = input.consultationFee !== undefined && input.consultationFee !== null && input.consultationFee !== '' ? parseFloat(String(input.consultationFee)) : 0;
+    const result = await (0, database_1.query)(`INSERT INTO users (email, password_hash, first_name, last_name, phone, role, employee_department, employee_specialization, license_number)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) 
+     RETURNING user_id, email, first_name, last_name, phone, role, is_active, employee_department, employee_specialization, license_number, created_at`, [input.email, passwordHash, input.firstName, input.lastName, input.phone || null, input.role, dept || null, spec || null, lic || null]);
+    const user = result.rows[0];
+    if (user && (user.role === 'Doctor' || dept || fee > 0)) {
+        await (0, database_1.query)(`
+      INSERT INTO doctor_profiles (doctor_id, department, consultation_fee, updated_at)
+      VALUES ($1, $2, $3, NOW())
+      ON CONFLICT (doctor_id) DO UPDATE
+      SET department = EXCLUDED.department,
+          consultation_fee = EXCLUDED.consultation_fee,
+          updated_at = NOW()
+    `, [user.user_id, dept || 'General', fee]);
+        user.department = dept || 'General';
+        user.consultation_fee = fee;
+    }
+    return user;
 };
 exports.createUser = createUser;
 const updateUser = async (id, input) => {
     const fieldMap = {
-        role: 'role', isActive: 'is_active', firstName: 'first_name', lastName: 'last_name', phone: 'phone',
+        role: 'role',
+        isActive: 'is_active',
+        firstName: 'first_name',
+        lastName: 'last_name',
+        phone: 'phone',
+        email: 'email',
+        department: 'employee_department',
+        specialization: 'employee_specialization',
+        licenseNumber: 'license_number',
     };
     const fields = [];
     const values = [];
@@ -56,15 +88,49 @@ const updateUser = async (id, input) => {
             idx++;
         }
     }
-    if (fields.length === 0)
-        throw new errorHandler_1.AppError('No fields to update.', 400);
-    fields.push(`updated_at = NOW()`);
-    values.push(id);
-    const result = await (0, database_1.query)(`UPDATE users SET ${fields.join(', ')} WHERE user_id = $${idx}
-     RETURNING user_id, email, first_name, last_name, phone, role, is_active, updated_at`, values);
-    if (result.rows.length === 0)
+    if (input.password && input.password.trim().length >= 6) {
+        const passwordHash = await bcryptjs_1.default.hash(input.password, SALT_ROUNDS);
+        fields.push(`password_hash = $${idx}`);
+        values.push(passwordHash);
+        idx++;
+    }
+    if (fields.length > 0) {
+        fields.push(`updated_at = NOW()`);
+        values.push(id);
+        const result = await (0, database_1.query)(`UPDATE users SET ${fields.join(', ')} WHERE user_id = $${idx}
+       RETURNING user_id, email, first_name, last_name, phone, role, is_active, employee_department, employee_specialization, license_number, updated_at`, values);
+        if (result.rows.length === 0)
+            throw new errorHandler_1.AppError('User not found.', 404);
+    }
+    // Handle doctor profile sync
+    const userRes = await (0, database_1.query)(`SELECT user_id, role, employee_department FROM users WHERE user_id = $1`, [id]);
+    if (userRes.rows.length === 0)
         throw new errorHandler_1.AppError('User not found.', 404);
-    return result.rows[0];
+    const user = userRes.rows[0];
+    const dept = input.department !== undefined ? input.department : (user.employee_department || '');
+    const fee = input.consultationFee !== undefined && input.consultationFee !== null && input.consultationFee !== '' ? parseFloat(String(input.consultationFee)) : null;
+    if (user.role === 'Doctor' || input.department !== undefined || fee !== null) {
+        const existingDp = await (0, database_1.query)(`SELECT consultation_fee FROM doctor_profiles WHERE doctor_id = $1`, [id]);
+        const currentFee = existingDp.rows.length > 0 ? parseFloat(existingDp.rows[0].consultation_fee) : 0;
+        const finalFee = fee !== null ? fee : currentFee;
+        await (0, database_1.query)(`
+      INSERT INTO doctor_profiles (doctor_id, department, consultation_fee, updated_at)
+      VALUES ($1, $2, $3, NOW())
+      ON CONFLICT (doctor_id) DO UPDATE
+      SET department = EXCLUDED.department,
+          consultation_fee = EXCLUDED.consultation_fee,
+          updated_at = NOW()
+    `, [id, dept || 'General', finalFee]);
+    }
+    const updatedRes = await (0, database_1.query)(`SELECT u.user_id, u.email, u.first_name, u.last_name, u.phone, u.role, u.is_active, 
+            u.employee_department, u.employee_specialization, u.license_number,
+            COALESCE(dp.department, u.employee_department, '') as department,
+            COALESCE(dp.consultation_fee, 0.00) as consultation_fee,
+            u.created_at, u.updated_at
+     FROM users u
+     LEFT JOIN doctor_profiles dp ON u.user_id = dp.doctor_id
+     WHERE u.user_id = $1`, [id]);
+    return updatedRes.rows[0];
 };
 exports.updateUser = updateUser;
 const getAuditLog = async (filters) => {

@@ -365,7 +365,7 @@ export const PublicReportView: React.FC = () => {
             </tr>
             <tr>
               <td style={{ padding: '4px 0', fontWeight: 600, color: '#475569' }}>Age/Gender:</td>
-              <td style={{ padding: '4px 0', fontWeight: 700 }}>{getAgeStr(report.birth_date, report.patient_age || report.age)} / {(report.gender || 'F').toUpperCase()}</td>
+              <td style={{ padding: '4px 0', fontWeight: 700 }}>{getAgeStr(report.birth_date || report.patient_birth_date, report.patient_age || report.age)} / {(report.gender || report.patient_gender || 'Male').toUpperCase()}</td>
               <td style={{ padding: '4px 0', fontWeight: 600, color: '#475569' }}>Reporting Date & time:</td>
               <td style={{ padding: '4px 0', fontWeight: 700 }}>{verifiedDate}</td>
             </tr>
