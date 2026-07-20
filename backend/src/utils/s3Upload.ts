@@ -1,5 +1,4 @@
 import { S3Client, PutObjectCommand, HeadBucketCommand, CreateBucketCommand } from '@aws-sdk/client-s3';
-import QRCode from 'qrcode';
 
 const s3 = new S3Client({
   endpoint: 'https://pamobniywbuloarioxiu.storage.supabase.co/storage/v1/s3',
@@ -56,19 +55,28 @@ export const uploadBase64Image = async (base64String: string, bucketName: string
 
 export const generateAndUploadQrCode = async (textToEncode: string, itemId: string): Promise<string> => {
   try {
-    const dataUrl = await QRCode.toDataURL(textToEncode, {
-      width: 300,
-      margin: 1,
-      color: {
-        dark: '#0f172a',
-        light: '#ffffff',
-      },
-    });
-    const cleanId = (itemId || 'report').replace(/[^a-zA-Z0-9_-]/g, '_');
-    const fileName = `qr_${cleanId}.png`;
-    return await uploadBase64Image(dataUrl, 'logos', fileName);
+    let QRCode: any;
+    try {
+      QRCode = require('qrcode');
+    } catch (e) {
+      console.warn('qrcode module require warning:', e);
+    }
+
+    if (QRCode && typeof QRCode.toDataURL === 'function') {
+      const dataUrl = await QRCode.toDataURL(textToEncode, {
+        width: 300,
+        margin: 1,
+        color: {
+          dark: '#0f172a',
+          light: '#ffffff',
+        },
+      });
+      const cleanId = (itemId || 'report').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const fileName = `qr_${cleanId}.png`;
+      return await uploadBase64Image(dataUrl, 'logos', fileName);
+    }
   } catch (err) {
     console.error(`Error generating/uploading S3 QR code for ${itemId}:`, err);
-    return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(textToEncode)}`;
   }
+  return `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(textToEncode)}`;
 };
