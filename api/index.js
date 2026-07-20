@@ -21,15 +21,16 @@ try {
 } catch (err) {
   console.error('Error initializing Express app in Vercel Serverless Function:', err);
   const express = require('express');
-  const fallback = express();
-  fallback.use((req, res) => {
+  app = express();
+  app.use(express.json());
+  app.all('*', (req, res) => {
     res.status(500).json({
       success: false,
-      error: 'Vercel Serverless Function Initialization Error',
-      message: err.message
+      error: 'Vercel Serverless Initialization Error',
+      message: err.message,
+      stack: process.env.NODE_ENV === 'development' ? err.stack : undefined
     });
   });
-  app = fallback;
 }
 
 module.exports = app;
