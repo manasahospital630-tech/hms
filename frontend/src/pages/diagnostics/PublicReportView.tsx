@@ -4,6 +4,7 @@ import { Beaker, ShieldAlert, Printer, RefreshCw, AlertTriangle, FileText, Check
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import api from '../../api/client';
+import { getAbsoluteLogoUrl, generateQrDataUrl } from '../../utils/logoHelper';
 
 export const PublicReportView: React.FC = () => {
   const { itemId } = useParams<{ itemId: string }>();
@@ -11,6 +12,11 @@ export const PublicReportView: React.FC = () => {
   const [hospitalSettings, setHospitalSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [qrDataUrl, setQrDataUrl] = useState('');
+
+  useEffect(() => {
+    generateQrDataUrl(window.location.href).then(setQrDataUrl);
+  }, []);
 
   const loadData = async () => {
     setLoading(true);
@@ -315,16 +321,30 @@ export const PublicReportView: React.FC = () => {
         {/* Hospital details */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
           <div className="logo-col">
-            {logoUrl ? (
-              <img src={logoUrl} alt="Logo" style={{ height: '70px', maxWidth: '100px', objectFit: 'contain' }} />
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '80px', height: '80px' }}>
-                <svg viewBox="0 0 24 24" width="45" height="45" fill="none" stroke="#007a87" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                </svg>
-                <span style={{ fontSize: '8px', fontWeight: 800, color: '#1e3a8a', letterSpacing: '0.5px', marginTop: '3px', textTransform: 'uppercase' }}>HANNAH</span>
-              </div>
-            )}
+            {getAbsoluteLogoUrl(logoUrl) ? (
+              <img
+                src={getAbsoluteLogoUrl(logoUrl)!}
+                alt="Logo"
+                style={{ height: '70px', maxWidth: '120px', objectFit: 'contain' }}
+                onError={(e) => {
+                  (e.target as HTMLElement).style.display = 'none';
+                  const next = (e.target as HTMLElement).nextElementSibling;
+                  if (next) (next as HTMLElement).style.display = 'flex';
+                }}
+              />
+            ) : null}
+            <div style={{ display: getAbsoluteLogoUrl(logoUrl) ? 'none' : 'flex', alignItems: 'center', justifyContent: 'center', width: '80px', height: '80px' }}>
+              <svg width="70" height="70" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="100" height="100" rx="18" fill="url(#mh-grad-pub)"/>
+                <path d="M22 76V24L50 52L78 24V76" stroke="#FFFFFF" strokeWidth="9" strokeLinecap="round" strokeLinejoin="round"/>
+                <defs>
+                  <linearGradient id="mh-grad-pub" x1="0" y1="0" x2="100" y2="100" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#0F172A"/>
+                    <stop offset="1" stopColor="#1E3A8A"/>
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
           </div>
           <div style={{ flex: 1, paddingLeft: '20px' }}>
             <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px 0' }}>{hospitalName}</h1>
@@ -334,7 +354,13 @@ export const PublicReportView: React.FC = () => {
           </div>
           <div className="stamp-col" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '80px', height: '80px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '4px', background: '#fff', textAlign: 'center', boxSizing: 'border-box' }}>
-              <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.href)}`} alt="Verify" style={{ width: '58px', height: '58px' }} />
+              {qrDataUrl ? (
+                <img src={qrDataUrl} alt="Verify" style={{ width: '58px', height: '58px', display: 'block' }} />
+              ) : (
+                <svg viewBox="0 0 24 24" width="45" height="45" fill="none" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                </svg>
+              )}
               <span style={{ fontSize: '6px', fontWeight: 'bold', color: '#64748b', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.2px' }}>VERIFY REPORT</span>
             </div>
           </div>

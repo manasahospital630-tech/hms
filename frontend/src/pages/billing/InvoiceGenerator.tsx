@@ -7,6 +7,7 @@ import { Card } from '../../components/ui/Card';
 import { PatientSearchBar } from '../../components/shared/PatientSearchBar';
 import api from '../../api/client';
 import { formatCurrency } from '../../utils/formatters';
+import { getHospitalLogoHtml } from '../../utils/logoHelper';
 
 const InvoiceGenerator: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'generator' | 'list' | 'create-item'>('generator');
@@ -207,15 +208,7 @@ const InvoiceGenerator: React.FC = () => {
           const gstin = hospitalSettings?.gstin || '36AABCU2450J1ZD';
           const licenseInfo = hospitalSettings?.license_info || 'PR-2026/8508';
           const logoUrl = hospitalSettings?.hospital_logo || null;
-
-          const logoHtml = logoUrl 
-            ? `<img src="${logoUrl}" alt="Logo" style="height: 70px; max-width: 100px; object-fit: contain;" />`
-            : `<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 80px; height: 80px;">
-                <svg viewBox="0 0 24 24" width="45" height="45" fill="none" stroke="#007a87" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-                </svg>
-                <span style="font-size: 8px; font-weight: 800; color: #1e3a8a; letter-spacing: 0.5px; margin-top: 3px; text-transform: uppercase;">HANNAH</span>
-              </div>`;
+          const logoHtml = getHospitalLogoHtml(logoUrl, 70);
 
           // Date formatting (DD/MM/YYYY HH:MM)
           const dateObj = new Date(inv.created_at);

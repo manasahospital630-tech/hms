@@ -8,6 +8,7 @@ import { Select } from '../../components/ui/Select';
 import { Badge } from '../../components/ui/Badge';
 import api from '../../api/client';
 import { formatCurrency } from '../../utils/formatters';
+import { getHospitalLogoHtml } from '../../utils/logoHelper';
 
 interface SaleInvoice {
   invoice_id: string;
@@ -429,7 +430,7 @@ const SalesHistory: React.FC = () => {
             <table class="header-table">
               <tr>
                 <td class="header-logo">
-                  ${hospitalDetails?.hospital_logo ? `<img src="${hospitalDetails.hospital_logo}" style="max-height: 60px; max-width: 100%; object-fit: contain;" />` : ''}
+                  ${getHospitalLogoHtml(hospitalDetails?.hospital_logo, 60)}
                 </td>
                 <td class="header-center">
                   <h1>${hospitalDetails?.hospital_name || 'Hannah Hospitals India Pvt. Ltd.'}</h1>

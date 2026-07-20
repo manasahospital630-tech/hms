@@ -10,6 +10,7 @@ import { Badge } from '../../components/ui/Badge';
 import { PatientSearchBar } from '../../components/shared/PatientSearchBar';
 import api from '../../api/client';
 import { formatCurrency } from '../../utils/formatters';
+import { getHospitalLogoHtml } from '../../utils/logoHelper';
 import SalesHistory from './SalesHistory';
 
 interface SelectedItem {
@@ -574,7 +575,7 @@ const MedicineSales: React.FC = () => {
             <table class="header-table">
               <tr>
                 <td class="header-logo">
-                  ${hospitalDetails?.hospital_logo ? `<img src="${hospitalDetails.hospital_logo}" style="max-height: 60px; max-width: 100%; object-fit: contain;" />` : ''}
+                  ${getHospitalLogoHtml(hospitalDetails?.hospital_logo, 60)}
                 </td>
                 <td class="header-center">
                   <h1>${hospitalDetails?.hospital_name || 'Hannah Hospitals India Pvt. Ltd.'}</h1>

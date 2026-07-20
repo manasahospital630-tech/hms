@@ -3,6 +3,7 @@ import { Beaker, Layers, Plus, Edit, Trash2, X, RefreshCw, Info, CheckCircle, Pr
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import api from '../../api/client';
+import { getHospitalLogoHtml, getQrCodeHeaderHtml } from '../../utils/logoHelper';
 
 export const ServiceCatalog: React.FC = () => {
   const [categories, setCategories] = useState<any[]>([]);
@@ -121,35 +122,23 @@ export const ServiceCatalog: React.FC = () => {
     return list;
   };
 
-  const handlePrintReport = (item: any) => {
+  const handlePrintReport = async (item: any) => {
+    const isLab = item.category_name === 'Laboratory';
+    const hospitalName = hospitalSettings?.hospital_name || 'Manasa Hospital';
+    const hospitalAddress = hospitalSettings?.hospital_address || 'Market Lane, Narsingi, Gandipet Mandal Rangareddy Dist - 500089.';
+    const phoneNumber = hospitalSettings?.phone_number || 'Ph: 7386301348';
+    const website = hospitalSettings?.website || 'www.manasahospital.co.in';
+    const email = hospitalSettings?.email || 'info@manasahospital.org';
+    const gstin = hospitalSettings?.gstin || '-';
+    const licenseInfo = hospitalSettings?.license_info || 'PR-2026/8508';
+    const logoUrl = hospitalSettings?.hospital_logo || null;
+
+    const logoHtml = getHospitalLogoHtml(logoUrl, 70);
+    const reportUrl = `${window.location.origin}/verify/reports/${item.item_id}`;
+    const qrCodeHeaderHtml = await getQrCodeHeaderHtml(reportUrl, 'VERIFY REPORT');
+
     const printWindow = window.open('', '_blank');
     if (printWindow) {
-      const isLab = item.category_name === 'Laboratory';
-      const hospitalName = hospitalSettings?.hospital_name || 'Telangana Diagnostics';
-      const hospitalAddress = hospitalSettings?.hospital_address || 'Central Lab, IPM Campus, Narayanaguda, Hyd - 500029.';
-      const phoneNumber = hospitalSettings?.phone_number || '040 - 68244555, 88012 33333';
-      const website = hospitalSettings?.website || 'https://hannahhospitals.in';
-      const email = hospitalSettings?.email || 'info@hannahhospitals.in';
-      const gstin = hospitalSettings?.gstin || '36AABCU2450J1ZD';
-      const licenseInfo = hospitalSettings?.license_info || 'PR-2026/8508';
-      const logoUrl = hospitalSettings?.hospital_logo || null;
-
-      const logoHtml = logoUrl 
-        ? `<img src="${logoUrl}" alt="Logo" style="height: 70px; max-width: 100px; object-fit: contain;" />`
-        : `<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 80px; height: 80px;">
-            <svg viewBox="0 0 24 24" width="45" height="45" fill="none" stroke="#007a87" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-            </svg>
-            <span style="font-size: 8px; font-weight: 800; color: #1e3a8a; letter-spacing: 0.5px; margin-top: 3px; text-transform: uppercase;">HANNAH</span>
-          </div>`;
-
-      const reportUrl = `${window.location.origin}/verify/reports/${item.item_id}`;
-      const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(reportUrl)}`;
-
-      const qrCodeHeaderHtml = `<div class="qr-header-container" style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 80px; height: 80px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px; background: #fff; text-align: center; box-sizing: border-box; flex-shrink: 0; margin-left: 20px;">
-        <img src="${qrCodeUrl}" alt="Verify" style="width: 58px; height: 58px;" />
-        <span style="font-size: 6px; font-weight: bold; color: #64748b; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.2px;">VERIFY REPORT</span>
-      </div>`;
 
       const headerHtml = printMode === 'letterhead'
         ? `<div style="height: 2.2in; display: flex; justify-content: flex-end; align-items: flex-start; width: 100%; box-sizing: border-box; padding-top: 10px; padding-right: 10px;">
