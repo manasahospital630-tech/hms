@@ -10,17 +10,30 @@ const mrnGenerator_1 = require("../../utils/mrnGenerator");
 const errorHandler_1 = require("../../middleware/errorHandler");
 const createPatient = async (input) => {
     const mrn = await (0, mrnGenerator_1.generateMRN)();
+    let ageVal = null;
+    if (input.age !== undefined && input.age !== null && input.age !== '') {
+        ageVal = parseInt(String(input.age), 10);
+    }
+    let dob = input.dateOfBirth;
+    if (!dob && ageVal !== null && !isNaN(ageVal)) {
+        const currentYear = new Date().getFullYear();
+        dob = `${currentYear - ageVal}-01-01`;
+    }
+    if (!dob) {
+        dob = '1990-01-01';
+    }
     const result = await (0, database_1.query)(`INSERT INTO patients (
-      user_id, medical_record_number, first_name, last_name, date_of_birth, gender,
+      user_id, medical_record_number, first_name, last_name, date_of_birth, age, gender,
       blood_group, address, phone, email, emergency_contact_name, emergency_contact_phone,
       insurance_provider, insurance_policy_number, allergies, assigned_doctor_id
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
     RETURNING *`, [
         input.userId || null,
         mrn,
         input.firstName,
         input.lastName,
-        input.dateOfBirth,
+        dob,
+        ageVal,
         input.gender,
         input.bloodGroup || null,
         input.address || null,

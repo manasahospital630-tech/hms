@@ -146,7 +146,7 @@ exports.addPackage = addPackage;
 // 5. Test Orders
 const getOrders = async () => {
     const result = await (0, database_1.query)(`
-    SELECT o.*, p.first_name, p.last_name, p.medical_record_number, p.phone as patient_phone,
+    SELECT o.*, p.first_name, p.last_name, p.medical_record_number, p.phone as patient_phone, p.gender as patient_gender, p.date_of_birth as patient_birth_date, p.age as patient_age,
            u.first_name as doc_first, u.last_name as doc_last,
            rd.name as referral_name,
            (
@@ -513,6 +513,7 @@ const getPublicReport = async (itemId) => {
       p.medical_record_number AS patient_mrn,
       p.gender,
       p.date_of_birth as birth_date,
+      p.age as patient_age,
       p.phone as patient_phone,
       u.first_name as doc_first,
       u.last_name as doc_last,

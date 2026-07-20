@@ -44,17 +44,22 @@ export const PublicReportView: React.FC = () => {
     }
   }, [itemId]);
 
-  const getAgeStr = (birthDateStr: string): string => {
+  const getAgeStr = (birthDateStr?: string, ageVal?: any): string => {
+    if (ageVal !== undefined && ageVal !== null && ageVal !== '' && ageVal !== 0) {
+      return `${ageVal} Years`;
+    }
     if (!birthDateStr) return '—';
     const birth = new Date(birthDateStr);
     const today = new Date();
+    if (isNaN(birth.getTime())) return '—';
     let years = today.getFullYear() - birth.getFullYear();
     let months = today.getMonth() - birth.getMonth();
     if (months < 0 || (months === 0 && today.getDate() < birth.getDate())) {
       years--;
       months += 12;
     }
-    return `${years} years ${months} months`;
+    if (years < 0) return '—';
+    return `${years} Years`;
   };
 
   const handlePrint = () => {
@@ -360,7 +365,7 @@ export const PublicReportView: React.FC = () => {
             </tr>
             <tr>
               <td style={{ padding: '4px 0', fontWeight: 600, color: '#475569' }}>Age/Gender:</td>
-              <td style={{ padding: '4px 0', fontWeight: 700 }}>{getAgeStr(report.birth_date)} / {(report.gender || 'F').toUpperCase()}</td>
+              <td style={{ padding: '4px 0', fontWeight: 700 }}>{getAgeStr(report.birth_date, report.patient_age || report.age)} / {(report.gender || 'F').toUpperCase()}</td>
               <td style={{ padding: '4px 0', fontWeight: 600, color: '#475569' }}>Reporting Date & time:</td>
               <td style={{ padding: '4px 0', fontWeight: 700 }}>{verifiedDate}</td>
             </tr>

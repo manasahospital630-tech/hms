@@ -165,7 +165,7 @@ const getInvoiceById = async (id) => {
     const result = await (0, database_1.query)(`SELECT i.*, 
             p.first_name || ' ' || p.last_name as patient_name, 
             p.first_name, p.last_name, p.phone, p.address, p.medical_record_number, p.is_inpatient,
-            p.gender, p.date_of_birth AS birth_date,
+            p.gender, p.date_of_birth AS birth_date, p.age AS patient_age,
             COALESCE(d.first_name || ' ' || d.last_name, ip_d.first_name || ' ' || ip_d.last_name) as doctor_name
      FROM invoices i 
      JOIN patients p ON i.patient_id = p.patient_id 

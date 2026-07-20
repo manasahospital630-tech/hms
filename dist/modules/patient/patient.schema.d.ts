@@ -2,7 +2,8 @@ import { z } from 'zod';
 export declare const createPatientSchema: z.ZodObject<{
     firstName: z.ZodString;
     lastName: z.ZodString;
-    dateOfBirth: z.ZodEffects<z.ZodString, string, string>;
+    age: z.ZodOptional<z.ZodUnion<[z.ZodNumber, z.ZodString]>>;
+    dateOfBirth: z.ZodUnion<[z.ZodOptional<z.ZodEffects<z.ZodString, string, string>>, z.ZodLiteral<"">]>;
     gender: z.ZodString;
     bloodGroup: z.ZodOptional<z.ZodString>;
     address: z.ZodOptional<z.ZodString>;
@@ -18,11 +19,12 @@ export declare const createPatientSchema: z.ZodObject<{
 }, "strip", z.ZodTypeAny, {
     firstName: string;
     lastName: string;
-    dateOfBirth: string;
     gender: string;
     email?: string | undefined;
     phone?: string | undefined;
     userId?: string | undefined;
+    age?: string | number | undefined;
+    dateOfBirth?: string | undefined;
     bloodGroup?: string | undefined;
     address?: string | undefined;
     emergencyContactName?: string | undefined;
@@ -34,11 +36,12 @@ export declare const createPatientSchema: z.ZodObject<{
 }, {
     firstName: string;
     lastName: string;
-    dateOfBirth: string;
     gender: string;
     email?: string | undefined;
     phone?: string | undefined;
     userId?: string | undefined;
+    age?: string | number | undefined;
+    dateOfBirth?: string | undefined;
     bloodGroup?: string | undefined;
     address?: string | undefined;
     emergencyContactName?: string | undefined;
@@ -51,7 +54,8 @@ export declare const createPatientSchema: z.ZodObject<{
 export declare const updatePatientSchema: z.ZodObject<{
     firstName: z.ZodOptional<z.ZodString>;
     lastName: z.ZodOptional<z.ZodString>;
-    dateOfBirth: z.ZodOptional<z.ZodEffects<z.ZodString, string, string>>;
+    age: z.ZodOptional<z.ZodUnion<[z.ZodNumber, z.ZodString]>>;
+    dateOfBirth: z.ZodUnion<[z.ZodOptional<z.ZodEffects<z.ZodString, string, string>>, z.ZodLiteral<"">]>;
     gender: z.ZodOptional<z.ZodString>;
     bloodGroup: z.ZodOptional<z.ZodString>;
     address: z.ZodOptional<z.ZodString>;
@@ -68,6 +72,7 @@ export declare const updatePatientSchema: z.ZodObject<{
     firstName?: string | undefined;
     lastName?: string | undefined;
     phone?: string | undefined;
+    age?: string | number | undefined;
     dateOfBirth?: string | undefined;
     gender?: string | undefined;
     bloodGroup?: string | undefined;
@@ -83,6 +88,7 @@ export declare const updatePatientSchema: z.ZodObject<{
     firstName?: string | undefined;
     lastName?: string | undefined;
     phone?: string | undefined;
+    age?: string | number | undefined;
     dateOfBirth?: string | undefined;
     gender?: string | undefined;
     bloodGroup?: string | undefined;

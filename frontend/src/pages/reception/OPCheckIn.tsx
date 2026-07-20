@@ -30,9 +30,13 @@ const BLOOD_GROUPS = [
   { value: 'AB-', label: 'AB-' },
 ];
 
-const calculateAge = (dob: string) => {
+const calculateAge = (dob?: string, ageVal?: any) => {
+  if (ageVal !== undefined && ageVal !== null && ageVal !== '' && ageVal !== 0) {
+    return `${ageVal} Years`;
+  }
   if (!dob) return '—';
   const birthDate = new Date(dob);
+  if (isNaN(birthDate.getTime())) return '—';
   const today = new Date();
   let years = today.getFullYear() - birthDate.getFullYear();
   let months = today.getMonth() - birthDate.getMonth();
@@ -40,7 +44,8 @@ const calculateAge = (dob: string) => {
     years--;
     months += 12;
   }
-  return `${years} years ${months} months`;
+  if (years < 0) return '—';
+  return `${years} Years`;
 };
 
 const numberToWords = (num: number) => {
@@ -108,7 +113,7 @@ const OPCheckIn: React.FC = () => {
   // Quick Registration Modal states
   const [showRegisterModal, setShowRegisterModal] = useState(false);
   const [regForm, setRegForm] = useState({
-    firstName: '', lastName: '', dateOfBirth: '', gender: 'Male',
+    firstName: '', lastName: '', age: '', gender: 'Male',
     bloodGroup: '', address: '', phone: '', email: '',
     emergencyContactName: '', emergencyContactPhone: '',
     insuranceProvider: '', insurancePolicyNumber: '', allergies: ''
@@ -225,7 +230,7 @@ const OPCheckIn: React.FC = () => {
         setShowRegisterModal(false);
         // Reset reg form
         setRegForm({
-          firstName: '', lastName: '', dateOfBirth: '', gender: 'Male',
+          firstName: '', lastName: '', age: '', gender: 'Male',
           bloodGroup: '', address: '', phone: '', email: '',
           emergencyContactName: '', emergencyContactPhone: '',
           insuranceProvider: '', insurancePolicyNumber: '', allergies: ''
@@ -933,10 +938,13 @@ const OPCheckIn: React.FC = () => {
 
             <div className="form-row">
               <Input 
-                label="Date of Birth *" 
-                type="date" 
-                value={regForm.dateOfBirth} 
-                onChange={e => setRegForm({ ...regForm, dateOfBirth: e.target.value })} 
+                label="Age (Years) *" 
+                type="number" 
+                min="0"
+                max="120"
+                placeholder="e.g. 35"
+                value={(regForm as any).age || ''} 
+                onChange={e => setRegForm({ ...regForm, age: e.target.value } as any)} 
                 required 
               />
               <Select 

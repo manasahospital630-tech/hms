@@ -168,20 +168,25 @@ export const ServiceCatalog: React.FC = () => {
           </div>
           <div class="divider-thick" style="border-bottom: 2.5px solid #0f172a; margin: 12px 0 20px 0;"></div>`;
 
-      const getAgeStr = (birthDateStr: string): string => {
+      const getAgeStr = (birthDateStr?: string, ageVal?: any): string => {
+        if (ageVal !== undefined && ageVal !== null && ageVal !== '' && ageVal !== 0) {
+          return `${ageVal} Years`;
+        }
         if (!birthDateStr) return '—';
         const birth = new Date(birthDateStr);
         const today = new Date();
+        if (isNaN(birth.getTime())) return '—';
         let years = today.getFullYear() - birth.getFullYear();
         let months = today.getMonth() - birth.getMonth();
         if (months < 0 || (months === 0 && today.getDate() < birth.getDate())) {
           years--;
           months += 12;
         }
+        if (years < 0) return '—';
         return `${years} Years`;
       };
 
-      const ageStr = getAgeStr(item.patient_birth_date);
+      const ageStr = getAgeStr(item.patient_birth_date, item.patient_age || item.age);
       const dateObj = new Date(item.created_at);
       const pad = (n: number) => n.toString().padStart(2, '0');
       const formattedDate = `${pad(dateObj.getDate())}-${pad(dateObj.getMonth() + 1)}-${dateObj.getFullYear()} ${pad(dateObj.getHours())}:${pad(dateObj.getMinutes())} ${dateObj.getHours() >= 12 ? 'PM' : 'AM'}`;

@@ -23,6 +23,46 @@ const InvoiceGenerator: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
 
+  // Quick Patient Registration Modal State
+  const [patientModalOpen, setPatientModalOpen] = useState(false);
+  const [regForm, setRegForm] = useState({
+    firstName: '',
+    lastName: '',
+    age: '',
+    gender: 'Male',
+    phone: '',
+    bloodGroup: '',
+    address: ''
+  });
+  const [regLoading, setRegLoading] = useState(false);
+  const [regError, setRegError] = useState('');
+
+  const handleQuickPatientSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegLoading(true);
+    setRegError('');
+    try {
+      const res = await api.post('/patients', regForm);
+      if (res.data.success && res.data.data) {
+        setPatient(res.data.data);
+        setPatientModalOpen(false);
+        setRegForm({
+          firstName: '',
+          lastName: '',
+          age: '',
+          gender: 'Male',
+          phone: '',
+          bloodGroup: '',
+          address: ''
+        });
+      }
+    } catch (err: any) {
+      setRegError(err.response?.data?.error || 'Failed to register patient.');
+    } finally {
+      setRegLoading(false);
+    }
+  };
+
   // Manage Line Items States
   const [categories, setCategories] = useState<any[]>([]);
   const [itemSearch, setItemSearch] = useState('');
@@ -814,14 +854,39 @@ const InvoiceGenerator: React.FC = () => {
       {activeTab === 'generator' ? (
         <>
           <div className="card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', padding: '20px', borderRadius: '12px', marginBottom: '24px' }}>
-            <div className="form-section-title" style={{ fontWeight: 700, marginBottom: '12px' }}>Patient Selection</div>
-            <PatientSearchBar onSelect={setPatient} />
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+              <div className="form-section-title" style={{ fontWeight: 700, margin: 0 }}>Patient Selection</div>
+              <Button 
+                variant="secondary" 
+                size="sm" 
+                icon={<Plus size={14} />} 
+                onClick={() => setPatientModalOpen(true)}
+              >
+                Create New Patient
+              </Button>
+            </div>
+            <PatientSearchBar 
+              onSelect={setPatient} 
+              showRegisterOption={true} 
+              onRegisterClick={() => setPatientModalOpen(true)} 
+            />
             {patient && (
-              <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', padding: '12px', borderRadius: '8px', marginTop: '12px', fontWeight: 600 }}>
-                {patient.first_name} {patient.last_name} ({patient.medical_record_number}) 
-                <span style={{ fontSize: '11px', marginLeft: '10px', padding: '2px 8px', borderRadius: '50px', background: patient.is_inpatient ? '#eff6ff' : '#ecfdf5', color: patient.is_inpatient ? '#1d4ed8' : '#047857' }}>
-                  {patient.is_inpatient ? 'Inpatient (IP)' : 'Outpatient (OP)'}
-                </span>
+              <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', padding: '12px', borderRadius: '8px', marginTop: '12px', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  {patient.first_name} {patient.last_name} ({patient.medical_record_number}) 
+                  {patient.age && <span style={{ marginLeft: '8px', color: 'var(--text-secondary)', fontSize: '13px' }}>| Age: {patient.age} yrs</span>}
+                  <span style={{ fontSize: '11px', marginLeft: '10px', padding: '2px 8px', borderRadius: '50px', background: patient.is_inpatient ? '#eff6ff' : '#ecfdf5', color: patient.is_inpatient ? '#1d4ed8' : '#047857' }}>
+                    {patient.is_inpatient ? 'Inpatient (IP)' : 'Outpatient (OP)'}
+                  </span>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={() => setPatient(null)} 
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--accent-danger)' }}
+                  title="Remove selected patient"
+                >
+                  <X size={16} />
+                </button>
               </div>
             )}
           </div>
@@ -1316,6 +1381,74 @@ const InvoiceGenerator: React.FC = () => {
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
                   <Button variant="ghost" type="button" onClick={() => setServiceModalOpen(false)}>Cancel</Button>
                   <Button variant="primary" type="submit">Save Line Item</Button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Quick Patient Registration Modal */}
+      {patientModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '12px', width: '100%', maxWidth: '480px', padding: '24px', position: 'relative' }}>
+            <button onClick={() => setPatientModalOpen(false)} style={{ position: 'absolute', right: '16px', top: '16px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+              <X size={20} />
+            </button>
+            <h2 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 16px 0', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <Plus size={20} color="var(--accent-primary)" /> Create New Patient Record
+            </h2>
+            {regError && <div style={{ color: 'var(--accent-danger)', background: 'rgba(244,63,94,0.06)', border: '1px solid rgba(244,63,94,0.15)', padding: '10px', borderRadius: '6px', marginBottom: '16px', fontSize: '13px' }}>{regError}</div>}
+            <form onSubmit={handleQuickPatientSubmit}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>First Name *</label>
+                    <input type="text" className="input" value={regForm.firstName} onChange={e => setRegForm({ ...regForm, firstName: e.target.value })} required placeholder="First Name" style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Last Name *</label>
+                    <input type="text" className="input" value={regForm.lastName} onChange={e => setRegForm({ ...regForm, lastName: e.target.value })} required placeholder="Last Name" style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Age (Years) *</label>
+                    <input type="number" min="0" max="120" className="input" value={regForm.age} onChange={e => setRegForm({ ...regForm, age: e.target.value })} required placeholder="e.g. 35" style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Gender *</label>
+                    <select className="select" value={regForm.gender} onChange={e => setRegForm({ ...regForm, gender: e.target.value })} required style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+                      <option value="Male">Male</option>
+                      <option value="Female">Female</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Phone Number</label>
+                    <input type="text" className="input" value={regForm.phone} onChange={e => setRegForm({ ...regForm, phone: e.target.value })} placeholder="Mobile Number" style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Blood Group</label>
+                    <select className="select" value={regForm.bloodGroup} onChange={e => setRegForm({ ...regForm, bloodGroup: e.target.value })} style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+                      <option value="">Select</option>
+                      {['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(b => <option key={b} value={b}>{b}</option>)}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Address</label>
+                  <input type="text" className="input" value={regForm.address} onChange={e => setRegForm({ ...regForm, address: e.target.value })} placeholder="City, Locality" style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', borderTop: '1px solid var(--border-primary)', paddingTop: '16px' }}>
+                  <Button variant="secondary" type="button" onClick={() => setPatientModalOpen(false)}>Cancel</Button>
+                  <Button variant="primary" type="submit" loading={regLoading}>Register & Select Patient</Button>
                 </div>
               </div>
             </form>

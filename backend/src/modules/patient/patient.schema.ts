@@ -3,7 +3,8 @@ import { z } from 'zod';
 export const createPatientSchema = z.object({
   firstName: z.string().min(1, { message: 'First name is required' }).max(100).trim(),
   lastName: z.string().min(1, { message: 'Last name is required' }).max(100).trim(),
-  dateOfBirth: z.string().refine((val) => !isNaN(Date.parse(val)), { message: 'Valid date of birth is required (YYYY-MM-DD)' }),
+  age: z.union([z.number(), z.string()]).optional(),
+  dateOfBirth: z.string().refine((val) => !isNaN(Date.parse(val)), { message: 'Valid date of birth is required' }).optional().or(z.literal('')),
   gender: z.string().min(1, { message: 'Gender is required' }).max(20),
   bloodGroup: z.string().max(5).optional(),
   address: z.string().optional(),
@@ -21,7 +22,8 @@ export const createPatientSchema = z.object({
 export const updatePatientSchema = z.object({
   firstName: z.string().min(1).max(100).trim().optional(),
   lastName: z.string().min(1).max(100).trim().optional(),
-  dateOfBirth: z.string().refine((val) => !isNaN(Date.parse(val)), { message: 'Valid date is required' }).optional(),
+  age: z.union([z.number(), z.string()]).optional(),
+  dateOfBirth: z.string().refine((val) => !isNaN(Date.parse(val)), { message: 'Valid date is required' }).optional().or(z.literal('')),
   gender: z.string().max(20).optional(),
   bloodGroup: z.string().max(5).optional(),
   address: z.string().optional(),
