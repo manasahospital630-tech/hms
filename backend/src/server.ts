@@ -19,16 +19,24 @@ import adminRoutes from './modules/admin/admin.routes';
 import ipRoutes from './modules/inpatient/ip.routes';
 import diagnosticsRoutes from './modules/diagnostics/diagnostics.routes';
 
+// Global exception handlers to prevent 503 crashes on Hostinger / Phusion Passenger / PM2
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+});
+
+process.on('unhandledRejection', (reason) => {
+  console.error('Unhandled Rejection:', reason);
+});
+
 const app = express();
 
-
 // Security & parsing middleware
-app.use(helmet());
+app.use(helmet({ contentSecurityPolicy: false }));
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000'],
+  origin: true,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-is-human', 'x-path', 'x-method'],
 }));
 app.use(morgan('dev'));
 app.use(express.json({ limit: '10mb' }));

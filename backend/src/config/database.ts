@@ -5,12 +5,13 @@ const pool = new Pool({
   connectionString: env.DATABASE_URL,
   max: 20,
   idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000,
+  connectionTimeoutMillis: 10000,
+  ssl: env.DATABASE_URL.includes('sslmode=disable') ? false : { rejectUnauthorized: false }
 });
 
 pool.on('error', (err: Error) => {
-  console.error('Unexpected error on idle database client:', err);
-  process.exit(-1);
+  console.error('Unexpected error on idle database client:', err.message);
+  // Do NOT execute process.exit() here to keep server running on Hostinger/Cloud hosting
 });
 
 export const query = async <T extends QueryResultRow = any>(

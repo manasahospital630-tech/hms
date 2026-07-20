@@ -22,14 +22,21 @@ const billing_routes_1 = __importDefault(require("./modules/billing/billing.rout
 const admin_routes_1 = __importDefault(require("./modules/admin/admin.routes"));
 const ip_routes_1 = __importDefault(require("./modules/inpatient/ip.routes"));
 const diagnostics_routes_1 = __importDefault(require("./modules/diagnostics/diagnostics.routes"));
+// Global exception handlers to prevent 503 crashes on Hostinger / Phusion Passenger / PM2
+process.on('uncaughtException', (err) => {
+    console.error('Uncaught Exception:', err);
+});
+process.on('unhandledRejection', (reason) => {
+    console.error('Unhandled Rejection:', reason);
+});
 const app = (0, express_1.default)();
 // Security & parsing middleware
-app.use((0, helmet_1.default)());
+app.use((0, helmet_1.default)({ contentSecurityPolicy: false }));
 app.use((0, cors_1.default)({
-    origin: ['http://localhost:5173', 'http://localhost:3000'],
+    origin: true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-is-human', 'x-path', 'x-method'],
 }));
 app.use((0, morgan_1.default)('dev'));
 app.use(express_1.default.json({ limit: '10mb' }));

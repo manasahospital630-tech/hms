@@ -3,28 +3,18 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const envSchema = z.object({
-  PORT: z
-    .string()
-    .default('5000')
-    .transform((val) => parseInt(val, 10))
-    .pipe(z.number().int().positive()),
-  DATABASE_URL: z
-    .string()
-    .default(process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/hms_db'),
-  JWT_SECRET: z
-    .string()
-    .default(process.env.JWT_SECRET || 'super-secret-jwt-key-for-manasa-hms-production-2026'),
-  JWT_EXPIRES_IN: z.string().default('24h'),
-  NODE_ENV: z.enum(['development', 'production', 'test']).default('production'),
-});
+const defaultDb = 'postgresql://postgres:postgres@localhost:5432/hms_db';
+const defaultJwt = 'super-secret-jwt-key-for-manasa-hms-production-2026';
 
-const parsed = envSchema.safeParse(process.env);
-
-if (!parsed.success) {
-  console.error('❌ Invalid environment variables:');
-  console.error(parsed.error.flatten().fieldErrors);
-  process.exit(1);
+let rawPort: any = process.env.PORT || 5000;
+if (typeof rawPort === 'string' && !isNaN(parseInt(rawPort, 10)) && !rawPort.includes('/') && !rawPort.includes('\\')) {
+  rawPort = parseInt(rawPort, 10);
 }
 
-export const env = parsed.data;
+export const env = {
+  PORT: rawPort,
+  DATABASE_URL: process.env.DATABASE_URL || defaultDb,
+  JWT_SECRET: process.env.JWT_SECRET || defaultJwt,
+  JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '24h',
+  NODE_ENV: process.env.NODE_ENV || 'production',
+};

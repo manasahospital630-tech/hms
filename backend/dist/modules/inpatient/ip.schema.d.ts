@@ -67,8 +67,8 @@ export declare const bedSchema: z.ZodObject<{
     perDayCharge: z.ZodNumber;
     floor: z.ZodDefault<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    type: "Emergency" | "ICU" | "General_Ward" | "Semi_Private" | "Private_Suite";
     status: "Available" | "Occupied" | "Maintenance";
+    type: "Emergency" | "ICU" | "General_Ward" | "Semi_Private" | "Private_Suite";
     bedNumber: string;
     wardName: string;
     perDayCharge: number;

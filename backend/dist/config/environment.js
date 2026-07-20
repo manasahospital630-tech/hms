@@ -4,29 +4,19 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.env = void 0;
-const zod_1 = require("zod");
 const dotenv_1 = __importDefault(require("dotenv"));
 dotenv_1.default.config();
-const envSchema = zod_1.z.object({
-    PORT: zod_1.z
-        .string()
-        .default('5000')
-        .transform((val) => parseInt(val, 10))
-        .pipe(zod_1.z.number().int().positive()),
-    DATABASE_URL: zod_1.z
-        .string()
-        .default(process.env.DATABASE_URL || 'postgresql://postgres:postgres@localhost:5432/hms_db'),
-    JWT_SECRET: zod_1.z
-        .string()
-        .default(process.env.JWT_SECRET || 'super-secret-jwt-key-for-manasa-hms-production-2026'),
-    JWT_EXPIRES_IN: zod_1.z.string().default('24h'),
-    NODE_ENV: zod_1.z.enum(['development', 'production', 'test']).default('production'),
-});
-const parsed = envSchema.safeParse(process.env);
-if (!parsed.success) {
-    console.error('❌ Invalid environment variables:');
-    console.error(parsed.error.flatten().fieldErrors);
-    process.exit(1);
+const defaultDb = 'postgresql://postgres:postgres@localhost:5432/hms_db';
+const defaultJwt = 'super-secret-jwt-key-for-manasa-hms-production-2026';
+let rawPort = process.env.PORT || 5000;
+if (typeof rawPort === 'string' && !isNaN(parseInt(rawPort, 10)) && !rawPort.includes('/') && !rawPort.includes('\\')) {
+    rawPort = parseInt(rawPort, 10);
 }
-exports.env = parsed.data;
+exports.env = {
+    PORT: rawPort,
+    DATABASE_URL: process.env.DATABASE_URL || defaultDb,
+    JWT_SECRET: process.env.JWT_SECRET || defaultJwt,
+    JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '24h',
+    NODE_ENV: process.env.NODE_ENV || 'production',
+};
 //# sourceMappingURL=environment.js.map
