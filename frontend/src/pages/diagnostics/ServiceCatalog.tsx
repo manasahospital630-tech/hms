@@ -356,6 +356,15 @@ export const ServiceCatalog: React.FC = () => {
         'CLOTTING TIME': '5-11',
         'ABO BLOOD GROUP': 'A/B/AB/O',
         'RH FACTOR': 'Positive/Negative',
+        // 8 PDF batch 2 manual tests
+        'C-REACTIVE PROTEIN': '<5',
+        'CHIKUNGUNYA IGM': 'Negative',
+        'CHIKUNGUNYA IGG': 'Negative',
+        'D-DIMER': '<0.50',
+        'DENGUE IGM': 'Negative',
+        'DENGUE IGG': 'Negative',
+        'NS1 ANTIGEN': 'Negative',
+        'ESR': 'Male 0-15; Female 0-20',
         // RFT parameters
         'BLOOD UREA': '15–40',
         'BLOOD UREA NITROGEN': '7–20',
