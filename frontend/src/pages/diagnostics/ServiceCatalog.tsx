@@ -322,7 +322,30 @@ export const ServiceCatalog: React.FC = () => {
         'ALKALINE PHOSPHATASE': '44-147 U/L',
         'ERYTHROCYTE SEDIMENTATION RATE': '0-15 (Male)',
         'RANDOM BLOOD SUGAR': '70-140 mg/dL',
-        'FASTING BLOOD SUGAR': '70-99 mg/dL'
+        'FASTING BLOOD SUGAR': '70-99 mg/dL',
+        // RFT parameters
+        'BLOOD UREA': '15–40',
+        'SERUM CREATININE': '0.7–1.3',
+        'BUN': '7–20',
+        'URIC ACID': '3.4–7.0',
+        'SODIUM': '135–145',
+        'POTASSIUM': '3.5–5.1',
+        'CHLORIDE': '98–107',
+        'BICARBONATE': '22–29',
+        'CALCIUM': '8.5–10.5',
+        'PHOSPHORUS': '2.5–4.5',
+        'EGFR': '≥90',
+        // LFT parameters
+        'TOTAL BILIRUBIN': '0.3–1.2',
+        'DIRECT BILIRUBIN': '0.0–0.3',
+        'INDIRECT BILIRUBIN': '0.2–0.9',
+        'AST (SGOT)': '10–40',
+        'ALT (SGPT)': '7–56',
+        'ALP': '44–147',
+        'TOTAL PROTEIN': '6.4–8.3',
+        'ALBUMIN': '3.5–5.2',
+        'GLOBULIN': '2.0–3.5',
+        'A/G RATIO': '1.0–2.2'
       };
 
       const lr = item.lab_result || {};
