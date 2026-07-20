@@ -325,6 +325,7 @@ export const ServiceCatalog: React.FC = () => {
         'FASTING BLOOD SUGAR': '70-99 mg/dL',
         // RFT parameters
         'BLOOD UREA': '15–40',
+        'BLOOD UREA NITROGEN': '7–20',
         'SERUM CREATININE': '0.7–1.3',
         'BUN': '7–20',
         'URIC ACID': '3.4–7.0',
