@@ -2,19 +2,29 @@ import { z } from 'zod';
 
 export const createUserSchema = z.object({
   email: z.string().email().max(255).transform((val) => val.toLowerCase().trim()),
-  password: z.string().min(8).max(128),
+  password: z.string().min(6).max(128),
   firstName: z.string().min(1).max(100).trim(),
   lastName: z.string().min(1).max(100).trim(),
-  phone: z.string().max(20).optional(),
+  phone: z.string().max(20).optional().or(z.literal('')),
   role: z.enum(['Admin', 'Management', 'Doctor', 'Nurse', 'Receptionist', 'Pharmacist', 'Biller', 'Patient', 'Incharge']),
+  department: z.string().max(100).optional().or(z.literal('')),
+  specialization: z.string().max(100).optional().or(z.literal('')),
+  licenseNumber: z.string().max(100).optional().or(z.literal('')),
+  consultationFee: z.union([z.number(), z.string()]).optional(),
 });
 
 export const updateUserSchema = z.object({
+  email: z.string().email().max(255).optional().or(z.literal('')),
+  password: z.string().min(6).max(128).optional().or(z.literal('')),
   role: z.enum(['Admin', 'Management', 'Doctor', 'Nurse', 'Receptionist', 'Pharmacist', 'Biller', 'Patient', 'Incharge']).optional(),
   isActive: z.boolean().optional(),
   firstName: z.string().min(1).max(100).optional(),
   lastName: z.string().min(1).max(100).optional(),
-  phone: z.string().max(20).optional(),
+  phone: z.string().max(20).optional().or(z.literal('')),
+  department: z.string().max(100).optional().or(z.literal('')),
+  specialization: z.string().max(100).optional().or(z.literal('')),
+  licenseNumber: z.string().max(100).optional().or(z.literal('')),
+  consultationFee: z.union([z.number(), z.string()]).optional(),
 });
 
 export type CreateUserInput = z.infer<typeof createUserSchema>;

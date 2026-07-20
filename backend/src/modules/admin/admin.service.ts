@@ -7,21 +7,27 @@ import { uploadBase64Image } from '../../utils/s3Upload';
 const SALT_ROUNDS = 12;
 
 export const getAllUsers = async (options: { search?: string; limit?: number; offset?: number }) => {
-  let whereClause = "WHERE role != 'Patient'";
+  let whereClause = "WHERE u.role != 'Patient'";
   const params: any[] = [];
   if (options.search) {
     params.push(`%${options.search}%`);
-    whereClause += ` AND (first_name ILIKE $1 OR last_name ILIKE $1 OR email ILIKE $1)`;
+    whereClause += ` AND (u.first_name ILIKE $1 OR u.last_name ILIKE $1 OR u.email ILIKE $1 OR u.employee_department ILIKE $1 OR dp.department ILIKE $1)`;
   }
-  const countResult = await query(`SELECT COUNT(*) as total FROM users ${whereClause}`, params);
+  const countResult = await query(`SELECT COUNT(*) as total FROM users u LEFT JOIN doctor_profiles dp ON u.user_id = dp.doctor_id ${whereClause}`, params);
   const dataParams = [...params];
   let limitClause = '';
   if (options.limit) { dataParams.push(options.limit); limitClause += ` LIMIT $${dataParams.length}`; }
   if (options.offset) { dataParams.push(options.offset); limitClause += ` OFFSET $${dataParams.length}`; }
 
   const result = await query(
-    `SELECT user_id, email, first_name, last_name, phone, role, is_active, created_at, updated_at
-     FROM users ${whereClause} ORDER BY created_at DESC ${limitClause}`, dataParams
+    `SELECT u.user_id, u.email, u.first_name, u.last_name, u.phone, u.role, u.is_active, 
+            u.employee_department, u.employee_specialization, u.license_number,
+            COALESCE(dp.department, u.employee_department, '') as department,
+            COALESCE(dp.consultation_fee, 0.00) as consultation_fee,
+            u.created_at, u.updated_at
+     FROM users u
+     LEFT JOIN doctor_profiles dp ON u.user_id = dp.doctor_id
+     ${whereClause} ORDER BY u.created_at DESC ${limitClause}`, dataParams
   );
   return { users: result.rows, total: parseInt(countResult.rows[0].total, 10) };
 };
@@ -31,34 +37,113 @@ export const createUser = async (input: CreateUserInput) => {
   if (existing.rows.length > 0) throw new AppError('Email already exists.', 409);
 
   const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
+  const dept = input.department || '';
+  const spec = input.specialization || '';
+  const lic = input.licenseNumber || '';
+  const fee = input.consultationFee !== undefined && input.consultationFee !== null && input.consultationFee !== '' ? parseFloat(String(input.consultationFee)) : 0;
+
   const result = await query(
-    `INSERT INTO users (email, password_hash, first_name, last_name, phone, role)
-     VALUES ($1,$2,$3,$4,$5,$6) RETURNING user_id, email, first_name, last_name, phone, role, is_active, created_at`,
-    [input.email, passwordHash, input.firstName, input.lastName, input.phone || null, input.role]
+    `INSERT INTO users (email, password_hash, first_name, last_name, phone, role, employee_department, employee_specialization, license_number)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) 
+     RETURNING user_id, email, first_name, last_name, phone, role, is_active, employee_department, employee_specialization, license_number, created_at`,
+    [input.email, passwordHash, input.firstName, input.lastName, input.phone || null, input.role, dept || null, spec || null, lic || null]
   );
-  return result.rows[0];
+
+  const user = result.rows[0];
+
+  if (user && (user.role === 'Doctor' || dept || fee > 0)) {
+    await query(`
+      INSERT INTO doctor_profiles (doctor_id, department, consultation_fee, updated_at)
+      VALUES ($1, $2, $3, NOW())
+      ON CONFLICT (doctor_id) DO UPDATE
+      SET department = EXCLUDED.department,
+          consultation_fee = EXCLUDED.consultation_fee,
+          updated_at = NOW()
+    `, [user.user_id, dept || 'General', fee]);
+    user.department = dept || 'General';
+    user.consultation_fee = fee;
+  }
+
+  return user;
 };
 
 export const updateUser = async (id: string, input: UpdateUserInput) => {
   const fieldMap: Record<string, string> = {
-    role: 'role', isActive: 'is_active', firstName: 'first_name', lastName: 'last_name', phone: 'phone',
+    role: 'role',
+    isActive: 'is_active',
+    firstName: 'first_name',
+    lastName: 'last_name',
+    phone: 'phone',
+    email: 'email',
+    department: 'employee_department',
+    specialization: 'employee_specialization',
+    licenseNumber: 'license_number',
   };
   const fields: string[] = [];
   const values: any[] = [];
   let idx = 1;
-  for (const [key, col] of Object.entries(fieldMap)) {
-    if ((input as any)[key] !== undefined) { fields.push(`${col} = $${idx}`); values.push((input as any)[key]); idx++; }
-  }
-  if (fields.length === 0) throw new AppError('No fields to update.', 400);
-  fields.push(`updated_at = NOW()`);
-  values.push(id);
 
-  const result = await query(
-    `UPDATE users SET ${fields.join(', ')} WHERE user_id = $${idx}
-     RETURNING user_id, email, first_name, last_name, phone, role, is_active, updated_at`, values
+  for (const [key, col] of Object.entries(fieldMap)) {
+    if ((input as any)[key] !== undefined) {
+      fields.push(`${col} = $${idx}`);
+      values.push((input as any)[key]);
+      idx++;
+    }
+  }
+
+  if (input.password && input.password.trim().length >= 6) {
+    const passwordHash = await bcrypt.hash(input.password, SALT_ROUNDS);
+    fields.push(`password_hash = $${idx}`);
+    values.push(passwordHash);
+    idx++;
+  }
+
+  if (fields.length > 0) {
+    fields.push(`updated_at = NOW()`);
+    values.push(id);
+
+    const result = await query(
+      `UPDATE users SET ${fields.join(', ')} WHERE user_id = $${idx}
+       RETURNING user_id, email, first_name, last_name, phone, role, is_active, employee_department, employee_specialization, license_number, updated_at`, values
+    );
+    if (result.rows.length === 0) throw new AppError('User not found.', 404);
+  }
+
+  // Handle doctor profile sync
+  const userRes = await query(`SELECT user_id, role, employee_department FROM users WHERE user_id = $1`, [id]);
+  if (userRes.rows.length === 0) throw new AppError('User not found.', 404);
+  const user = userRes.rows[0];
+
+  const dept = input.department !== undefined ? input.department : (user.employee_department || '');
+  const fee = input.consultationFee !== undefined && input.consultationFee !== null && input.consultationFee !== '' ? parseFloat(String(input.consultationFee)) : null;
+
+  if (user.role === 'Doctor' || input.department !== undefined || fee !== null) {
+    const existingDp = await query(`SELECT consultation_fee FROM doctor_profiles WHERE doctor_id = $1`, [id]);
+    const currentFee = existingDp.rows.length > 0 ? parseFloat(existingDp.rows[0].consultation_fee) : 0;
+    const finalFee = fee !== null ? fee : currentFee;
+
+    await query(`
+      INSERT INTO doctor_profiles (doctor_id, department, consultation_fee, updated_at)
+      VALUES ($1, $2, $3, NOW())
+      ON CONFLICT (doctor_id) DO UPDATE
+      SET department = EXCLUDED.department,
+          consultation_fee = EXCLUDED.consultation_fee,
+          updated_at = NOW()
+    `, [id, dept || 'General', finalFee]);
+  }
+
+  const updatedRes = await query(
+    `SELECT u.user_id, u.email, u.first_name, u.last_name, u.phone, u.role, u.is_active, 
+            u.employee_department, u.employee_specialization, u.license_number,
+            COALESCE(dp.department, u.employee_department, '') as department,
+            COALESCE(dp.consultation_fee, 0.00) as consultation_fee,
+            u.created_at, u.updated_at
+     FROM users u
+     LEFT JOIN doctor_profiles dp ON u.user_id = dp.doctor_id
+     WHERE u.user_id = $1`, [id]
   );
-  if (result.rows.length === 0) throw new AppError('User not found.', 404);
-  return result.rows[0];
+
+  return updatedRes.rows[0];
 };
 
 export const getAuditLog = async (filters: { userId?: string; resourceType?: string; limit?: number; offset?: number }) => {
