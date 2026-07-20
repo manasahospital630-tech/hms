@@ -24,16 +24,6 @@ export const getQrSvgSync = (text: string, sizePx = 58): string => {
   }
 };
 
-export const getQrCodeHeaderSyncHtml = (verifyUrl: string, label = 'VERIFY REPORT'): string => {
-  const qrSvg = getQrSvgSync(verifyUrl, 58);
-  return `
-    <div class="qr-header-container" style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 80px; height: 80px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px; background: #fff; text-align: center; box-sizing: border-box; flex-shrink: 0; margin-left: 20px;">
-      ${qrSvg}
-      <span style="font-size: 6px; font-weight: bold; color: #64748b; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.2px;">${label}</span>
-    </div>
-  `;
-};
-
 export const getManasaEmblemSvgString = (sizePx = 70): string => {
   return `
     <div style="display: flex; align-items: center; justify-content: center; width: ${sizePx}px; height: ${sizePx}px;">
@@ -53,17 +43,42 @@ export const getManasaEmblemSvgString = (sizePx = 70): string => {
 };
 
 export const getHospitalLogoHtml = (logoUrlInput?: string | null, heightPx = 70): string => {
+  const fallbackSvg = getManasaEmblemSvgString(heightPx);
   if (logoUrlInput && typeof logoUrlInput === 'string') {
     const trimmed = logoUrlInput.trim();
-    if (trimmed.startsWith('data:image')) {
+    if (trimmed.startsWith('data:image') || (trimmed.startsWith('http') && !trimmed.includes('localhost'))) {
+      const cleanFallback = fallbackSvg.replace(/"/g, '&quot;').replace(/\n/g, '');
       return `
         <div style="display: flex; align-items: center; justify-content: flex-start;">
-          <img src="${trimmed}" alt="Logo" style="height: ${heightPx}px; max-width: 140px; object-fit: contain;" />
+          <img 
+            src="${trimmed}" 
+            alt="Logo" 
+            style="height: ${heightPx}px; max-width: 140px; object-fit: contain;" 
+            onerror="this.onerror=null; this.outerHTML='${cleanFallback}';"
+          />
         </div>
       `;
     }
   }
-  return getManasaEmblemSvgString(heightPx);
+  return fallbackSvg;
+};
+
+export const getQrCodeHeaderSyncHtml = (verifyUrl: string, s3QrUrl?: string, label = 'VERIFY REPORT'): string => {
+  const fallbackSvg = getQrSvgSync(verifyUrl, 58);
+  const cleanFallback = fallbackSvg.replace(/"/g, '&quot;').replace(/\n/g, '');
+  const qrSrc = s3QrUrl && s3QrUrl.startsWith('http') ? s3QrUrl : `https://pamobniywbuloarioxiu.supabase.co/storage/v1/object/public/logos/qr_report.png`;
+
+  return `
+    <div class="qr-header-container" style="display: flex; flex-direction: column; align-items: center; justify-content: center; width: 80px; height: 80px; border: 1px solid #cbd5e1; border-radius: 8px; padding: 4px; background: #fff; text-align: center; box-sizing: border-box; flex-shrink: 0; margin-left: 20px;">
+      <img 
+        src="${qrSrc}" 
+        alt="${label}" 
+        style="width: 58px; height: 58px; display: block;" 
+        onerror="this.onerror=null; this.outerHTML='${cleanFallback}';" 
+      />
+      <span style="font-size: 6px; font-weight: bold; color: #64748b; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.2px;">${label}</span>
+    </div>
+  `;
 };
 
 export const ManasaLogoSvg: React.FC<{ size?: number }> = ({ size = 70 }) => (

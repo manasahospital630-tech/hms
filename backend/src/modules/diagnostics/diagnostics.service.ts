@@ -1,5 +1,6 @@
 import { query } from '../../config/database';
 import { AppError } from '../../middleware/errorHandler';
+import { generateAndUploadQrCode } from '../../utils/s3Upload';
 
 // 1. Dashboard Statistics
 export const getDashboardStats = async () => {
@@ -235,7 +236,27 @@ export const getOrders = async () => {
     LEFT JOIN referral_doctors rd ON o.referral_id = rd.referral_id
     ORDER BY o.created_at DESC
   `);
-  return result.rows;
+
+  const frontendUrl = process.env.FRONTEND_URL || 'https://hms-simon518.vercel.app';
+
+  return result.rows.map((o) => {
+    if (o.items && Array.isArray(o.items)) {
+      o.items = o.items.map((item: any) => {
+        const cleanId = (item.item_id || 'report').replace(/[^a-zA-Z0-9_-]/g, '_');
+        const s3QrUrl = `https://pamobniywbuloarioxiu.supabase.co/storage/v1/object/public/logos/qr_${cleanId}.png`;
+        const verifyUrl = `${frontendUrl}/verify/reports/${item.item_id}`;
+
+        // Trigger S3 QR code upload asynchronously
+        generateAndUploadQrCode(verifyUrl, item.item_id).catch(() => {});
+
+        return {
+          ...item,
+          qr_code_url: s3QrUrl
+        };
+      });
+    }
+    return o;
+  });
 };
 
 export const createOrder = async (input: any) => {
@@ -597,5 +618,19 @@ export const getPublicReport = async (itemId: string) => {
     WHERE toi.item_id = $1 AND (toi.status = 'Completed' OR toi.status = 'Verified' OR toi.status = 'Resulted')
     LIMIT 1
   `, [itemId]);
-  return result.rows[0];
+
+  if (result.rows.length === 0) return null;
+
+  const item = result.rows[0];
+  const cleanId = (item.item_id || 'report').replace(/[^a-zA-Z0-9_-]/g, '_');
+  const s3QrUrl = `https://pamobniywbuloarioxiu.supabase.co/storage/v1/object/public/logos/qr_${cleanId}.png`;
+  const frontendUrl = process.env.FRONTEND_URL || 'https://hms-simon518.vercel.app';
+  const verifyUrl = `${frontendUrl}/verify/reports/${item.item_id}`;
+
+  generateAndUploadQrCode(verifyUrl, item.item_id).catch(() => {});
+
+  return {
+    ...item,
+    qr_code_url: s3QrUrl
+  };
 };
