@@ -424,6 +424,17 @@ export const ServiceCatalog: React.FC = () => {
         'CULTURE': 'No Growth',
         'SENSITIVITY': 'As applicable',
         'URINE ALBUMIN': 'Negative',
+        // 8 PDF batch 6 manual tests
+        'TROPONIN-T': '<14',
+        'TN-T': '<14',
+        'TROPONIN-I': '<34 (Male), <16 (Female)',
+        'TN-I': '<34 (Male), <16 (Female)',
+        'TOTAL TESTOSTERONE': 'Male:300-1000',
+        'TT': 'Male:300-1000',
+        'TSH': '0.27-4.20',
+        'THYROID STIMULATING HORMONE': '0.27-4.20',
+        'TOTAL T3': '0.8-2.0',
+        'TOTAL T4': '5.1-14.1',
         // RFT parameters
         'BLOOD UREA': '15–40',
         'BLOOD UREA NITROGEN': '7–20',
