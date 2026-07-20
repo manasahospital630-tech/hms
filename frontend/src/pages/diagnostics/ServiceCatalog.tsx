@@ -3,7 +3,7 @@ import { Beaker, Layers, Plus, Edit, Trash2, X, RefreshCw, Info, CheckCircle, Pr
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import api from '../../api/client';
-import { getHospitalLogoHtml, getQrCodeHeaderHtml } from '../../utils/logoHelper';
+import { getHospitalLogoHtml, getQrCodeHeaderSyncHtml } from '../../utils/logoHelper';
 
 export const ServiceCatalog: React.FC = () => {
   const [categories, setCategories] = useState<any[]>([]);
@@ -122,7 +122,7 @@ export const ServiceCatalog: React.FC = () => {
     return list;
   };
 
-  const handlePrintReport = async (item: any) => {
+  const handlePrintReport = (item: any) => {
     const isLab = item.category_name === 'Laboratory';
     const hospitalName = hospitalSettings?.hospital_name || 'Manasa Hospital';
     const hospitalAddress = hospitalSettings?.hospital_address || 'Market Lane, Narsingi, Gandipet Mandal Rangareddy Dist - 500089.';
@@ -135,7 +135,7 @@ export const ServiceCatalog: React.FC = () => {
 
     const logoHtml = getHospitalLogoHtml(logoUrl, 70);
     const reportUrl = `${window.location.origin}/verify/reports/${item.item_id}`;
-    const qrCodeHeaderHtml = await getQrCodeHeaderHtml(reportUrl, 'VERIFY REPORT');
+    const qrCodeHeaderHtml = getQrCodeHeaderSyncHtml(reportUrl, 'VERIFY REPORT');
 
     const printWindow = window.open('', '_blank');
     if (printWindow) {
