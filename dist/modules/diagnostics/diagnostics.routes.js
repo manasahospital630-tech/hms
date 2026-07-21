@@ -47,6 +47,8 @@ router.put('/services/:id', dController.editService);
 router.delete('/services/:id', dController.deleteService);
 router.get('/packages', dController.getPackages);
 router.post('/packages', dController.addPackage);
+router.put('/packages/:id', dController.editPackage);
+router.delete('/packages/:id', dController.deletePackage);
 router.get('/orders', dController.getOrders);
 router.post('/orders', dController.createOrder);
 router.post('/orders/:id/pay', dController.payOrder);

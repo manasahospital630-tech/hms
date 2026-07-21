@@ -194,7 +194,29 @@ export const deleteService = async (serviceId: string) => {
 // 4. Packages
 export const getPackages = async () => {
   const result = await query(`
-    SELECT dp.*, COALESCE(json_agg(s.*) FILTER (WHERE s.service_id IS NOT NULL), '[]') as services
+    SELECT dp.*, 
+           COALESCE(
+             json_agg(
+               json_build_object(
+                 'service_id', s.service_id,
+                 'name', s.name,
+                 'service_code', s.service_code,
+                 'price', s.price,
+                 'sample_required', s.sample_required,
+                 'normal_range', s.normal_range,
+                 'parameters', (
+                   SELECT json_agg(json_build_object(
+                     'parameter_id', dp_param.parameter_id,
+                     'name', dp_param.name,
+                     'unit', dp_param.unit,
+                     'reference_range', dp_param.reference_range
+                   ) ORDER BY dp_param.display_order)
+                   FROM diagnostic_parameters dp_param
+                   WHERE dp_param.service_id = s.service_id
+                 )
+               )
+             ) FILTER (WHERE s.service_id IS NOT NULL), '[]'
+           ) as services
     FROM diagnostic_packages dp
     LEFT JOIN diagnostic_package_items dpi ON dp.package_id = dpi.package_id
     LEFT JOIN diagnostic_services s ON dpi.service_id = s.service_id
@@ -211,7 +233,7 @@ export const addPackage = async (input: any) => {
       INSERT INTO diagnostic_packages (name, price, discount, validity_days, is_active)
       VALUES ($1, $2, $3, $4, true)
       RETURNING *
-    `, [input.name, input.price, input.discount, input.validityDays]);
+    `, [input.name, input.price, input.discount || 0, input.validityDays || 365]);
 
     const packageId = pkgRes.rows[0].package_id;
 
@@ -224,6 +246,45 @@ export const addPackage = async (input: any) => {
 
     await query('COMMIT');
     return pkgRes.rows[0];
+  } catch (error) {
+    await query('ROLLBACK');
+    throw error;
+  }
+};
+
+export const editPackage = async (packageId: string, input: any) => {
+  await query('BEGIN');
+  try {
+    await query(`
+      UPDATE diagnostic_packages 
+      SET name = $1, price = $2, discount = $3, validity_days = $4
+      WHERE package_id = $5
+    `, [input.name, input.price, input.discount || 0, input.validityDays || 365, packageId]);
+
+    await query('DELETE FROM diagnostic_package_items WHERE package_id = $1', [packageId]);
+
+    for (const serviceId of input.services) {
+      await query(`
+        INSERT INTO diagnostic_package_items (package_id, service_id)
+        VALUES ($1, $2)
+      `, [packageId, serviceId]);
+    }
+
+    await query('COMMIT');
+    return { success: true };
+  } catch (error) {
+    await query('ROLLBACK');
+    throw error;
+  }
+};
+
+export const deletePackage = async (packageId: string) => {
+  await query('BEGIN');
+  try {
+    await query('DELETE FROM diagnostic_package_items WHERE package_id = $1', [packageId]);
+    await query('DELETE FROM diagnostic_packages WHERE package_id = $1', [packageId]);
+    await query('COMMIT');
+    return { success: true };
   } catch (error) {
     await query('ROLLBACK');
     throw error;
@@ -243,6 +304,8 @@ export const getOrders = async () => {
              SELECT json_agg(json_build_object(
                'item_id', toi.item_id,
                'service_id', toi.service_id,
+               'package_id', toi.package_id,
+               'package_name', (SELECT dp.name FROM diagnostic_packages dp WHERE dp.package_id = toi.package_id),
                'service_name', ds.name,
                'service_code', ds.service_code,
                'category_name', c.name,

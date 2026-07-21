@@ -97,39 +97,75 @@ export const Workspaces: React.FC = () => {
 
     try {
       if (activeWorkspace === 'collection') {
-        const payload = {
-          itemId: actionItem.item_id,
-          containerType,
-          barcode,
-          remarks: 'Sample collection logged successfully'
-        };
-        await api.post('/diagnostics/samples/collect', payload);
-      } else if (activeWorkspace === 'lab') {
-        const hasParams = actionItem.parameters && Array.isArray(actionItem.parameters) && actionItem.parameters.length > 0;
-        let submitActualResult = actualResult;
-        let submitParams = undefined;
-
-        if (hasParams) {
-          submitParams = actionItem.parameters.map((p: any) => ({
-            parameterId: p.parameter_id,
-            name: p.name,
-            unit: p.unit,
-            referenceRange: p.reference_range,
-            actualValue: paramValues[p.parameter_id] || ''
-          }));
-          submitActualResult = submitParams.map((p: any) => `${p.name}: ${p.actualValue} ${p.unit || ''}`).join(', ');
+        const itemsToCollect = getPackageGroupItems(actionItem);
+        for (const targetItem of itemsToCollect) {
+          const payload = {
+            itemId: targetItem.item_id,
+            containerType,
+            barcode,
+            remarks: 'Sample collection logged successfully'
+          };
+          await api.post('/diagnostics/samples/collect', payload);
         }
+      } else if (activeWorkspace === 'lab') {
+        if (actionItem.package_id) {
+          const groupItems = getPackageGroupItems(actionItem);
+          for (const targetItem of groupItems) {
+            const hasParams = targetItem.parameters && Array.isArray(targetItem.parameters) && targetItem.parameters.length > 0;
+            let submitActualResult = '';
+            let submitParams = undefined;
 
-        const payload = {
-          itemId: actionItem.item_id,
-          actualResult: submitActualResult,
-          referenceRange: actionItem.normal_range,
-          status: labStatus,
-          machineId: selectedMachineId || null,
-          remarks: 'Lab values entered',
-          parameters: submitParams
-        };
-        await api.post('/diagnostics/results/submit?type=lab', payload);
+            if (hasParams) {
+              submitParams = targetItem.parameters.map((p: any) => ({
+                parameterId: p.parameter_id,
+                name: p.name,
+                unit: p.unit,
+                referenceRange: p.reference_range,
+                actualValue: paramValues[p.parameter_id] || ''
+              }));
+              submitActualResult = submitParams.map((p: any) => `${p.name}: ${p.actualValue} ${p.unit || ''}`).join(', ');
+            } else {
+              submitActualResult = paramValues[`svc-${targetItem.item_id}`] || 'Normal';
+            }
+
+            const payload = {
+              itemId: targetItem.item_id,
+              actualResult: submitActualResult,
+              referenceRange: targetItem.normal_range || 'Normal',
+              status: labStatus,
+              machineId: selectedMachineId || null,
+              remarks: 'Grouped profile lab values entered',
+              parameters: submitParams
+            };
+            await api.post('/diagnostics/results/submit?type=lab', payload);
+          }
+        } else {
+          const hasParams = actionItem.parameters && Array.isArray(actionItem.parameters) && actionItem.parameters.length > 0;
+          let submitActualResult = actualResult;
+          let submitParams = undefined;
+
+          if (hasParams) {
+            submitParams = actionItem.parameters.map((p: any) => ({
+              parameterId: p.parameter_id,
+              name: p.name,
+              unit: p.unit,
+              referenceRange: p.reference_range,
+              actualValue: paramValues[p.parameter_id] || ''
+            }));
+            submitActualResult = submitParams.map((p: any) => `${p.name}: ${p.actualValue} ${p.unit || ''}`).join(', ');
+          }
+
+          const payload = {
+            itemId: actionItem.item_id,
+            actualResult: submitActualResult,
+            referenceRange: actionItem.normal_range,
+            status: labStatus,
+            machineId: selectedMachineId || null,
+            remarks: 'Lab values entered',
+            parameters: submitParams
+          };
+          await api.post('/diagnostics/results/submit?type=lab', payload);
+        }
       } else if (activeWorkspace === 'imaging') {
         const isXray = actionItem.category_name === 'Radiology';
         const isUsg = actionItem.category_name === 'Ultrasound';
@@ -179,13 +215,16 @@ export const Workspaces: React.FC = () => {
           await api.post('/diagnostics/results/submit?type=ecg', payload);
         }
       } else if (activeWorkspace === 'verification') {
-        const payload = {
-          itemId: actionItem.item_id,
-          status: verifyStatus,
-          notes: verifyNotes,
-          digitalSignatureUsed: 'Dr. Pathologist Digital Approval Stamp'
-        };
-        await api.post('/diagnostics/results/verify', payload);
+        const itemsToVerify = getPackageGroupItems(actionItem);
+        for (const targetItem of itemsToVerify) {
+          const payload = {
+            itemId: targetItem.item_id,
+            status: verifyStatus,
+            notes: verifyNotes,
+            digitalSignatureUsed: 'Dr. Pathologist Digital Approval Stamp'
+          };
+          await api.post('/diagnostics/results/verify', payload);
+        }
       }
 
       setActionModalOpen(false);
@@ -212,12 +251,14 @@ export const Workspaces: React.FC = () => {
         if (matchesWorkspace) {
           items.push({
             ...item,
+            order_id: o.order_id,
             patient_name: `${o.first_name} ${o.last_name}`,
             patient_mrn: o.medical_record_number,
             order_number: o.order_number,
             priority: o.priority,
             clinical_notes: o.clinical_notes,
-            diagnosis: o.diagnosis
+            diagnosis: o.diagnosis,
+            all_order_items: o.items || []
           });
         }
       });
@@ -226,6 +267,12 @@ export const Workspaces: React.FC = () => {
   };
 
   const workspaceItems = getWorkspaceItems();
+
+  // Helper to get all items belonging to the same package in an order
+  const getPackageGroupItems = (item: any) => {
+    if (!item || !item.package_id || !item.all_order_items) return [item];
+    return item.all_order_items.filter((i: any) => i.package_id === item.package_id);
+  };
 
   return (
     <div style={{ color: 'var(--text-primary)' }}>
@@ -317,7 +364,14 @@ export const Workspaces: React.FC = () => {
                     </td>
                     <td style={{ padding: '12px 16px' }}>
                       <div style={{ fontWeight: 600 }}>{item.service_name}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Code: {item.service_code} ({item.category_name})</div>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Code: {item.service_code} ({item.category_name})</span>
+                        {item.package_name && (
+                          <span style={{ fontSize: '10px', background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                            Profile: {item.package_name}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td style={{ padding: '12px 16px' }}>
                       <span style={{ 
@@ -333,8 +387,8 @@ export const Workspaces: React.FC = () => {
                     </td>
                     <td style={{ padding: '12px 16px', textAlign: 'right' }}>
                       <Button variant="primary" size="sm" onClick={() => openActionModal(item)}>
-                        {activeWorkspace === 'collection' && 'Collect Sample'}
-                        {activeWorkspace === 'lab' && 'Enter Results'}
+                        {activeWorkspace === 'collection' && (item.package_id ? 'Collect Profile Samples' : 'Collect Sample')}
+                        {activeWorkspace === 'lab' && (item.package_id ? 'Enter Group Results' : 'Enter Results')}
                         {activeWorkspace === 'imaging' && 'Perform & Document'}
                         {activeWorkspace === 'verification' && 'Review & Verify'}
                       </Button>
@@ -350,17 +404,20 @@ export const Workspaces: React.FC = () => {
       {/* Action Dialog Modal */}
       {actionModalOpen && actionItem && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '12px', width: '100%', maxWidth: '520px', padding: '24px', position: 'relative' }}>
+          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '12px', width: '100%', maxWidth: actionItem.package_id ? '640px' : '520px', padding: '24px', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
             <button onClick={() => setActionModalOpen(false)} style={{ position: 'absolute', right: '16px', top: '16px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
             
             <h2 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 4px 0', color: 'var(--text-primary)' }}>
-              {activeWorkspace === 'collection' && 'Phlebotomy Sample Collection'}
-              {activeWorkspace === 'lab' && 'Hematology & Biochemistry Entry'}
+              {activeWorkspace === 'collection' && (actionItem.package_id ? 'Phlebotomy Profile Sample Collection' : 'Phlebotomy Sample Collection')}
+              {activeWorkspace === 'lab' && (actionItem.package_id ? 'Grouped Profile Lab Result Entry' : 'Hematology & Biochemistry Entry')}
               {activeWorkspace === 'imaging' && 'Diagnostic Imaging Documentation'}
               {activeWorkspace === 'verification' && 'Sign-Off Report Verification'}
             </h2>
             <p style={{ margin: '0 0 16px 0', fontSize: '12px', color: 'var(--text-secondary)' }}>
               Patient: <strong>{actionItem.patient_name}</strong> | Test: <strong>{actionItem.service_name}</strong>
+              {actionItem.package_name && (
+                <span style={{ color: '#3b82f6', fontWeight: 600, marginLeft: '6px' }}>[Package: {actionItem.package_name}]</span>
+              )}
             </p>
 
             {actionError && (
@@ -375,6 +432,21 @@ export const Workspaces: React.FC = () => {
                 {/* 1. Sample Collection Desk Form */}
                 {activeWorkspace === 'collection' && (
                   <>
+                    {actionItem.package_id && (
+                      <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', borderRadius: '8px', padding: '10px', fontSize: '12px' }}>
+                        <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px' }}>
+                          Profile Grouped Tests ({getPackageGroupItems(actionItem).length} Tests):
+                        </div>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                          {getPackageGroupItems(actionItem).map((pItem: any) => (
+                            <span key={pItem.item_id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', padding: '2px 8px', borderRadius: '4px', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: 500 }}>
+                              ✓ {pItem.service_name}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <div>
                       <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Container Tube Type *</label>
                       <select className="select" value={containerType} onChange={(e) => setContainerType(e.target.value)} required style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
@@ -395,7 +467,56 @@ export const Workspaces: React.FC = () => {
                 {/* 2. Lab Results Entry Form */}
                 {activeWorkspace === 'lab' && (
                   <>
-                    {actionItem.parameters && Array.isArray(actionItem.parameters) && actionItem.parameters.length > 0 ? (
+                    {actionItem.package_id ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        <div style={{ fontSize: '12px', color: 'var(--accent-primary)', fontWeight: 700 }}>
+                          Grouped Package Parameters ({actionItem.package_name}):
+                        </div>
+                        {getPackageGroupItems(actionItem).map((groupSvc: any) => (
+                          <div key={groupSvc.item_id} style={{ border: '1px solid var(--border-primary)', borderRadius: '8px', padding: '12px', background: 'var(--bg-primary)' }}>
+                            <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px', borderBottom: '1px solid var(--border-primary)', paddingBottom: '4px' }}>
+                              {groupSvc.service_name} ({groupSvc.service_code})
+                            </div>
+                            {groupSvc.parameters && groupSvc.parameters.length > 0 ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1.2fr', gap: '8px', fontWeight: 'bold', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                  <span>PARAMETER</span>
+                                  <span>VALUE *</span>
+                                  <span>UNIT</span>
+                                  <span>REF INTERVAL</span>
+                                </div>
+                                {groupSvc.parameters.map((p: any) => (
+                                  <div key={p.parameter_id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1.2fr', gap: '8px', alignItems: 'center', fontSize: '12px' }}>
+                                    <span style={{ fontWeight: 600 }}>{p.name}</span>
+                                    <input 
+                                      type="text" 
+                                      className="input" 
+                                      required
+                                      value={paramValues[p.parameter_id] || ''} 
+                                      onChange={(e) => setParamValues({ ...paramValues, [p.parameter_id]: e.target.value })}
+                                      style={{ height: '28px', padding: '4px 8px', fontSize: '12px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)' }}
+                                    />
+                                    <span style={{ color: 'var(--text-muted)' }}>{p.unit || '-'}</span>
+                                    <span style={{ color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.reference_range || '-'}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div>
+                                <input 
+                                  type="text" 
+                                  className="input" 
+                                  placeholder="Enter result value summary..."
+                                  value={paramValues[`svc-${groupSvc.item_id}`] || ''} 
+                                  onChange={(e) => setParamValues({ ...paramValues, [`svc-${groupSvc.item_id}`]: e.target.value })}
+                                  style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', fontSize: '12px' }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : actionItem.parameters && Array.isArray(actionItem.parameters) && actionItem.parameters.length > 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '280px', overflowY: 'auto', border: '1px solid var(--border-primary)', borderRadius: '8px', padding: '12px', background: 'var(--bg-primary)' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1.2fr', gap: '8px', fontWeight: 'bold', fontSize: '11px', borderBottom: '1px solid var(--border-primary)', paddingBottom: '6px', color: 'var(--text-secondary)' }}>
                           <span>PARAMETER</span>
@@ -443,11 +564,6 @@ export const Workspaces: React.FC = () => {
                         </select>
                       </div>
                     </div>
-                    {(!actionItem.parameters || actionItem.parameters.length === 0) && (
-                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)', background: 'var(--bg-primary)', padding: '8px', borderRadius: '6px' }}>
-                        <strong>Reference Ranges:</strong> {actionItem.normal_range || 'No reference range defined.'}
-                      </div>
-                    )}
                   </>
                 )}
 

@@ -94,7 +94,33 @@ export const createInvoice = async (input: CreateInvoiceInput) => {
         const orderId = orderRes.rows[0].order_id;
 
         for (const diagItem of diagnosticItems) {
-          const descLower = diagItem.description.toLowerCase();
+          const descClean = diagItem.description.trim();
+
+          // Check if item is a grouped Profile / Package
+          const pkgRes = await client.query(
+            `SELECT package_id FROM diagnostic_packages 
+             WHERE LOWER(name) = LOWER($1) OR LOWER(name) LIKE '%' || LOWER($1) || '%'
+             LIMIT 1`,
+            [descClean]
+          );
+
+          if (pkgRes.rows.length > 0) {
+            const packageId = pkgRes.rows[0].package_id;
+            const pServices = await client.query(
+              `SELECT service_id FROM diagnostic_package_items WHERE package_id = $1`,
+              [packageId]
+            );
+            for (const ps of pServices.rows) {
+              await client.query(
+                `INSERT INTO test_order_items (order_id, service_id, package_id, status)
+                 VALUES ($1, $2, $3, 'Ordered')`,
+                [orderId, ps.service_id, packageId]
+              );
+            }
+            continue;
+          }
+
+          const descLower = descClean.toLowerCase();
           let targetCategoryName = null;
 
           if (descLower.includes('xray') || descLower.includes('x-ray') || descLower.includes('x ray') || descLower.includes('radiology')) {
@@ -114,7 +140,7 @@ export const createInvoice = async (input: CreateInvoiceInput) => {
                WHERE (LOWER(name) = LOWER($1) OR LOWER(service_code) = LOWER($1))
                AND category_id = (SELECT category_id FROM diagnostic_categories WHERE name = $2 LIMIT 1)
                LIMIT 1`,
-              [diagItem.description.trim(), targetCategoryName]
+              [descClean, targetCategoryName]
             );
 
             if (servRes.rows.length === 0) {
@@ -123,7 +149,7 @@ export const createInvoice = async (input: CreateInvoiceInput) => {
                  WHERE (LOWER(name) LIKE '%' || LOWER($1) || '%' OR LOWER(service_code) LIKE '%' || LOWER($1) || '%')
                  AND category_id = (SELECT category_id FROM diagnostic_categories WHERE name = $2 LIMIT 1)
                  LIMIT 1`,
-                [diagItem.description.trim(), targetCategoryName]
+                [descClean, targetCategoryName]
               );
             }
 
@@ -149,7 +175,7 @@ export const createInvoice = async (input: CreateInvoiceInput) => {
               `SELECT service_id FROM diagnostic_services 
                WHERE LOWER(name) = LOWER($1) OR LOWER(service_code) = LOWER($1) 
                LIMIT 1`,
-              [diagItem.description.trim()]
+              [descClean]
             );
             
             if (servRes.rows.length === 0) {
@@ -157,7 +183,7 @@ export const createInvoice = async (input: CreateInvoiceInput) => {
                 `SELECT service_id FROM diagnostic_services 
                  WHERE LOWER(name) LIKE '%' || LOWER($1) || '%' OR LOWER(service_code) LIKE '%' || LOWER($1) || '%'
                  LIMIT 1`,
-                [diagItem.description.trim()]
+                [descClean]
               );
             }
 

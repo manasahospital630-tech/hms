@@ -7,6 +7,8 @@ export declare const editService: (req: Request, res: Response, next: NextFuncti
 export declare const deleteService: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 export declare const getPackages: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 export declare const addPackage: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+export declare const editPackage: (req: Request, res: Response, next: NextFunction) => Promise<void>;
+export declare const deletePackage: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 export declare const getOrders: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 export declare const createOrder: (req: Request, res: Response, next: NextFunction) => Promise<void>;
 export declare const payOrder: (req: Request, res: Response, next: NextFunction) => Promise<void>;

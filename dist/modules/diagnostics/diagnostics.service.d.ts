@@ -21,6 +21,12 @@ export declare const deleteService: (serviceId: string) => Promise<{
 }>;
 export declare const getPackages: () => Promise<any[]>;
 export declare const addPackage: (input: any) => Promise<any>;
+export declare const editPackage: (packageId: string, input: any) => Promise<{
+    success: boolean;
+}>;
+export declare const deletePackage: (packageId: string) => Promise<{
+    success: boolean;
+}>;
 export declare const getOrders: () => Promise<any[]>;
 export declare const createOrder: (input: any) => Promise<any>;
 export declare const payOrder: (orderId: string) => Promise<{

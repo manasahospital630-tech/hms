@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getPublicReport = exports.updateOrderItemStatus = exports.addQcLog = exports.getQcLogs = exports.addReferral = exports.getReferrals = exports.addMachine = exports.getMachines = exports.verifyReport = exports.submitEcgReport = exports.submitUltrasoundReport = exports.submitRadiologyReport = exports.submitLabResult = exports.collectSample = exports.payOrder = exports.createOrder = exports.getOrders = exports.addPackage = exports.getPackages = exports.deleteService = exports.editService = exports.addService = exports.getServices = exports.getCategories = exports.getDashboardStats = void 0;
+exports.getPublicReport = exports.updateOrderItemStatus = exports.addQcLog = exports.getQcLogs = exports.addReferral = exports.getReferrals = exports.addMachine = exports.getMachines = exports.verifyReport = exports.submitEcgReport = exports.submitUltrasoundReport = exports.submitRadiologyReport = exports.submitLabResult = exports.collectSample = exports.payOrder = exports.createOrder = exports.getOrders = exports.deletePackage = exports.editPackage = exports.addPackage = exports.getPackages = exports.deleteService = exports.editService = exports.addService = exports.getServices = exports.getCategories = exports.getDashboardStats = void 0;
 const database_1 = require("../../config/database");
 const s3Upload_1 = require("../../utils/s3Upload");
 // 1. Dashboard Statistics
@@ -162,7 +162,29 @@ exports.deleteService = deleteService;
 // 4. Packages
 const getPackages = async () => {
     const result = await (0, database_1.query)(`
-    SELECT dp.*, COALESCE(json_agg(s.*) FILTER (WHERE s.service_id IS NOT NULL), '[]') as services
+    SELECT dp.*, 
+           COALESCE(
+             json_agg(
+               json_build_object(
+                 'service_id', s.service_id,
+                 'name', s.name,
+                 'service_code', s.service_code,
+                 'price', s.price,
+                 'sample_required', s.sample_required,
+                 'normal_range', s.normal_range,
+                 'parameters', (
+                   SELECT json_agg(json_build_object(
+                     'parameter_id', dp_param.parameter_id,
+                     'name', dp_param.name,
+                     'unit', dp_param.unit,
+                     'reference_range', dp_param.reference_range
+                   ) ORDER BY dp_param.display_order)
+                   FROM diagnostic_parameters dp_param
+                   WHERE dp_param.service_id = s.service_id
+                 )
+               )
+             ) FILTER (WHERE s.service_id IS NOT NULL), '[]'
+           ) as services
     FROM diagnostic_packages dp
     LEFT JOIN diagnostic_package_items dpi ON dp.package_id = dpi.package_id
     LEFT JOIN diagnostic_services s ON dpi.service_id = s.service_id
@@ -179,7 +201,7 @@ const addPackage = async (input) => {
       INSERT INTO diagnostic_packages (name, price, discount, validity_days, is_active)
       VALUES ($1, $2, $3, $4, true)
       RETURNING *
-    `, [input.name, input.price, input.discount, input.validityDays]);
+    `, [input.name, input.price, input.discount || 0, input.validityDays || 365]);
         const packageId = pkgRes.rows[0].package_id;
         for (const serviceId of input.services) {
             await (0, database_1.query)(`
@@ -196,6 +218,44 @@ const addPackage = async (input) => {
     }
 };
 exports.addPackage = addPackage;
+const editPackage = async (packageId, input) => {
+    await (0, database_1.query)('BEGIN');
+    try {
+        await (0, database_1.query)(`
+      UPDATE diagnostic_packages 
+      SET name = $1, price = $2, discount = $3, validity_days = $4
+      WHERE package_id = $5
+    `, [input.name, input.price, input.discount || 0, input.validityDays || 365, packageId]);
+        await (0, database_1.query)('DELETE FROM diagnostic_package_items WHERE package_id = $1', [packageId]);
+        for (const serviceId of input.services) {
+            await (0, database_1.query)(`
+        INSERT INTO diagnostic_package_items (package_id, service_id)
+        VALUES ($1, $2)
+      `, [packageId, serviceId]);
+        }
+        await (0, database_1.query)('COMMIT');
+        return { success: true };
+    }
+    catch (error) {
+        await (0, database_1.query)('ROLLBACK');
+        throw error;
+    }
+};
+exports.editPackage = editPackage;
+const deletePackage = async (packageId) => {
+    await (0, database_1.query)('BEGIN');
+    try {
+        await (0, database_1.query)('DELETE FROM diagnostic_package_items WHERE package_id = $1', [packageId]);
+        await (0, database_1.query)('DELETE FROM diagnostic_packages WHERE package_id = $1', [packageId]);
+        await (0, database_1.query)('COMMIT');
+        return { success: true };
+    }
+    catch (error) {
+        await (0, database_1.query)('ROLLBACK');
+        throw error;
+    }
+};
+exports.deletePackage = deletePackage;
 // 5. Test Orders
 const getOrders = async () => {
     const result = await (0, database_1.query)(`
@@ -209,6 +269,8 @@ const getOrders = async () => {
              SELECT json_agg(json_build_object(
                'item_id', toi.item_id,
                'service_id', toi.service_id,
+               'package_id', toi.package_id,
+               'package_name', (SELECT dp.name FROM diagnostic_packages dp WHERE dp.package_id = toi.package_id),
                'service_name', ds.name,
                'service_code', ds.service_code,
                'category_name', c.name,

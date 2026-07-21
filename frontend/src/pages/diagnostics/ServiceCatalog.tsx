@@ -58,6 +58,8 @@ export const ServiceCatalog: React.FC = () => {
 
   // Package Modal States
   const [packageModalOpen, setPackageModalOpen] = useState(false);
+  const [editingPackageId, setEditingPackageId] = useState<string | null>(null);
+  const [packageSearch, setPackageSearch] = useState('');
   const [packageForm, setPackageForm] = useState({
     name: '',
     price: '',
@@ -65,6 +67,9 @@ export const ServiceCatalog: React.FC = () => {
     validityDays: '365',
     selectedServices: [] as string[]
   });
+
+  const [packageQuickViewModalOpen, setPackageQuickViewModalOpen] = useState(false);
+  const [selectedQuickViewPackage, setSelectedQuickViewPackage] = useState<any>(null);
 
   const [modalLoading, setModalLoading] = useState(false);
   const [modalError, setModalError] = useState('');
@@ -115,6 +120,91 @@ export const ServiceCatalog: React.FC = () => {
       loadOrders();
     }
   }, [activeTab]);
+
+  const openAddPackageModal = () => {
+    setEditingPackageId(null);
+    setPackageForm({
+      name: '',
+      price: '',
+      discount: '0',
+      validityDays: '365',
+      selectedServices: []
+    });
+    setPackageSearch('');
+    setModalError('');
+    setPackageModalOpen(true);
+  };
+
+  const openEditPackageModal = (pkg: any) => {
+    setEditingPackageId(pkg.package_id);
+    setPackageForm({
+      name: pkg.name || '',
+      price: pkg.price ? pkg.price.toString() : '',
+      discount: pkg.discount ? pkg.discount.toString() : '0',
+      validityDays: pkg.validity_days ? pkg.validity_days.toString() : '365',
+      selectedServices: (pkg.services || []).map((s: any) => s.service_id)
+    });
+    setPackageSearch('');
+    setModalError('');
+    setPackageModalOpen(true);
+  };
+
+  const handleDeletePackage = async (packageId: string) => {
+    if (!window.confirm('Are you sure you want to delete this grouped profile / package?')) return;
+    try {
+      await api.delete(`/diagnostics/packages/${packageId}`);
+      loadCatalogData();
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to delete package.');
+    }
+  };
+
+  const handlePackageSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (packageForm.selectedServices.length === 0) {
+      setModalError('Select at least one test service to include in this profile / package.');
+      return;
+    }
+    setModalLoading(true);
+    setModalError('');
+
+    const payload = {
+      name: packageForm.name,
+      price: parseFloat(packageForm.price),
+      discount: parseFloat(packageForm.discount || '0'),
+      validityDays: parseInt(packageForm.validityDays || '365'),
+      services: packageForm.selectedServices
+    };
+
+    try {
+      if (editingPackageId) {
+        await api.put(`/diagnostics/packages/${editingPackageId}`, payload);
+      } else {
+        await api.post('/diagnostics/packages', payload);
+      }
+      setPackageModalOpen(false);
+      loadCatalogData();
+    } catch (err: any) {
+      setModalError(err.response?.data?.error || 'Failed to save profile package.');
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const handleServiceSelectToggle = (serviceId: string) => {
+    const isSelected = packageForm.selectedServices.includes(serviceId);
+    if (isSelected) {
+      setPackageForm({
+        ...packageForm,
+        selectedServices: packageForm.selectedServices.filter(id => id !== serviceId)
+      });
+    } else {
+      setPackageForm({
+        ...packageForm,
+        selectedServices: [...packageForm.selectedServices, serviceId]
+      });
+    }
+  };
 
   const getCompletedReports = () => {
     const list: any[] = [];
@@ -846,61 +936,6 @@ export const ServiceCatalog: React.FC = () => {
     }
   };
 
-  const openAddPackageModal = () => {
-    setPackageForm({
-      name: '',
-      price: '',
-      discount: '0',
-      validityDays: '365',
-      selectedServices: []
-    });
-    setModalError('');
-    setPackageModalOpen(true);
-  };
-
-  const handlePackageSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (packageForm.selectedServices.length === 0) {
-      setModalError('Select at least one service test to bundle in this package.');
-      return;
-    }
-    setModalLoading(true);
-    setModalError('');
-
-    const payload = {
-      name: packageForm.name,
-      price: parseFloat(packageForm.price),
-      discount: parseFloat(packageForm.discount),
-      validityDays: parseInt(packageForm.validityDays),
-      services: packageForm.selectedServices
-    };
-
-    try {
-      await api.post('/diagnostics/packages', payload);
-      setPackageModalOpen(false);
-      loadCatalogData();
-    } catch (err: any) {
-      setModalError(err.response?.data?.error || 'Failed to save test package.');
-    } finally {
-      setModalLoading(false);
-    }
-  };
-
-  const handleServiceSelectToggle = (serviceId: string) => {
-    const isSelected = packageForm.selectedServices.includes(serviceId);
-    if (isSelected) {
-      setPackageForm({
-        ...packageForm,
-        selectedServices: packageForm.selectedServices.filter(id => id !== serviceId)
-      });
-    } else {
-      setPackageForm({
-        ...packageForm,
-        selectedServices: [...packageForm.selectedServices, serviceId]
-      });
-    }
-  };
-
   return (
     <div style={{ color: 'var(--text-primary)' }}>
       {/* Header */}
@@ -971,7 +1006,7 @@ export const ServiceCatalog: React.FC = () => {
             marginBottom: '-1px'
           }}
         >
-          Bundled Packages ({packages.length})
+          Profiles/Package ({packages.length})
         </button>
         <button
           onClick={() => setActiveTab('reports')}
@@ -1071,30 +1106,54 @@ export const ServiceCatalog: React.FC = () => {
           </div>
         </Card>
       ) : activeTab === 'packages' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
           {packages.map((pkg) => (
-            <Card key={pkg.package_id} title={pkg.name} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: '12px' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', minHeight: '180px' }}>
+            <Card key={pkg.package_id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: '12px', padding: '18px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', height: '100%', justifyContent: 'space-between', gap: '14px' }}>
                 <div>
-                  <div style={{ display: 'flex', gap: '8px', margin: '8px 0 16px 0', flexWrap: 'wrap' }}>
-                    {pkg.services.map((s: any) => (
-                      <span key={s.service_id} style={{ background: 'var(--bg-primary)', padding: '2px 8px', borderRadius: '50px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
+                    <div>
+                      <h3 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>{pkg.name}</h3>
+                      <span style={{ fontSize: '11px', background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '2px 8px', borderRadius: '50px', fontWeight: 600 }}>
+                        {pkg.services ? pkg.services.length : 0} Grouped Tests Included
+                      </span>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Set Profile Price</div>
+                      <div style={{ fontSize: '18px', fontWeight: 800, color: 'var(--accent-success)' }}>
+                        Rs. {parseFloat(pkg.price).toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ margin: '12px 0', display: 'flex', flexWrap: 'wrap', gap: '6px', maxHeight: '100px', overflowY: 'auto' }}>
+                    {(pkg.services || []).map((s: any) => (
+                      <span key={s.service_id} style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', padding: '3px 8px', borderRadius: '6px', fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 500 }}>
                         {s.name}
                       </span>
                     ))}
                   </div>
                 </div>
-                
+
                 <div style={{ borderTop: '1px solid var(--border-primary)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Package Rate</div>
-                    <div style={{ fontSize: '18px', fontWeight: 700, color: 'var(--accent-success)' }}>
-                      Rs. {parseFloat(pkg.price).toFixed(2)}
-                    </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    Discount: Rs. {parseFloat(pkg.discount || '0').toFixed(2)} | Validity: {pkg.validity_days || 365} Days
                   </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Validity: {pkg.validity_days} Days</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Discount: Rs. {parseFloat(pkg.discount || '0').toFixed(2)}</div>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button
+                      onClick={() => openEditPackageModal(pkg)}
+                      style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', borderRadius: '6px', padding: '6px 10px', fontSize: '11px', cursor: 'pointer', color: 'var(--text-primary)', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}
+                      title="Edit Grouped Profile"
+                    >
+                      <Edit size={12} /> Edit
+                    </button>
+                    <button
+                      onClick={() => handleDeletePackage(pkg.package_id)}
+                      style={{ background: 'rgba(244,63,94,0.1)', border: '1px solid rgba(244,63,94,0.2)', borderRadius: '6px', padding: '6px 10px', fontSize: '11px', cursor: 'pointer', color: 'var(--accent-danger)', display: 'inline-flex', alignItems: 'center', gap: '4px', fontWeight: 600 }}
+                      title="Delete Profile"
+                    >
+                      <Trash2 size={12} /> Delete
+                    </button>
                   </div>
                 </div>
               </div>
@@ -1149,67 +1208,53 @@ export const ServiceCatalog: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {getCompletedReports()
-                  .filter(r => 
-                    r.patient_name.toLowerCase().includes(reportSearch.toLowerCase()) ||
-                    r.patient_mrn.toLowerCase().includes(reportSearch.toLowerCase()) ||
-                    r.order_number.toLowerCase().includes(reportSearch.toLowerCase())
-                  )
-                  .map((r, idx) => {
-                    const verifiedDate = r.verification?.verified_at 
-                      ? new Date(r.verification.verified_at).toLocaleDateString() + ' ' + new Date(r.verification.verified_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                      : new Date(r.created_at).toLocaleDateString();
-
-                    return (
-                      <tr key={idx} style={{ borderBottom: '1px solid var(--border-primary)' }}>
-                        <td style={{ padding: '12px 16px', fontWeight: 700 }}>{r.order_number}</td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <div style={{ fontWeight: 600 }}>{r.patient_name}</div>
-                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>MRN: {r.patient_mrn}</div>
-                        </td>
-                        <td style={{ padding: '12px 16px', fontWeight: 600 }}>{r.service_name}</td>
-                        <td style={{ padding: '12px 16px' }}>
-                          <span style={{ background: 'var(--bg-primary)', padding: '2px 8px', borderRadius: '50px', fontSize: '11px', color: 'var(--text-secondary)' }}>
-                            {r.category_name}
-                          </span>
-                        </td>
-                        <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>{verifiedDate}</td>
-                        <td style={{ padding: '12px 16px', fontWeight: 500, color: 'var(--accent-success)' }}>
-                          ✓ {r.verification?.verified_by_name || 'Dr. Priya Nair'}
-                        </td>
-                        <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                          <Button 
-                            variant="primary" 
-                            size="sm" 
-                            icon={<Printer size={13} />}
-                            onClick={() => handlePrintReport(r)}
-                          >
-                            Print Report
-                          </Button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                {getCompletedReports().length === 0 && (
-                  <tr>
-                    <td colSpan={7} style={{ padding: '30px', textAlign: 'center', color: 'var(--text-muted)' }}>
-                      No completed or verified test reports available to print.
+                {getCompletedReports().map((rep: any, idx: number) => (
+                  <tr key={idx} style={{ borderBottom: '1px solid var(--border-primary)' }}>
+                    <td style={{ padding: '12px 16px', fontWeight: 700 }}>{rep.order_number}</td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <div style={{ fontWeight: 600 }}>{rep.patient_name}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>MRN: {rep.patient_mrn}</div>
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <div style={{ fontWeight: 600 }}>{rep.service_name}</div>
+                      {rep.package_name && (
+                        <div style={{ fontSize: '10px', color: '#3b82f6', fontWeight: 600 }}>
+                          [Profile: {rep.package_name}]
+                        </div>
+                      )}
+                    </td>
+                    <td style={{ padding: '12px 16px' }}>
+                      <span style={{ background: 'var(--bg-primary)', padding: '2px 8px', borderRadius: '50px', fontSize: '11px', fontWeight: 500 }}>
+                        {rep.category_name}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                      {rep.verification?.verified_at ? new Date(rep.verification.verified_at).toLocaleDateString() : 'Today'}
+                    </td>
+                    <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--accent-success)', fontWeight: 600 }}>
+                      <CheckCircle size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                      {rep.verification?.verified_by_name || 'Dr. Pathologist'}
+                    </td>
+                    <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                      <Button variant="primary" size="sm" icon={<Printer size={12} />} onClick={() => handlePrintReport(rep)}>
+                        Print PDF Report
+                      </Button>
                     </td>
                   </tr>
-                )}
+                ))}
               </tbody>
             </table>
           </div>
         </Card>
       )}
 
-      {/* Service Modal */}
+      {/* Service Add/Edit Modal */}
       {serviceModalOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '12px', width: '100%', maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', padding: '24px', position: 'relative' }}>
+          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '12px', width: '100%', maxWidth: '580px', padding: '24px', position: 'relative' }}>
             <button onClick={() => setServiceModalOpen(false)} style={{ position: 'absolute', right: '16px', top: '16px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
             <h2 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 16px 0', color: 'var(--text-primary)' }}>
-              {editingService ? 'Edit Diagnostic Service' : 'Add New Diagnostic Service'}
+              {editingService ? 'Edit Diagnostic Test Service' : 'Add New Diagnostic Test Service'}
             </h2>
 
             {modalError && (
@@ -1220,27 +1265,32 @@ export const ServiceCatalog: React.FC = () => {
 
             <form onSubmit={handleServiceSubmit}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '10px' }}>
-                  <div>
-                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Service/Test Name *</label>
-                    <input type="text" className="input" value={serviceForm.name} onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })} required style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
-                  </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '10px' }}>
                   <div>
                     <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Service Code *</label>
-                    <input type="text" className="input" value={serviceForm.serviceCode} onChange={(e) => setServiceForm({ ...serviceForm, serviceCode: e.target.value })} required placeholder="e.g. CBC, XRAY" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                    <input type="text" className="input" value={serviceForm.serviceCode} onChange={(e) => setServiceForm({ ...serviceForm, serviceCode: e.target.value })} required placeholder="e.g. CBC" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Service Name *</label>
+                    <input type="text" className="input" value={serviceForm.name} onChange={(e) => setServiceForm({ ...serviceForm, name: e.target.value })} required placeholder="e.g. Complete Blood Count" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                   <div>
                     <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Department Category *</label>
                     <select className="select" value={serviceForm.categoryId} onChange={(e) => setServiceForm({ ...serviceForm, categoryId: e.target.value })} required style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+                      <option value="">Select Department</option>
                       {categories.map(c => <option key={c.category_id} value={c.category_id}>{c.name}</option>)}
                     </select>
                   </div>
                   <div>
-                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Base Price (Rs.) *</label>
-                    <input type="number" className="input" value={serviceForm.price} onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })} required style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Price (Rs.) *</label>
+                    <input type="number" className="input" value={serviceForm.price} onChange={(e) => setServiceForm({ ...serviceForm, price: e.target.value })} required placeholder="350" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Turnaround (Mins)</label>
+                    <input type="number" className="input" value={serviceForm.durationMinutes} onChange={(e) => setServiceForm({ ...serviceForm, durationMinutes: e.target.value })} placeholder="30" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
                   </div>
                 </div>
 
@@ -1422,9 +1472,11 @@ export const ServiceCatalog: React.FC = () => {
       {/* Package Modal */}
       {packageModalOpen && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '12px', width: '100%', maxWidth: '540px', padding: '24px', position: 'relative' }}>
+          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '12px', width: '100%', maxWidth: '560px', padding: '24px', position: 'relative' }}>
             <button onClick={() => setPackageModalOpen(false)} style={{ position: 'absolute', right: '16px', top: '16px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
-            <h2 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 16px 0', color: 'var(--text-primary)' }}>Create Health Test Bundle Package</h2>
+            <h2 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 16px 0', color: 'var(--text-primary)' }}>
+              {editingPackageId ? 'Edit Grouped Profile / Package' : 'Create Grouped Profile / Package'}
+            </h2>
 
             {modalError && (
               <div style={{ color: 'var(--accent-danger)', background: 'rgba(244,63,94,0.06)', border: '1px solid rgba(244,63,94,0.15)', padding: '10px', borderRadius: '6px', marginBottom: '16px', fontSize: '13px' }}>
@@ -1435,17 +1487,17 @@ export const ServiceCatalog: React.FC = () => {
             <form onSubmit={handlePackageSubmit}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div>
-                  <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Package Title *</label>
-                  <input type="text" className="input" value={packageForm.name} onChange={(e) => setPackageForm({ ...packageForm, name: e.target.value })} required placeholder="e.g. Master Executive Health Checkup" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                  <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Profile / Package Name *</label>
+                  <input type="text" className="input" value={packageForm.name} onChange={(e) => setPackageForm({ ...packageForm, name: e.target.value })} required placeholder="e.g. Comprehensive Executive Health Profile" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
                   <div>
-                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Package Price *</label>
-                    <input type="number" className="input" value={packageForm.price} onChange={(e) => setPackageForm({ ...packageForm, price: e.target.value })} required style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Set Package Price (Rs.) *</label>
+                    <input type="number" className="input" value={packageForm.price} onChange={(e) => setPackageForm({ ...packageForm, price: e.target.value })} required placeholder="e.g. 2500" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
                   </div>
                   <div>
-                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Discount Amount</label>
+                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Discount Amount (Rs.)</label>
                     <input type="number" className="input" value={packageForm.discount} onChange={(e) => setPackageForm({ ...packageForm, discount: e.target.value })} style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
                   </div>
                   <div>
@@ -1455,23 +1507,43 @@ export const ServiceCatalog: React.FC = () => {
                 </div>
 
                 <div>
-                  <label style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600, display: 'block', marginBottom: '8px' }}>Select Included Tests *</label>
-                  <div style={{ maxHeight: '180px', overflowY: 'auto', border: '1px solid var(--border-primary)', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '6px', background: 'var(--bg-primary)' }}>
-                    {services.map(s => {
-                      const isChecked = packageForm.selectedServices.includes(s.service_id);
-                      return (
-                        <label key={s.service_id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', cursor: 'pointer', padding: '4px', borderRadius: '4px', background: isChecked ? 'rgba(14,165,233,0.04)' : 'transparent' }}>
-                          <input type="checkbox" checked={isChecked} onChange={() => handleServiceSelectToggle(s.service_id)} />
-                          <span>{s.name} ({s.service_code})</span>
-                        </label>
-                      );
-                    })}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Select Individual Services to Include in Package *</label>
+                    <span style={{ fontSize: '11px', color: 'var(--accent-primary)', fontWeight: 600 }}>
+                      Selected: {packageForm.selectedServices.length} Tests
+                    </span>
+                  </div>
+
+                  <input 
+                    type="text" 
+                    className="input" 
+                    placeholder="Search test services..." 
+                    value={packageSearch} 
+                    onChange={(e) => setPackageSearch(e.target.value)} 
+                    style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', marginBottom: '8px', padding: '6px 10px', fontSize: '12px' }}
+                  />
+
+                  <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border-primary)', borderRadius: '8px', padding: '8px', display: 'flex', flexDirection: 'column', gap: '4px', background: 'var(--bg-primary)' }}>
+                    {services
+                      .filter(s => !packageSearch || s.name.toLowerCase().includes(packageSearch.toLowerCase()) || s.service_code.toLowerCase().includes(packageSearch.toLowerCase()))
+                      .map(s => {
+                        const isChecked = packageForm.selectedServices.includes(s.service_id);
+                        return (
+                          <label key={s.service_id} style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', cursor: 'pointer', padding: '4px 8px', borderRadius: '4px', background: isChecked ? 'rgba(14,165,233,0.08)' : 'transparent' }}>
+                            <input type="checkbox" checked={isChecked} onChange={() => handleServiceSelectToggle(s.service_id)} />
+                            <span style={{ fontWeight: isChecked ? 600 : 400 }}>{s.name} ({s.service_code})</span>
+                            <span style={{ marginLeft: 'auto', fontSize: '11px', color: 'var(--text-muted)' }}>Rs. {parseFloat(s.price).toFixed(2)}</span>
+                          </label>
+                        );
+                      })}
                   </div>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', borderTop: '1px solid var(--border-primary)', paddingTop: '16px' }}>
                   <Button variant="secondary" type="button" onClick={() => setPackageModalOpen(false)}>Cancel</Button>
-                  <Button variant="primary" type="submit" loading={modalLoading}>Create Package</Button>
+                  <Button variant="primary" type="submit" loading={modalLoading}>
+                    {editingPackageId ? 'Update Grouped Profile' : 'Save Grouped Profile'}
+                  </Button>
                 </div>
               </div>
             </form>

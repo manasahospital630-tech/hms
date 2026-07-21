@@ -63,6 +63,23 @@ export const addPackage = async (req: Request, res: Response, next: NextFunction
   } catch (error) { next(error); }
 };
 
+export const editPackage = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = req.params.id as string;
+    const input = schemas.packageSchema.parse(req.body);
+    const result = await dService.editPackage(id, input);
+    res.json({ success: true, data: result });
+  } catch (error) { next(error); }
+};
+
+export const deletePackage = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const id = req.params.id as string;
+    const result = await dService.deletePackage(id);
+    res.json({ success: true, data: result });
+  } catch (error) { next(error); }
+};
+
 export const getOrders = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const orders = await dService.getOrders();

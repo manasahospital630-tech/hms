@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getPublicReport = exports.updateOrderItemStatus = exports.addQcLog = exports.getQcLogs = exports.addReferral = exports.getReferrals = exports.addMachine = exports.getMachines = exports.verifyReport = exports.submitResult = exports.collectSample = exports.payOrder = exports.createOrder = exports.getOrders = exports.addPackage = exports.getPackages = exports.deleteService = exports.editService = exports.addService = exports.getServices = exports.getCategories = exports.getDashboardStats = void 0;
+exports.getPublicReport = exports.updateOrderItemStatus = exports.addQcLog = exports.getQcLogs = exports.addReferral = exports.getReferrals = exports.addMachine = exports.getMachines = exports.verifyReport = exports.submitResult = exports.collectSample = exports.payOrder = exports.createOrder = exports.getOrders = exports.deletePackage = exports.editPackage = exports.addPackage = exports.getPackages = exports.deleteService = exports.editService = exports.addService = exports.getServices = exports.getCategories = exports.getDashboardStats = void 0;
 const dService = __importStar(require("./diagnostics.service"));
 const schemas = __importStar(require("./diagnostics.schema"));
 const getDashboardStats = async (req, res, next) => {
@@ -121,6 +121,29 @@ const addPackage = async (req, res, next) => {
     }
 };
 exports.addPackage = addPackage;
+const editPackage = async (req, res, next) => {
+    try {
+        const id = req.params.id;
+        const input = schemas.packageSchema.parse(req.body);
+        const result = await dService.editPackage(id, input);
+        res.json({ success: true, data: result });
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.editPackage = editPackage;
+const deletePackage = async (req, res, next) => {
+    try {
+        const id = req.params.id;
+        const result = await dService.deletePackage(id);
+        res.json({ success: true, data: result });
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.deletePackage = deletePackage;
 const getOrders = async (req, res, next) => {
     try {
         const orders = await dService.getOrders();
