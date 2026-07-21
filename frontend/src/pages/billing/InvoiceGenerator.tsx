@@ -219,9 +219,14 @@ const InvoiceGenerator: React.FC = () => {
 
   const handlePrintBill = async (invoiceId: string) => {
     try {
-      const res = await api.get(`/billing/invoices/${invoiceId}`);
-      if (res.data.success) {
-        const inv = res.data.data;
+      const [invRes, pkgsRes] = await Promise.all([
+        api.get(`/billing/invoices/${invoiceId}`),
+        api.get('/diagnostics/packages').catch(() => ({ data: { success: false, data: [] } }))
+      ]);
+
+      if (invRes.data.success) {
+        const inv = invRes.data.data;
+        const availablePackages = pkgsRes.data?.data || diagPackages || [];
         const printWindow = window.open('', '_blank');
         if (printWindow) {
           const isIP = !!inv.is_inpatient;
@@ -348,63 +353,39 @@ const InvoiceGenerator: React.FC = () => {
                     color: #0f172a;
                   }
                   .stamp-col {
+                    width: 180px;
                     text-align: right;
-                    width: 200px;
                   }
                   .reg-stamp {
-                    border: 2px dashed #2563eb;
-                    color: #2563eb;
-                    padding: 6px 12px;
-                    font-weight: 800;
-                    font-size: 12px;
-                    text-transform: uppercase;
+                    border: 1.5px dashed #2563eb;
+                    color: #1d4ed8;
+                    padding: 6px 10px;
+                    font-size: 11px;
+                    font-weight: 700;
                     border-radius: 6px;
-                    transform: rotate(-3deg);
                     display: inline-block;
-                    font-family: monospace;
+                    text-align: center;
                   }
                   .divider-thick {
-                    border-bottom: 2.5px solid #0f172a;
-                    margin: 12px 0 20px 0;
+                    border-bottom: 2px solid #0f172a;
+                    margin: 12px 0 16px 0;
                   }
                   .bill-title {
                     text-align: center;
-                    font-weight: 800;
                     font-size: 14px;
-                    letter-spacing: 1px;
-                    border-top: 1px solid #cbd5e1;
-                    border-bottom: 1px solid #cbd5e1;
-                    padding: 6px 0;
-                    margin-bottom: 20px;
+                    font-weight: 800;
+                    letter-spacing: 1.5px;
+                    margin-bottom: 16px;
                     text-transform: uppercase;
                   }
-                  .bill-grid {
-                    display: grid;
-                    grid-template-columns: 1.2fr 1.2fr;
-                    gap: 8px 30px;
-                    margin-bottom: 20px;
-                  }
-                  .bill-meta-row {
-                    display: flex;
-                    justify-content: flex-start;
-                  }
-                  .bill-meta-label {
-                    width: 100px;
-                    font-weight: 600;
-                    color: #475569;
-                  }
-                  .bill-meta-value {
-                    font-weight: 700;
-                    color: #0f172a;
-                  }
                   .patient-banner {
-                    background: #f8fafc;
                     border: 1px solid #e2e8f0;
                     border-radius: 8px;
-                    padding: 12px 16px;
-                    display: grid;
-                    grid-template-columns: 2.2fr 1.5fr 1.3fr 0.8fr 1.5fr;
-                    margin-bottom: 20px;
+                    padding: 10px 16px;
+                    display: flex;
+                    justify-content: space-between;
+                    margin-bottom: 16px;
+                    background: #f8fafc;
                   }
                   .patient-block {
                     display: flex;
@@ -414,88 +395,76 @@ const InvoiceGenerator: React.FC = () => {
                     font-size: 10px;
                     color: #64748b;
                     font-weight: 700;
-                    text-transform: uppercase;
-                    margin-bottom: 3px;
+                    margin-bottom: 2px;
                   }
                   .patient-value {
-                    font-size: 13px;
                     font-weight: 800;
+                    font-size: 13px;
                     color: #0f172a;
                   }
                   .payment-type {
-                    font-size: 12px;
                     font-weight: 700;
-                    margin-bottom: 20px;
-                    color: #1e293b;
+                    margin-bottom: 12px;
+                    font-size: 12px;
                   }
                   .table {
                     width: 100%;
                     border-collapse: collapse;
-                    margin-bottom: 25px;
+                    margin-bottom: 20px;
                   }
                   .table th {
                     border-top: 1.5px solid #0f172a;
                     border-bottom: 1.5px solid #0f172a;
-                    padding: 8px 10px;
+                    padding: 8px;
                     font-size: 11px;
                     font-weight: 700;
-                    color: #475569;
-                    text-transform: uppercase;
+                    color: #334155;
                   }
                   .table td {
-                    padding: 8px 10px;
-                    font-size: 13px;
-                    border-bottom: none;
-                  }
-                  .table tr:last-child td {
-                    border-bottom: 1.5px solid #0f172a;
+                    padding: 8px;
+                    border-bottom: 1px solid #f1f5f9;
+                    font-size: 12px;
                   }
                   .summary-container {
                     display: flex;
                     justify-content: space-between;
+                    margin-top: 10px;
                     align-items: flex-start;
-                    margin-bottom: 40px;
                   }
                   .words-block {
                     flex: 1;
-                    padding-right: 30px;
+                    padding-right: 20px;
                   }
                   .words-label {
                     font-size: 11px;
                     font-weight: 700;
-                    color: #64748b;
-                    margin-bottom: 2px;
+                    color: #475569;
                   }
                   .words-val {
-                    font-size: 12px;
                     font-weight: 800;
                     font-style: italic;
-                    color: #0f172a;
+                    font-size: 12px;
+                    margin-top: 2px;
                   }
                   .calc-block {
-                    width: 250px;
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0;
+                    width: 280px;
                   }
                   .calc-row {
                     display: flex;
                     justify-content: space-between;
-                    font-size: 13px;
-                    padding: 8px 0;
-                  }
-                  .calc-val {
-                    font-weight: 700;
-                    text-align: right;
+                    padding: 4px 0;
+                    font-size: 12px;
                   }
                   .receivable-row {
-                    border-bottom: 1px solid #cbd5e1;
+                    border-top: 1px solid #e2e8f0;
+                    padding-top: 6px;
                   }
                   .received-row {
-                    border-bottom: 1.5px solid #0f172a;
-                    font-size: 14px;
+                    border-top: 1px solid #e2e8f0;
                     font-weight: 800;
-                    color: #0f172a;
+                    font-size: 13px;
+                    padding-top: 6px;
+                    margin-top: 2px;
                   }
                   .footer-signature {
                     display: flex;
@@ -599,15 +568,33 @@ const InvoiceGenerator: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    ${(inv.items || []).map((item: any, idx: number) => `
-                      <tr>
-                        <td style="text-align: left;">${idx + 1}.</td>
-                        <td style="font-weight: 700; text-transform: uppercase;">${item.description}</td>
-                        <td style="text-align: right;">${item.quantity}</td>
-                        <td style="text-align: right;">${parseFloat(item.unit_price).toFixed(2)}</td>
-                        <td style="text-align: right; font-weight: 700;">${(parseFloat(item.unit_price) * item.quantity).toFixed(2)}</td>
-                      </tr>
-                    `).join('')}
+                    ${(inv.items || []).map((item: any, idx: number) => {
+                      const descClean = (item.description || '').trim().toLowerCase();
+                      const matchedPkg = availablePackages.find((p: any) => {
+                        const pName = (p.name || '').trim().toLowerCase();
+                        return pName === descClean || descClean.includes(pName) || pName.includes(descClean);
+                      });
+                      const testListStr = matchedPkg && matchedPkg.services && matchedPkg.services.length > 0
+                        ? matchedPkg.services.map((s: any) => s.name).join(', ')
+                        : '';
+
+                      return `
+                        <tr>
+                          <td style="text-align: left; vertical-align: top;">${idx + 1}.</td>
+                          <td style="text-align: left; vertical-align: top;">
+                            <div style="font-weight: 700; text-transform: uppercase;">${item.description}</div>
+                            ${testListStr ? `
+                              <div style="font-size: 11px; font-weight: 500; color: #475569; margin-top: 3px; text-transform: none;">
+                                (${testListStr})
+                              </div>
+                            ` : ''}
+                          </td>
+                          <td style="text-align: right; vertical-align: top;">${item.quantity}</td>
+                          <td style="text-align: right; vertical-align: top;">${parseFloat(item.unit_price).toFixed(2)}</td>
+                          <td style="text-align: right; vertical-align: top; font-weight: 700;">${(parseFloat(item.unit_price) * item.quantity).toFixed(2)}</td>
+                        </tr>
+                      `;
+                    }).join('')}
                   </tbody>
                 </table>
 
@@ -1036,17 +1023,35 @@ const InvoiceGenerator: React.FC = () => {
               <Button variant="secondary" icon={<Plus size={16} />} onClick={addItem} style={{ height: '36px' }}>Add</Button>
             </div>
             
-            {items.map((item, i) => (
-              <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--border-primary)', fontSize: '13px', alignItems: 'center' }}>
-                <span>{item.description} ({item.category})</span>
-                <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <span>{item.quantity} × {formatCurrency(item.unitPrice)} = {formatCurrency(item.quantity * item.unitPrice)}</span>
-                  <button className="btn btn-ghost btn-sm" onClick={() => setItems(items.filter((_, idx) => idx !== i))} style={{ padding: '4px', cursor: 'pointer', color: 'var(--accent-danger)', border: 'none', background: 'transparent' }}>
-                    <Trash2 size={14} />
-                  </button>
-                </span>
-              </div>
-            ))}
+            {items.map((item, i) => {
+              const descClean = (item.description || '').trim().toLowerCase();
+              const matchedPkg = diagPackages.find((p: any) => {
+                const pName = (p.name || '').trim().toLowerCase();
+                return pName === descClean || descClean.includes(pName) || pName.includes(descClean);
+              });
+              const testListStr = matchedPkg && matchedPkg.services && matchedPkg.services.length > 0
+                ? matchedPkg.services.map((s: any) => s.name).join(', ')
+                : '';
+
+              return (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--border-primary)', fontSize: '13px', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, color: 'var(--text-primary)' }}>{item.description} ({item.category})</div>
+                    {testListStr && (
+                      <div style={{ fontSize: '11px', color: 'var(--accent-primary)', marginTop: '2px', fontWeight: 500 }}>
+                        ({testListStr})
+                      </div>
+                    )}
+                  </div>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span>{item.quantity} × {formatCurrency(item.unitPrice)} = {formatCurrency(item.quantity * item.unitPrice)}</span>
+                    <button className="btn btn-ghost btn-sm" onClick={() => setItems(items.filter((_, idx) => idx !== i))} style={{ padding: '4px', cursor: 'pointer', color: 'var(--accent-danger)', border: 'none', background: 'transparent' }}>
+                      <Trash2 size={14} />
+                    </button>
+                  </span>
+                </div>
+              );
+            })}
           </div>
 
           <div className="card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', padding: '20px', borderRadius: '12px', marginBottom: '24px' }}>
