@@ -217,6 +217,51 @@ const InvoiceGenerator: React.FC = () => {
     setItemForm({ description: '', category: 'General', quantity: '1', unitPrice: '0' });
   };
 
+  const findPackageForDescription = (description: string, packages: any[]) => {
+    if (!description || !packages || !Array.isArray(packages) || packages.length === 0) return null;
+    
+    const norm = (s: string) => (s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+    const targetNorm = norm(description);
+    
+    if (!targetNorm) return null;
+
+    // 1. Direct normalized match or substring match
+    let found = packages.find((p: any) => {
+      const pNorm = norm(p.name);
+      return pNorm === targetNorm || targetNorm.includes(pNorm) || pNorm.includes(targetNorm);
+    });
+    if (found) return found;
+
+    // 2. Singular / Plural match (e.g., "profiles" vs "profile")
+    const targetNoS = targetNorm.replace(/s$/, '');
+    found = packages.find((p: any) => {
+      const pNoS = norm(p.name).replace(/s$/, '');
+      return pNoS === targetNoS || targetNoS.includes(pNoS) || pNoS.includes(targetNoS);
+    });
+    if (found) return found;
+
+    // 3. Word token intersection (e.g., "fever" and "profile")
+    const words = description.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length >= 3);
+    if (words.length > 0) {
+      found = packages.find((p: any) => {
+        const pLower = (p.name || '').toLowerCase();
+        return words.every(w => pLower.includes(w));
+      });
+    }
+    return found || null;
+  };
+
+  const getPackageTestListString = (itemDesc: string, pkgs: any[]) => {
+    const pkg = findPackageForDescription(itemDesc, pkgs);
+    if (!pkg || !pkg.services || !Array.isArray(pkg.services) || pkg.services.length === 0) {
+      return '';
+    }
+    return pkg.services
+      .map((s: any) => (typeof s === 'string' ? s : (s.name || s.service_name || '')))
+      .filter(Boolean)
+      .join(', ');
+  };
+
   const handlePrintBill = async (invoiceId: string) => {
     try {
       const [invRes, pkgsRes] = await Promise.all([
@@ -226,7 +271,7 @@ const InvoiceGenerator: React.FC = () => {
 
       if (invRes.data.success) {
         const inv = invRes.data.data;
-        const availablePackages = pkgsRes.data?.data || diagPackages || [];
+        const availablePackages = (pkgsRes.data?.data && pkgsRes.data.data.length > 0) ? pkgsRes.data.data : diagPackages;
         const printWindow = window.open('', '_blank');
         if (printWindow) {
           const isIP = !!inv.is_inpatient;
@@ -569,22 +614,15 @@ const InvoiceGenerator: React.FC = () => {
                   </thead>
                   <tbody>
                     ${(inv.items || []).map((item: any, idx: number) => {
-                      const descClean = (item.description || '').trim().toLowerCase();
-                      const matchedPkg = availablePackages.find((p: any) => {
-                        const pName = (p.name || '').trim().toLowerCase();
-                        return pName === descClean || descClean.includes(pName) || pName.includes(descClean);
-                      });
-                      const testListStr = matchedPkg && matchedPkg.services && matchedPkg.services.length > 0
-                        ? matchedPkg.services.map((s: any) => s.name).join(', ')
-                        : '';
+                      const testListStr = getPackageTestListString(item.description, availablePackages);
 
                       return `
                         <tr>
                           <td style="text-align: left; vertical-align: top;">${idx + 1}.</td>
                           <td style="text-align: left; vertical-align: top;">
-                            <div style="font-weight: 700; text-transform: uppercase;">${item.description}</div>
+                            <div style="font-weight: 700; text-transform: uppercase; color: #0f172a;">${item.description}</div>
                             ${testListStr ? `
-                              <div style="font-size: 11px; font-weight: 500; color: #475569; margin-top: 3px; text-transform: none;">
+                              <div style="font-size: 11px; font-weight: 600; color: #334155; margin-top: 4px; line-height: 1.3; text-transform: none;">
                                 (${testListStr})
                               </div>
                             ` : ''}
@@ -1024,14 +1062,7 @@ const InvoiceGenerator: React.FC = () => {
             </div>
             
             {items.map((item, i) => {
-              const descClean = (item.description || '').trim().toLowerCase();
-              const matchedPkg = diagPackages.find((p: any) => {
-                const pName = (p.name || '').trim().toLowerCase();
-                return pName === descClean || descClean.includes(pName) || pName.includes(descClean);
-              });
-              const testListStr = matchedPkg && matchedPkg.services && matchedPkg.services.length > 0
-                ? matchedPkg.services.map((s: any) => s.name).join(', ')
-                : '';
+              const testListStr = getPackageTestListString(item.description, diagPackages);
 
               return (
                 <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 0', borderBottom: '1px solid var(--border-primary)', fontSize: '13px', alignItems: 'center' }}>
