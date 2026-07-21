@@ -435,6 +435,18 @@ export const ServiceCatalog: React.FC = () => {
         'THYROID STIMULATING HORMONE': '0.27-4.20',
         'TOTAL T3': '0.8-2.0',
         'TOTAL T4': '5.1-14.1',
+        // 13 PDF batch 7 manual tests
+        'PT': '11-13.5',
+        'APTT': '25-35',
+        'RHEUMATOID FACTOR': '<20',
+        'RF': '<20',
+        'SERUM AMYLASE': '30-110',
+        'SERUM BILIRUBIN': '0.3-1.2',
+        'SERUM CALCIUM': '8.5-10.5',
+        'SERUM LIPASE': '13-60',
+        'SERUM URIC ACID': 'Male 3.4-7.0',
+        'OCCULT BLOOD': 'Negative',
+        'PROFILE STATUS': 'All Included',
         // RFT parameters
         'BLOOD UREA': '15–40',
         'BLOOD UREA NITROGEN': '7–20',
