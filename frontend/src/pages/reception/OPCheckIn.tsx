@@ -210,18 +210,27 @@ const OPCheckIn: React.FC = () => {
     setRegLoading(true);
     setRegError('');
     try {
-      const res = await api.post('/patients', regForm);
+      const formattedAge = (regForm as any).patientCategory === 'Child'
+        ? (regForm.age ? `${regForm.age} Years ${(regForm as any).ageMonths || '0'} Months` : `${(regForm as any).ageMonths || '0'} Months`)
+        : `${regForm.age} Years`;
+
+      const payload = {
+        ...regForm,
+        age: formattedAge
+      };
+
+      const res = await api.post('/patients', payload);
       if (res.data.success) {
         // Automatically select newly registered patient
         setPatient(res.data.data);
         setShowRegisterModal(false);
         // Reset reg form
         setRegForm({
-          firstName: '', lastName: '', age: '', gender: 'Male',
-          bloodGroup: '', address: '', phone: '', email: '',
+          firstName: '', lastName: '', age: '', ageMonths: '', gender: 'Male',
+          patientCategory: 'Adult', bloodGroup: '', address: '', phone: '', email: '',
           emergencyContactName: '', emergencyContactPhone: '',
           insuranceProvider: '', insurancePolicyNumber: '', allergies: ''
-        });
+        } as any);
       }
     } catch (err: any) {
       setRegError(err.response?.data?.error || 'Failed to register patient.');
@@ -946,24 +955,54 @@ const OPCheckIn: React.FC = () => {
               />
             </div>
 
-            <div className="form-row">
-              <Input 
-                label="Age (Years) *" 
-                type="number" 
-                min="0"
-                max="120"
-                placeholder="e.g. 35"
-                value={(regForm as any).age || ''} 
-                onChange={e => setRegForm({ ...regForm, age: e.target.value } as any)} 
-                required 
-              />
-              <Select 
-                label="Gender *" 
-                value={regForm.gender} 
-                onChange={e => setRegForm({ ...regForm, gender: e.target.value })}
-                options={GENDER_OPTIONS} 
-              />
-            </div>
+            {(regForm as any).patientCategory === 'Child' ? (
+              <div className="form-row">
+                <Input 
+                  label="Age (Years)" 
+                  type="number" 
+                  min="0"
+                  max="9"
+                  placeholder="e.g. 4"
+                  value={(regForm as any).age || ''} 
+                  onChange={e => setRegForm({ ...regForm, age: e.target.value } as any)} 
+                />
+                <Input 
+                  label="Age (Months) *" 
+                  type="number" 
+                  min="0"
+                  max="11"
+                  placeholder="e.g. 6"
+                  value={(regForm as any).ageMonths || ''} 
+                  onChange={e => setRegForm({ ...regForm, ageMonths: e.target.value } as any)} 
+                  required
+                />
+                <Select 
+                  label="Gender *" 
+                  value={regForm.gender} 
+                  onChange={e => setRegForm({ ...regForm, gender: e.target.value })}
+                  options={GENDER_OPTIONS} 
+                />
+              </div>
+            ) : (
+              <div className="form-row">
+                <Input 
+                  label="Age (Years) *" 
+                  type="number" 
+                  min="10"
+                  max="120"
+                  placeholder="e.g. 35"
+                  value={(regForm as any).age || ''} 
+                  onChange={e => setRegForm({ ...regForm, age: e.target.value } as any)} 
+                  required 
+                />
+                <Select 
+                  label="Gender *" 
+                  value={regForm.gender} 
+                  onChange={e => setRegForm({ ...regForm, gender: e.target.value })}
+                  options={GENDER_OPTIONS} 
+                />
+              </div>
+            )}
 
             <div className="form-row">
               <Input 

@@ -53,6 +53,7 @@ const InvoiceGenerator: React.FC = () => {
     firstName: '',
     lastName: '',
     age: '',
+    ageMonths: '',
     gender: 'Male',
     patientCategory: 'Adult',
     phone: '',
@@ -67,7 +68,16 @@ const InvoiceGenerator: React.FC = () => {
     setRegLoading(true);
     setRegError('');
     try {
-      const res = await api.post('/patients', regForm);
+      const formattedAge = regForm.patientCategory === 'Child'
+        ? (regForm.age ? `${regForm.age} Years ${regForm.ageMonths || '0'} Months` : `${regForm.ageMonths || '0'} Months`)
+        : `${regForm.age} Years`;
+
+      const payload = {
+        ...regForm,
+        age: formattedAge
+      };
+
+      const res = await api.post('/patients', payload);
       if (res.data.success && res.data.data) {
         setPatient(res.data.data);
         setPatientModalOpen(false);
@@ -75,6 +85,7 @@ const InvoiceGenerator: React.FC = () => {
           firstName: '',
           lastName: '',
           age: '',
+          ageMonths: '',
           gender: 'Male',
           patientCategory: 'Adult',
           phone: '',
@@ -1595,20 +1606,41 @@ const InvoiceGenerator: React.FC = () => {
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Age (Years) *</label>
-                    <input type="number" min="0" max="120" className="input" value={regForm.age} onChange={e => setRegForm({ ...regForm, age: e.target.value })} required placeholder="e.g. 35" style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                {regForm.patientCategory === 'Child' ? (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                    <div>
+                      <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Age (Years)</label>
+                      <input type="number" min="0" max="9" className="input" value={regForm.age} onChange={e => setRegForm({ ...regForm, age: e.target.value })} placeholder="e.g. 4" style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Age (Months) *</label>
+                      <input type="number" min="0" max="11" className="input" value={regForm.ageMonths} onChange={e => setRegForm({ ...regForm, ageMonths: e.target.value })} required placeholder="e.g. 6" style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Gender *</label>
+                      <select className="select" value={regForm.gender} onChange={e => setRegForm({ ...regForm, gender: e.target.value })} required style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Gender *</label>
-                    <select className="select" value={regForm.gender} onChange={e => setRegForm({ ...regForm, gender: e.target.value })} required style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
-                    </select>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                    <div>
+                      <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Age (Years) *</label>
+                      <input type="number" min="10" max="120" className="input" value={regForm.age} onChange={e => setRegForm({ ...regForm, age: e.target.value })} required placeholder="e.g. 35" style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Gender *</label>
+                      <select className="select" value={regForm.gender} onChange={e => setRegForm({ ...regForm, gender: e.target.value })} required style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+                        <option value="Male">Male</option>
+                        <option value="Female">Female</option>
+                        <option value="Other">Other</option>
+                      </select>
+                    </div>
                   </div>
-                </div>
+                )}
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div>

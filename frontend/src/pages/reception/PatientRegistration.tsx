@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button';
 import api from '../../api/client';
 
 const PatientRegistration: React.FC = () => {
-  const [form, setForm] = useState({ firstName: '', lastName: '', age: '', gender: 'Male', bloodGroup: '', phone: '', email: '', address: '', emergencyContactName: '', emergencyContactPhone: '', insuranceProvider: '', insurancePolicyNumber: '', allergies: '', patientCategory: 'Adult' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', age: '', ageMonths: '', gender: 'Male', bloodGroup: '', phone: '', email: '', address: '', emergencyContactName: '', emergencyContactPhone: '', insuranceProvider: '', insurancePolicyNumber: '', allergies: '', patientCategory: 'Adult' });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<{ mrn: string } | null>(null);
   const [error, setError] = useState('');
@@ -17,9 +17,18 @@ const PatientRegistration: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); setError(''); setLoading(true);
     try {
-      const res = await api.post('/patients', form);
+      const formattedAge = form.patientCategory === 'Child'
+        ? (form.age ? `${form.age} Years ${form.ageMonths || '0'} Months` : `${form.ageMonths || '0'} Months`)
+        : `${form.age} Years`;
+
+      const payload = {
+        ...form,
+        age: formattedAge
+      };
+
+      const res = await api.post('/patients', payload);
       setSuccess({ mrn: res.data.data.medical_record_number });
-      setForm({ firstName: '', lastName: '', age: '', gender: 'Male', bloodGroup: '', phone: '', email: '', address: '', emergencyContactName: '', emergencyContactPhone: '', insuranceProvider: '', insurancePolicyNumber: '', allergies: '', patientCategory: 'Adult' });
+      setForm({ firstName: '', lastName: '', age: '', ageMonths: '', gender: 'Male', bloodGroup: '', phone: '', email: '', address: '', emergencyContactName: '', emergencyContactPhone: '', insuranceProvider: '', insurancePolicyNumber: '', allergies: '', patientCategory: 'Adult' });
     } catch (err: any) { setError(err.response?.data?.error || 'Failed to register patient.'); }
     finally { setLoading(false); }
   };
@@ -62,7 +71,17 @@ const PatientRegistration: React.FC = () => {
           <div className="form-row">
             <Input label="First Name *" value={form.firstName} onChange={set('firstName')} required />
             <Input label="Last Name *" value={form.lastName} onChange={set('lastName')} required />
-            <Input label="Age (Years) *" type="number" min="0" max="120" placeholder="e.g. 35" value={form.age} onChange={set('age')} required />
+          </div>
+
+          <div className="form-row" style={{ marginTop: 'var(--space-md)' }}>
+            {form.patientCategory === 'Child' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', width: '100%' }}>
+                <Input label="Age (Years)" type="number" min="0" max="9" placeholder="e.g. 4" value={form.age} onChange={set('age')} />
+                <Input label="Age (Months) *" type="number" min="0" max="11" placeholder="e.g. 6" value={form.ageMonths} onChange={set('ageMonths')} required />
+              </div>
+            ) : (
+              <Input label="Age (Years) *" type="number" min="10" max="120" placeholder="e.g. 35" value={form.age} onChange={set('age')} required />
+            )}
           </div>
           <div className="form-row" style={{ marginTop: 'var(--space-md)' }}>
             <Select label="Gender *" value={form.gender} onChange={set('gender')} options={[{ value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }, { value: 'Other', label: 'Other' }]} />
