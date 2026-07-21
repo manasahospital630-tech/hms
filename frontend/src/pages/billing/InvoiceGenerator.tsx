@@ -54,6 +54,7 @@ const InvoiceGenerator: React.FC = () => {
     lastName: '',
     age: '',
     gender: 'Male',
+    patientCategory: 'Adult',
     phone: '',
     bloodGroup: '',
     address: ''
@@ -75,6 +76,7 @@ const InvoiceGenerator: React.FC = () => {
           lastName: '',
           age: '',
           gender: 'Male',
+          patientCategory: 'Adult',
           phone: '',
           bloodGroup: '',
           address: ''
@@ -329,20 +331,39 @@ const InvoiceGenerator: React.FC = () => {
           const billYear = dateObj.getFullYear().toString().substring(2);
           const billNumber = `${billPrefix}${billYear}-${inv.invoice_id.substring(0, 8).toUpperCase()}`;
 
-          // Dynamic Age computation
-          const getAgeStr = (birthDateStr: string): string => {
-            if (!birthDateStr) return '—';
-            const birth = new Date(birthDateStr);
-            const today = new Date();
-            let years = today.getFullYear() - birth.getFullYear();
-            let months = today.getMonth() - birth.getMonth();
-            if (months < 0 || (months === 0 && today.getDate() < birth.getDate())) {
-              years--;
-              months += 12;
+          // Dynamic Age computation according to adult/child rules
+          const getAgeStr = (birthDateStr: string, fallbackAge?: any): string => {
+            if (birthDateStr) {
+              const birth = new Date(birthDateStr);
+              if (!isNaN(birth.getTime())) {
+                const today = new Date();
+                let years = today.getFullYear() - birth.getFullYear();
+                let months = today.getMonth() - birth.getMonth();
+                if (months < 0 || (months === 0 && today.getDate() < birth.getDate())) {
+                  years--;
+                  months += 12;
+                }
+                if (years < 1) {
+                  return `${Math.max(months, 1)} Months`;
+                }
+                if (years < 10) {
+                  return months > 0 ? `${years} Years ${months} Months` : `${years} Years`;
+                }
+                return `${years} Years`;
+              }
             }
-            return `${years} years ${months} months`;
+
+            if (fallbackAge !== undefined && fallbackAge !== null && fallbackAge !== '' && fallbackAge !== 0) {
+              const numAge = Number(fallbackAge);
+              if (!isNaN(numAge)) {
+                if (numAge < 1) return '6 Months';
+                if (numAge < 10) return `${numAge} Years`;
+                return `${numAge} Years`;
+              }
+            }
+            return '—';
           };
-          const ageStr = getAgeStr(inv.birth_date);
+          const ageStr = getAgeStr(inv.birth_date, inv.patient_age);
 
           // Rupees in words converter
           const numberToWords = (num: number): string => {
@@ -1565,6 +1586,35 @@ const InvoiceGenerator: React.FC = () => {
             {regError && <div style={{ color: 'var(--accent-danger)', background: 'rgba(244,63,94,0.06)', border: '1px solid rgba(244,63,94,0.15)', padding: '10px', borderRadius: '6px', marginBottom: '16px', fontSize: '13px' }}>{regError}</div>}
             <form onSubmit={handleQuickPatientSubmit}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* Patient Category Adult/Child Selector */}
+                <div style={{ background: 'var(--bg-primary)', padding: '10px 12px', borderRadius: '8px', border: '1px solid var(--border-primary)' }}>
+                  <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', fontWeight: 600 }}>
+                    Patient Category *
+                  </label>
+                  <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer', color: 'var(--text-primary)', fontWeight: 600 }}>
+                      <input
+                        type="radio"
+                        name="quickPatientCategory"
+                        value="Adult"
+                        checked={regForm.patientCategory !== 'Child'}
+                        onChange={() => setRegForm({ ...regForm, patientCategory: 'Adult' })}
+                      />
+                      👨‍💼 Adult (≥ 10 Yrs)
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer', color: 'var(--text-primary)', fontWeight: 600 }}>
+                      <input
+                        type="radio"
+                        name="quickPatientCategory"
+                        value="Child"
+                        checked={regForm.patientCategory === 'Child'}
+                        onChange={() => setRegForm({ ...regForm, patientCategory: 'Child' })}
+                      />
+                      👶 Child (&lt; 10 Yrs)
+                    </label>
+                  </div>
+                </div>
+
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div>
                     <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>First Name *</label>

@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button';
 import api from '../../api/client';
 
 const PatientRegistration: React.FC = () => {
-  const [form, setForm] = useState({ firstName: '', lastName: '', age: '', gender: 'Male', bloodGroup: '', phone: '', email: '', address: '', emergencyContactName: '', emergencyContactPhone: '', insuranceProvider: '', insurancePolicyNumber: '', allergies: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', age: '', gender: 'Male', bloodGroup: '', phone: '', email: '', address: '', emergencyContactName: '', emergencyContactPhone: '', insuranceProvider: '', insurancePolicyNumber: '', allergies: '', patientCategory: 'Adult' });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<{ mrn: string } | null>(null);
   const [error, setError] = useState('');
@@ -19,7 +19,7 @@ const PatientRegistration: React.FC = () => {
     try {
       const res = await api.post('/patients', form);
       setSuccess({ mrn: res.data.data.medical_record_number });
-      setForm({ firstName: '', lastName: '', age: '', gender: 'Male', bloodGroup: '', phone: '', email: '', address: '', emergencyContactName: '', emergencyContactPhone: '', insuranceProvider: '', insurancePolicyNumber: '', allergies: '' });
+      setForm({ firstName: '', lastName: '', age: '', gender: 'Male', bloodGroup: '', phone: '', email: '', address: '', emergencyContactName: '', emergencyContactPhone: '', insuranceProvider: '', insurancePolicyNumber: '', allergies: '', patientCategory: 'Adult' });
     } catch (err: any) { setError(err.response?.data?.error || 'Failed to register patient.'); }
     finally { setLoading(false); }
   };
@@ -31,6 +31,34 @@ const PatientRegistration: React.FC = () => {
       {error && <div className="alert alert-danger">{error}</div>}
       <form onSubmit={handleSubmit} className="card">
         <div className="form-section"><div className="form-section-title">Personal Information</div>
+          <div style={{ marginBottom: '16px', background: 'var(--bg-primary)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-primary)' }}>
+            <label style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '8px' }}>
+              Patient Category *
+            </label>
+            <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="patientCategory"
+                  value="Adult"
+                  checked={form.patientCategory !== 'Child'}
+                  onChange={() => setForm({ ...form, patientCategory: 'Adult' })}
+                />
+                👨‍💼 Adult (≥ 10 Years)
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+                <input
+                  type="radio"
+                  name="patientCategory"
+                  value="Child"
+                  checked={form.patientCategory === 'Child'}
+                  onChange={() => setForm({ ...form, patientCategory: 'Child' })}
+                />
+                👶 Child / Pediatric (&lt; 10 Years)
+              </label>
+            </div>
+          </div>
+
           <div className="form-row">
             <Input label="First Name *" value={form.firstName} onChange={set('firstName')} required />
             <Input label="Last Name *" value={form.lastName} onChange={set('lastName')} required />

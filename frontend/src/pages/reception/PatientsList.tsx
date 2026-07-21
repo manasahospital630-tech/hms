@@ -286,6 +286,34 @@ const PatientsList: React.FC = () => {
               </div>
             )}
 
+            <div style={{ marginBottom: '16px', background: 'var(--bg-primary)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-primary)' }}>
+              <label style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '8px' }}>
+                Patient Category *
+              </label>
+              <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="editPatientCategory"
+                    value="Adult"
+                    checked={(editForm as any).patientCategory !== 'Child'}
+                    onChange={() => setEditForm({ ...editForm, patientCategory: 'Adult' } as any)}
+                  />
+                  👨‍💼 Adult (≥ 10 Years)
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="editPatientCategory"
+                    value="Child"
+                    checked={(editForm as any).patientCategory === 'Child'}
+                    onChange={() => setEditForm({ ...editForm, patientCategory: 'Child' } as any)}
+                  />
+                  👶 Child / Pediatric (&lt; 10 Years)
+                </label>
+              </div>
+            </div>
+
             <div className="form-row">
               <Input label="First Name *" value={editForm.firstName} onChange={e => setEditForm({ ...editForm, firstName: e.target.value })} required />
               <Input label="Last Name *" value={editForm.lastName} onChange={e => setEditForm({ ...editForm, lastName: e.target.value })} required />

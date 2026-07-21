@@ -32,21 +32,35 @@ const BLOOD_GROUPS = [
 ];
 
 const calculateAge = (dob?: string, ageVal?: any) => {
+  if (dob) {
+    const birthDate = new Date(dob);
+    if (!isNaN(birthDate.getTime())) {
+      const today = new Date();
+      let years = today.getFullYear() - birthDate.getFullYear();
+      let months = today.getMonth() - birthDate.getMonth();
+      if (months < 0 || (months === 0 && today.getDate() < birthDate.getDate())) {
+        years--;
+        months += 12;
+      }
+      if (years < 1) {
+        return `${Math.max(months, 1)} Months`;
+      }
+      if (years < 10) {
+        return months > 0 ? `${years} Years ${months} Months` : `${years} Years`;
+      }
+      return `${years} Years`;
+    }
+  }
+
   if (ageVal !== undefined && ageVal !== null && ageVal !== '' && ageVal !== 0) {
-    return `${ageVal} Years`;
+    const numAge = Number(ageVal);
+    if (!isNaN(numAge)) {
+      if (numAge < 1) return '6 Months';
+      if (numAge < 10) return `${numAge} Years`;
+      return `${numAge} Years`;
+    }
   }
-  if (!dob) return '—';
-  const birthDate = new Date(dob);
-  if (isNaN(birthDate.getTime())) return '—';
-  const today = new Date();
-  let years = today.getFullYear() - birthDate.getFullYear();
-  let months = today.getMonth() - birthDate.getMonth();
-  if (months < 0 || (months === 0 && today.getDate() < birthDate.getDate())) {
-    years--;
-    months += 12;
-  }
-  if (years < 0) return '—';
-  return `${years} Years`;
+  return '—';
 };
 
 const numberToWords = (num: number) => {
@@ -916,6 +930,34 @@ const OPCheckIn: React.FC = () => {
                 ⚠️ {regError}
               </div>
             )}
+
+            <div style={{ marginBottom: '16px', background: 'var(--bg-primary)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-primary)' }}>
+              <label style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '8px' }}>
+                Patient Category *
+              </label>
+              <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="opPatientCategory"
+                    value="Adult"
+                    checked={(regForm as any).patientCategory !== 'Child'}
+                    onChange={() => setRegForm({ ...regForm, patientCategory: 'Adult' } as any)}
+                  />
+                  👨‍💼 Adult (≥ 10 Years)
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="opPatientCategory"
+                    value="Child"
+                    checked={(regForm as any).patientCategory === 'Child'}
+                    onChange={() => setRegForm({ ...regForm, patientCategory: 'Child' } as any)}
+                  />
+                  👶 Child / Pediatric (&lt; 10 Years)
+                </label>
+              </div>
+            </div>
 
             <div className="form-row">
               <Input 
