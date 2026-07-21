@@ -189,7 +189,7 @@ const getPatientFullTimeline = async (patientId) => {
      FROM prescriptions pr
      LEFT JOIN users u ON pr.doctor_id = u.user_id
      WHERE pr.patient_id = $1
-     ORDER BY pr.created_at DESC`, [patientId]);
+     ORDER BY pr.issued_at DESC`, [patientId]);
     const prescriptions = rxRes.rows;
     const activeMedications = [];
     for (const rx of prescriptions) {
@@ -205,7 +205,7 @@ const getPatientFullTimeline = async (patientId) => {
                 frequency: item.frequency,
                 duration: item.duration,
                 fulfillment_status: rx.status || 'Active',
-                prescribed_date: rx.created_at,
+                prescribed_date: rx.issued_at,
                 prescription_id: rx.prescription_id
             });
         }
