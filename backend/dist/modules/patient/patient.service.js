@@ -173,86 +173,138 @@ const getPatientFullTimeline = async (patientId) => {
         throw new errorHandler_1.AppError('Patient not found.', 404);
     }
     const patient = patientRes.rows[0];
-    // 2. Encounters / Consultations
-    const encountersRes = await (0, database_1.query)(`SELECT e.*, u.first_name || ' ' || u.last_name as provider_name
-     FROM encounters e
-     JOIN users u ON e.provider_id = u.user_id
-     WHERE e.patient_id = $1
-     ORDER BY e.encounter_timestamp DESC`, [patientId]);
-    const encounters = encountersRes.rows;
-    for (const enc of encounters) {
-        const diagnosesRes = await (0, database_1.query)(`SELECT * FROM diagnoses WHERE encounter_id = $1 ORDER BY is_primary DESC, recorded_at ASC`, [enc.encounter_id]);
-        enc.diagnoses = diagnosesRes.rows;
+    // 2. Encounters / Consultations (Fault tolerant)
+    let encounters = [];
+    try {
+        const encountersRes = await (0, database_1.query)(`SELECT e.*, u.first_name || ' ' || u.last_name as provider_name
+       FROM encounters e
+       JOIN users u ON e.provider_id = u.user_id
+       WHERE e.patient_id = $1
+       ORDER BY e.encounter_timestamp DESC`, [patientId]);
+        encounters = encountersRes.rows;
+        for (const enc of encounters) {
+            try {
+                const diagnosesRes = await (0, database_1.query)(`SELECT * FROM diagnoses WHERE encounter_id = $1 ORDER BY is_primary DESC`, [enc.encounter_id]);
+                enc.diagnoses = diagnosesRes.rows;
+            }
+            catch {
+                enc.diagnoses = [];
+            }
+        }
     }
-    // 3. Prescriptions & Active Meds
-    const rxRes = await (0, database_1.query)(`SELECT pr.*, u.first_name || ' ' || u.last_name as doctor_name
-     FROM prescriptions pr
-     LEFT JOIN users u ON pr.doctor_id = u.user_id
-     WHERE pr.patient_id = $1
-     ORDER BY pr.issued_at DESC`, [patientId]);
-    const prescriptions = rxRes.rows;
+    catch (err) {
+        console.warn('Encounters query skipped:', err);
+        encounters = [];
+    }
+    // 3. Prescriptions & Active Meds (Fault tolerant)
+    let prescriptions = [];
     const activeMedications = [];
-    for (const rx of prescriptions) {
-        const itemsRes = await (0, database_1.query)(`SELECT pi.*, COALESCE(i.name, pi.medication_name) as med_name
-       FROM prescription_items pi
-       LEFT JOIN inventory_items i ON pi.inventory_id = i.inventory_id
-       WHERE pi.prescription_id = $1`, [rx.prescription_id]);
-        rx.items = itemsRes.rows;
-        for (const item of itemsRes.rows) {
-            activeMedications.push({
-                medication_name: item.med_name || 'Medication',
-                dosage: item.dosage,
-                frequency: item.frequency,
-                duration: item.duration,
-                fulfillment_status: rx.status || 'Active',
-                prescribed_date: rx.issued_at,
-                prescription_id: rx.prescription_id
-            });
+    try {
+        const rxRes = await (0, database_1.query)(`SELECT pr.*, u.first_name || ' ' || u.last_name as doctor_name
+       FROM prescriptions pr
+       LEFT JOIN users u ON pr.doctor_id = u.user_id
+       WHERE pr.patient_id = $1`, [patientId]);
+        prescriptions = rxRes.rows;
+        for (const rx of prescriptions) {
+            try {
+                const itemsRes = await (0, database_1.query)(`SELECT pi.*, COALESCE(i.name, pi.medication_name) as med_name
+           FROM prescription_items pi
+           LEFT JOIN inventory_items i ON pi.inventory_id = i.inventory_id
+           WHERE pi.prescription_id = $1`, [rx.prescription_id]);
+                rx.items = itemsRes.rows;
+                for (const item of itemsRes.rows) {
+                    activeMedications.push({
+                        medication_name: item.med_name || item.item_name || 'Medication',
+                        dosage: item.dosage,
+                        frequency: item.frequency,
+                        duration: item.duration,
+                        fulfillment_status: rx.status || 'Active',
+                        prescribed_date: rx.issued_at || rx.created_at,
+                        prescription_id: rx.prescription_id
+                    });
+                }
+            }
+            catch {
+                rx.items = [];
+            }
         }
     }
-    // 4. Lab & Diagnostic Orders
-    const labOrdersRes = await (0, database_1.query)(`SELECT tor.*, u.first_name || ' ' || u.last_name as doctor_name
-     FROM test_orders tor
-     LEFT JOIN users u ON tor.doctor_id = u.user_id
-     WHERE tor.patient_id = $1
-     ORDER BY tor.created_at DESC`, [patientId]);
-    const labOrders = labOrdersRes.rows;
-    for (const order of labOrders) {
-        const orderItemsRes = await (0, database_1.query)(`SELECT toi.*, ds.name as test_name, ds.service_code, ds.sample_required,
-              dc.name as category_name
-       FROM test_order_items toi
-       LEFT JOIN diagnostic_services ds ON toi.service_id = ds.service_id
-       LEFT JOIN diagnostic_categories dc ON ds.category_id = dc.category_id
-       WHERE toi.order_id = $1`, [order.order_id]);
-        order.items = orderItemsRes.rows;
-        for (const item of order.items) {
-            const resultsRes = await (0, database_1.query)(`SELECT dr.*, dp.name as parameter_name, dp.unit, dp.reference_range
-         FROM diagnostic_results dr
-         LEFT JOIN diagnostic_parameters dp ON dr.parameter_id = dp.parameter_id
-         WHERE dr.item_id = $1`, [item.item_id]);
-            item.results = resultsRes.rows;
+    catch (err) {
+        console.warn('Prescriptions query skipped:', err);
+        prescriptions = [];
+    }
+    // 4. Lab & Diagnostic Orders (Fault tolerant)
+    let labOrders = [];
+    try {
+        const labOrdersRes = await (0, database_1.query)(`SELECT tor.*, u.first_name || ' ' || u.last_name as doctor_name
+       FROM test_orders tor
+       LEFT JOIN users u ON tor.doctor_id = u.user_id
+       WHERE tor.patient_id = $1`, [patientId]);
+        labOrders = labOrdersRes.rows;
+        for (const order of labOrders) {
+            try {
+                const orderItemsRes = await (0, database_1.query)(`SELECT toi.*, ds.name as test_name, ds.service_code, ds.sample_required,
+                  dc.name as category_name
+           FROM test_order_items toi
+           LEFT JOIN diagnostic_services ds ON toi.service_id = ds.service_id
+           LEFT JOIN diagnostic_categories dc ON ds.category_id = dc.category_id
+           WHERE toi.order_id = $1`, [order.order_id]);
+                order.items = orderItemsRes.rows;
+                for (const item of order.items) {
+                    try {
+                        const resultsRes = await (0, database_1.query)(`SELECT lrp.*, lrp.parameter_name as name, lrp.actual_value as result_value
+               FROM lab_result_parameters lrp
+               WHERE lrp.order_item_id = $1`, [item.item_id]);
+                        item.results = resultsRes.rows;
+                    }
+                    catch {
+                        item.results = [];
+                    }
+                }
+            }
+            catch {
+                order.items = [];
+            }
         }
     }
-    // 5. Vitals History Series for Trend Graphing
-    const vitalsSeriesRes = await (0, database_1.query)(`SELECT encounter_id, encounter_timestamp, systolic_bp, diastolic_bp, pulse_rate,
-            temperature_celsius, weight_kg, spo2
-     FROM encounters
-     WHERE patient_id = $1 AND (systolic_bp IS NOT NULL OR pulse_rate IS NOT NULL OR temperature_celsius IS NOT NULL)
-     ORDER BY encounter_timestamp ASC`, [patientId]);
-    // 6. Upcoming Appointments
-    const appointmentsRes = await (0, database_1.query)(`SELECT a.*, u.first_name || ' ' || u.last_name as doctor_name
-     FROM appointments a
-     LEFT JOIN users u ON a.doctor_id = u.user_id
-     WHERE a.patient_id = $1 AND a.appointment_date >= CURRENT_DATE
-     ORDER BY a.appointment_date ASC, a.start_time ASC`, [patientId]);
+    catch (err) {
+        console.warn('Lab orders query skipped:', err);
+        labOrders = [];
+    }
+    // 5. Vitals History Series for Trend Graphing (Fault tolerant)
+    let vitalsSeries = [];
+    try {
+        const vitalsSeriesRes = await (0, database_1.query)(`SELECT encounter_id, encounter_timestamp, systolic_bp, diastolic_bp, pulse_rate,
+              temperature_celsius, weight_kg, spo2
+       FROM encounters
+       WHERE patient_id = $1`, [patientId]);
+        vitalsSeries = vitalsSeriesRes.rows;
+    }
+    catch (err) {
+        console.warn('Vitals query skipped:', err);
+        vitalsSeries = [];
+    }
+    // 6. Upcoming Appointments (Fault tolerant)
+    let upcomingAppointments = [];
+    try {
+        const appointmentsRes = await (0, database_1.query)(`SELECT a.*, u.first_name || ' ' || u.last_name as doctor_name
+       FROM appointments a
+       LEFT JOIN users u ON a.doctor_id = u.user_id
+       WHERE a.patient_id = $1`, [patientId]);
+        upcomingAppointments = appointmentsRes.rows;
+    }
+    catch (err) {
+        console.warn('Appointments query skipped:', err);
+        upcomingAppointments = [];
+    }
     return {
         patient,
         encounters,
         prescriptions,
         activeMedications,
         labOrders,
-        vitalsSeries: vitalsSeriesRes.rows,
-        upcomingAppointments: appointmentsRes.rows
+        vitalsSeries,
+        upcomingAppointments
     };
 };
 exports.getPatientFullTimeline = getPatientFullTimeline;
