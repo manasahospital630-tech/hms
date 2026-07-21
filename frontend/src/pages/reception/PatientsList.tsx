@@ -88,10 +88,23 @@ const PatientsList: React.FC = () => {
 
   const handleOpenEdit = (patient: any) => {
     setEditingPatient(patient);
+
+    const rawAge = String(patient.age || '');
+    const yearsMatch = rawAge.match(/(\d+)\s*(?:years?|yrs?|y)/i) || rawAge.match(/^(\d+)/);
+    const monthsMatch = rawAge.match(/(\d+)\s*(?:months?|mos?|m)/i);
+
+    let parsedYears = yearsMatch ? yearsMatch[1] : (patient.age || '');
+    let parsedMonths = monthsMatch ? monthsMatch[1] : '';
+
+    let isChild = (parsedYears !== '' && Number(parsedYears) < 10) || Boolean(monthsMatch) || rawAge.toLowerCase().includes('month');
+
     setEditForm({
       firstName: patient.first_name || '',
       lastName: patient.last_name || '',
       dateOfBirth: patient.date_of_birth ? patient.date_of_birth.substring(0, 10) : '',
+      age: parsedYears,
+      ageMonths: parsedMonths,
+      patientCategory: isChild ? 'Child' : 'Adult',
       gender: patient.gender || 'Male',
       bloodGroup: patient.blood_group || '',
       address: patient.address || '',
@@ -103,7 +116,7 @@ const PatientsList: React.FC = () => {
       insurancePolicyNumber: patient.insurance_policy_number || '',
       allergies: patient.allergies || '',
       assignedDoctorId: patient.assigned_doctor_id || '',
-    });
+    } as any);
     setErrorMsg('');
     setShowEditModal(true);
   };
@@ -113,8 +126,13 @@ const PatientsList: React.FC = () => {
     setSaveLoading(true);
     setErrorMsg('');
     try {
+      const formattedAge = (editForm as any).patientCategory === 'Child'
+        ? ((editForm as any).age ? `${(editForm as any).age} Years ${(editForm as any).ageMonths || '0'} Months` : `${(editForm as any).ageMonths || '0'} Months`)
+        : `${(editForm as any).age} Years`;
+
       await api.put(`/patients/${editingPatient.patient_id}`, {
         ...editForm,
+        age: formattedAge,
         assignedDoctorId: editForm.assignedDoctorId || null,
       });
       setShowEditModal(false);
@@ -320,7 +338,18 @@ const PatientsList: React.FC = () => {
             </div>
 
             <div className="form-row">
-              <Input label="Date of Birth *" type="date" value={editForm.dateOfBirth} onChange={e => setEditForm({ ...editForm, dateOfBirth: e.target.value })} required />
+              {(editForm as any).patientCategory === 'Child' ? (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', width: '100%' }}>
+                  <Input label="Age (Years)" type="number" min="0" max="9" placeholder="e.g. 4" value={(editForm as any).age || ''} onChange={e => setEditForm({ ...editForm, age: e.target.value } as any)} />
+                  <Input label="Age (Months) *" type="number" min="0" max="11" placeholder="e.g. 6" value={(editForm as any).ageMonths || ''} onChange={e => setEditForm({ ...editForm, ageMonths: e.target.value } as any)} required />
+                </div>
+              ) : (
+                <Input label="Age (Years) *" type="number" min="10" max="120" placeholder="e.g. 35" value={(editForm as any).age || ''} onChange={e => setEditForm({ ...editForm, age: e.target.value } as any)} required />
+              )}
+            </div>
+
+            <div className="form-row">
+              <Input label="Date of Birth" type="date" value={editForm.dateOfBirth} onChange={e => setEditForm({ ...editForm, dateOfBirth: e.target.value })} />
               <Select label="Gender *" value={editForm.gender} onChange={e => setEditForm({ ...editForm, gender: e.target.value })}
                 options={GENDER_OPTIONS} />
             </div>
