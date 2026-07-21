@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.givePortalAccess = exports.update = exports.getById = exports.getAll = exports.create = void 0;
+exports.getTimeline = exports.givePortalAccess = exports.update = exports.getById = exports.getAll = exports.create = void 0;
 const responseHelper_1 = require("../../utils/responseHelper");
 const patientService = __importStar(require("./patient.service"));
 const create = async (req, res, next) => {
@@ -91,4 +91,14 @@ const givePortalAccess = async (req, res, next) => {
     }
 };
 exports.givePortalAccess = givePortalAccess;
+const getTimeline = async (req, res, next) => {
+    try {
+        const timeline = await patientService.getPatientFullTimeline(req.params.id);
+        (0, responseHelper_1.successResponse)(res, timeline);
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.getTimeline = getTimeline;
 //# sourceMappingURL=patient.controller.js.map

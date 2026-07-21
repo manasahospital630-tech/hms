@@ -53,3 +53,12 @@ export const givePortalAccess = async (req: ProtectedRequest, res: Response, nex
   }
 };
 
+export const getTimeline = async (req: ProtectedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const timeline = await patientService.getPatientFullTimeline(req.params.id as string);
+    successResponse(res, timeline);
+  } catch (error) {
+    next(error);
+  }
+};
+

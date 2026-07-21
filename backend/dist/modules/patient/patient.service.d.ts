@@ -19,4 +19,13 @@ export declare const givePortalAccess: (patientId: string) => Promise<{
     email: any;
     password: string;
 }>;
+export declare const getPatientFullTimeline: (patientId: string) => Promise<{
+    patient: any;
+    encounters: any[];
+    prescriptions: any[];
+    activeMedications: any[];
+    labOrders: any[];
+    vitalsSeries: any[];
+    upcomingAppointments: any[];
+}>;
 //# sourceMappingURL=patient.service.d.ts.map

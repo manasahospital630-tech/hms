@@ -38,6 +38,7 @@ import Workspaces from '../pages/diagnostics/Workspaces';
 import ReferralsAndBilling from '../pages/diagnostics/ReferralsAndBilling';
 import EquipmentAndQC from '../pages/diagnostics/EquipmentAndQC';
 import PublicReportView from '../pages/diagnostics/PublicReportView';
+import PatientProfile from '../pages/patient/PatientProfile';
 
 const roleDefaultPaths: Record<string, string> = {
   Admin: '/admin/dashboard', Doctor: '/doctor/dashboard', Nurse: '/nurse/triage',
@@ -122,6 +123,10 @@ const AppRouter: React.FC = () => (
           <Route path="diagnostics/workspaces" element={<Workspaces />} />
           <Route path="diagnostics/billing" element={<ReferralsAndBilling />} />
           <Route path="diagnostics/equipment" element={<EquipmentAndQC />} />
+        </Route>
+
+        <Route element={<RoleProtectedRoute permittedRoles={['Receptionist','Doctor','Nurse','Admin','Biller','Pharmacist','Patient','Incharge']} />}>
+          <Route path="patient/profile/:patientId" element={<PatientProfile />} />
         </Route>
 
         <Route element={<RoleProtectedRoute permittedRoles={['Patient','Admin']} />}>

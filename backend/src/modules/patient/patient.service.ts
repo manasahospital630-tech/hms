@@ -201,3 +201,138 @@ export const givePortalAccess = async (patientId: string) => {
     password: defaultPassword
   };
 };
+
+export const getPatientFullTimeline = async (patientId: string) => {
+  // 1. Core Patient Specs
+  const patientRes = await query(
+    `SELECT p.*, d.first_name as doctor_first_name, d.last_name as doctor_last_name
+     FROM patients p
+     LEFT JOIN users d ON p.assigned_doctor_id = d.user_id
+     WHERE p.patient_id = $1`,
+    [patientId]
+  );
+
+  if (patientRes.rows.length === 0) {
+    throw new AppError('Patient not found.', 404);
+  }
+  const patient = patientRes.rows[0];
+
+  // 2. Encounters / Consultations
+  const encountersRes = await query(
+    `SELECT e.*, u.first_name || ' ' || u.last_name as provider_name
+     FROM encounters e
+     JOIN users u ON e.provider_id = u.user_id
+     WHERE e.patient_id = $1
+     ORDER BY e.encounter_timestamp DESC`,
+    [patientId]
+  );
+  const encounters = encountersRes.rows;
+
+  for (const enc of encounters) {
+    const diagnosesRes = await query(
+      `SELECT * FROM diagnoses WHERE encounter_id = $1 ORDER BY is_primary DESC, recorded_at ASC`,
+      [enc.encounter_id]
+    );
+    enc.diagnoses = diagnosesRes.rows;
+  }
+
+  // 3. Prescriptions & Active Meds
+  const rxRes = await query(
+    `SELECT pr.*, u.first_name || ' ' || u.last_name as doctor_name
+     FROM prescriptions pr
+     LEFT JOIN users u ON pr.doctor_id = u.user_id
+     WHERE pr.patient_id = $1
+     ORDER BY pr.created_at DESC`,
+    [patientId]
+  );
+  const prescriptions = rxRes.rows;
+
+  const activeMedications: any[] = [];
+  for (const rx of prescriptions) {
+    const itemsRes = await query(
+      `SELECT pi.*, COALESCE(i.name, pi.medication_name) as med_name
+       FROM prescription_items pi
+       LEFT JOIN inventory_items i ON pi.inventory_id = i.inventory_id
+       WHERE pi.prescription_id = $1`,
+      [rx.prescription_id]
+    );
+    rx.items = itemsRes.rows;
+
+    for (const item of itemsRes.rows) {
+      activeMedications.push({
+        medication_name: item.med_name || 'Medication',
+        dosage: item.dosage,
+        frequency: item.frequency,
+        duration: item.duration,
+        fulfillment_status: rx.status || 'Active',
+        prescribed_date: rx.created_at,
+        prescription_id: rx.prescription_id
+      });
+    }
+  }
+
+  // 4. Lab & Diagnostic Orders
+  const labOrdersRes = await query(
+    `SELECT tor.*, u.first_name || ' ' || u.last_name as doctor_name
+     FROM test_orders tor
+     LEFT JOIN users u ON tor.doctor_id = u.user_id
+     WHERE tor.patient_id = $1
+     ORDER BY tor.order_date DESC`,
+    [patientId]
+  );
+  const labOrders = labOrdersRes.rows;
+
+  for (const order of labOrders) {
+    const orderItemsRes = await query(
+      `SELECT toi.*, ds.name as test_name, ds.service_code, ds.sample_required,
+              dc.name as category_name
+       FROM test_order_items toi
+       LEFT JOIN diagnostic_services ds ON toi.service_id = ds.service_id
+       LEFT JOIN diagnostic_categories dc ON ds.category_id = dc.category_id
+       WHERE toi.order_id = $1`,
+      [order.order_id]
+    );
+    order.items = orderItemsRes.rows;
+
+    for (const item of order.items) {
+      const resultsRes = await query(
+        `SELECT dr.*, dp.name as parameter_name, dp.unit, dp.reference_range
+         FROM diagnostic_results dr
+         LEFT JOIN diagnostic_parameters dp ON dr.parameter_id = dp.parameter_id
+         WHERE dr.item_id = $1`,
+        [item.item_id]
+      );
+      item.results = resultsRes.rows;
+    }
+  }
+
+  // 5. Vitals History Series for Trend Graphing
+  const vitalsSeriesRes = await query(
+    `SELECT encounter_id, encounter_timestamp, systolic_bp, diastolic_bp, pulse_rate,
+            temperature_celsius, weight_kg, spo2
+     FROM encounters
+     WHERE patient_id = $1 AND (systolic_bp IS NOT NULL OR pulse_rate IS NOT NULL OR temperature_celsius IS NOT NULL)
+     ORDER BY encounter_timestamp ASC`,
+    [patientId]
+  );
+
+  // 6. Upcoming Appointments
+  const appointmentsRes = await query(
+    `SELECT a.*, u.first_name || ' ' || u.last_name as doctor_name
+     FROM appointments a
+     LEFT JOIN users u ON a.doctor_id = u.user_id
+     WHERE a.patient_id = $1 AND a.appointment_date >= CURRENT_DATE
+     ORDER BY a.appointment_date ASC, a.start_time ASC`,
+    [patientId]
+  );
+
+  return {
+    patient,
+    encounters,
+    prescriptions,
+    activeMedications,
+    labOrders,
+    vitalsSeries: vitalsSeriesRes.rows,
+    upcomingAppointments: appointmentsRes.rows
+  };
+};

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Users, RefreshCw, KeyRound, Key, Edit, ShieldAlert, Award, Stethoscope } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Users, RefreshCw, KeyRound, Key, Edit, ShieldAlert, Award, Stethoscope, Activity } from 'lucide-react';
 import { Table } from '../../components/ui/Table';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -238,13 +239,14 @@ const PatientsList: React.FC = () => {
               key: 'actions',
               label: 'Actions',
               render: (_, row) => (
-                <div style={{ display: 'flex', gap: 'var(--space-xs)' }}>
-                  {canEdit ? (
+                <div style={{ display: 'flex', gap: 'var(--space-xs)', alignItems: 'center' }}>
+                  <Link to={`/patient/profile/${row.patient_id}`} className="btn btn-primary btn-sm" style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', textDecoration: 'none' }}>
+                    <Activity size={12} /> Timeline Profile
+                  </Link>
+                  {canEdit && (
                     <Button variant="secondary" size="sm" icon={<Edit size={12} />} onClick={() => handleOpenEdit(row)}>
                       Modify
                     </Button>
-                  ) : (
-                    <span style={{ color: 'var(--text-tertiary)', fontSize: '11px' }}>Admin Only</span>
                   )}
                 </div>
               )

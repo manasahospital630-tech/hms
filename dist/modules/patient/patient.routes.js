@@ -44,6 +44,7 @@ const router = (0, express_1.Router)();
 router.post('/', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Receptionist', 'Admin']), (0, validator_1.validate)(patient_schema_1.createPatientSchema), (0, auditLogger_1.auditLogger)('CREATE', 'Patient'), patientController.create);
 router.get('/', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Receptionist', 'Doctor', 'Nurse', 'Admin', 'Biller', 'Pharmacist']), patientController.getAll);
 router.get('/:id', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Receptionist', 'Doctor', 'Nurse', 'Admin', 'Biller', 'Pharmacist']), patientController.getById);
+router.get('/:id/timeline', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Receptionist', 'Doctor', 'Nurse', 'Admin', 'Biller', 'Pharmacist', 'Patient']), patientController.getTimeline);
 router.put('/:id', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin']), (0, validator_1.validate)(patient_schema_1.updatePatientSchema), (0, auditLogger_1.auditLogger)('UPDATE', 'Patient'), patientController.update);
 router.post('/:id/portal-access', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Receptionist', 'Admin', 'Biller']), (0, auditLogger_1.auditLogger)('CREATE', 'PatientPortalAccess'), patientController.givePortalAccess);
 exports.default = router;
