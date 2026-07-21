@@ -1137,7 +1137,7 @@ export const ServiceCatalog: React.FC = () => {
 
                 <div style={{ borderTop: '1px solid var(--border-primary)', paddingTop: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                    Discount: Rs. {parseFloat(pkg.discount || '0').toFixed(2)} | Validity: {pkg.validity_days || 365} Days
+                    Discount: Rs. {parseFloat(pkg.discount || '0').toFixed(2)}
                   </div>
                   <div style={{ display: 'flex', gap: '6px' }}>
                     <button
@@ -1491,7 +1491,7 @@ export const ServiceCatalog: React.FC = () => {
                   <input type="text" className="input" value={packageForm.name} onChange={(e) => setPackageForm({ ...packageForm, name: e.target.value })} required placeholder="e.g. Comprehensive Executive Health Profile" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '10px' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
                   <div>
                     <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Set Package Price (Rs.) *</label>
                     <input type="number" className="input" value={packageForm.price} onChange={(e) => setPackageForm({ ...packageForm, price: e.target.value })} required placeholder="e.g. 2500" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
@@ -1499,10 +1499,6 @@ export const ServiceCatalog: React.FC = () => {
                   <div>
                     <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Discount Amount (Rs.)</label>
                     <input type="number" className="input" value={packageForm.discount} onChange={(e) => setPackageForm({ ...packageForm, discount: e.target.value })} style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
-                  </div>
-                  <div>
-                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Validity (Days)</label>
-                    <input type="number" className="input" value={packageForm.validityDays} onChange={(e) => setPackageForm({ ...packageForm, validityDays: e.target.value })} style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
                   </div>
                 </div>
 
