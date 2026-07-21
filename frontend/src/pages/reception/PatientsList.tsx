@@ -337,22 +337,18 @@ const PatientsList: React.FC = () => {
               <Input label="Last Name *" value={editForm.lastName} onChange={e => setEditForm({ ...editForm, lastName: e.target.value })} required />
             </div>
 
-            <div className="form-row">
-              {(editForm as any).patientCategory === 'Child' ? (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', width: '100%' }}>
-                  <Input label="Age (Years)" type="number" min="0" max="9" placeholder="e.g. 4" value={(editForm as any).age || ''} onChange={e => setEditForm({ ...editForm, age: e.target.value } as any)} />
-                  <Input label="Age (Months) *" type="number" min="0" max="11" placeholder="e.g. 6" value={(editForm as any).ageMonths || ''} onChange={e => setEditForm({ ...editForm, ageMonths: e.target.value } as any)} required />
-                </div>
-              ) : (
+            {(editForm as any).patientCategory === 'Child' ? (
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', width: '100%', marginBottom: '16px' }}>
+                <Input label="Age (Years)" type="number" min="0" max="9" placeholder="e.g. 4" value={(editForm as any).age || ''} onChange={e => setEditForm({ ...editForm, age: e.target.value } as any)} />
+                <Input label="Age (Months) *" type="number" min="0" max="11" placeholder="e.g. 6" value={(editForm as any).ageMonths || ''} onChange={e => setEditForm({ ...editForm, ageMonths: e.target.value } as any)} required />
+                <Select label="Gender *" value={editForm.gender} onChange={e => setEditForm({ ...editForm, gender: e.target.value })} options={GENDER_OPTIONS} />
+              </div>
+            ) : (
+              <div className="form-row">
                 <Input label="Age (Years) *" type="number" min="10" max="120" placeholder="e.g. 35" value={(editForm as any).age || ''} onChange={e => setEditForm({ ...editForm, age: e.target.value } as any)} required />
-              )}
-            </div>
-
-            <div className="form-row">
-              <Input label="Date of Birth" type="date" value={editForm.dateOfBirth} onChange={e => setEditForm({ ...editForm, dateOfBirth: e.target.value })} />
-              <Select label="Gender *" value={editForm.gender} onChange={e => setEditForm({ ...editForm, gender: e.target.value })}
-                options={GENDER_OPTIONS} />
-            </div>
+                <Select label="Gender *" value={editForm.gender} onChange={e => setEditForm({ ...editForm, gender: e.target.value })} options={GENDER_OPTIONS} />
+              </div>
+            )}
 
             <div className="form-row">
               <Input label="Phone" value={editForm.phone} onChange={e => setEditForm({ ...editForm, phone: e.target.value })} />
