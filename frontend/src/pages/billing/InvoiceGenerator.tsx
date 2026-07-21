@@ -6,7 +6,7 @@ import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { PatientSearchBar } from '../../components/shared/PatientSearchBar';
 import api from '../../api/client';
-import { formatCurrency } from '../../utils/formatters';
+import { formatCurrency, formatDisplayAge } from '../../utils/formatters';
 import { getHospitalLogoHtml } from '../../utils/logoHelper';
 
 const InvoiceGenerator: React.FC = () => {
@@ -332,38 +332,7 @@ const InvoiceGenerator: React.FC = () => {
           const billNumber = `${billPrefix}${billYear}-${inv.invoice_id.substring(0, 8).toUpperCase()}`;
 
           // Dynamic Age computation according to adult/child rules
-          const getAgeStr = (birthDateStr: string, fallbackAge?: any): string => {
-            if (birthDateStr) {
-              const birth = new Date(birthDateStr);
-              if (!isNaN(birth.getTime())) {
-                const today = new Date();
-                let years = today.getFullYear() - birth.getFullYear();
-                let months = today.getMonth() - birth.getMonth();
-                if (months < 0 || (months === 0 && today.getDate() < birth.getDate())) {
-                  years--;
-                  months += 12;
-                }
-                if (years < 1) {
-                  return `${Math.max(months, 1)} Months`;
-                }
-                if (years < 10) {
-                  return months > 0 ? `${years} Years ${months} Months` : `${years} Years`;
-                }
-                return `${years} Years`;
-              }
-            }
-
-            if (fallbackAge !== undefined && fallbackAge !== null && fallbackAge !== '' && fallbackAge !== 0) {
-              const numAge = Number(fallbackAge);
-              if (!isNaN(numAge)) {
-                if (numAge < 1) return '6 Months';
-                if (numAge < 10) return `${numAge} Years`;
-                return `${numAge} Years`;
-              }
-            }
-            return '—';
-          };
-          const ageStr = getAgeStr(inv.birth_date, inv.patient_age);
+          const ageStr = formatDisplayAge(inv.birth_date, inv.patient_age || inv.age);
 
           // Rupees in words converter
           const numberToWords = (num: number): string => {

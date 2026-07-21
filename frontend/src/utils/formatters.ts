@@ -65,3 +65,48 @@ export function formatTime(dateStr: string): string {
     minute: '2-digit',
   });
 }
+
+export function formatDisplayAge(dob?: string | null, rawAge?: any): string {
+  if (dob && typeof dob === 'string' && (dob.includes('-') || dob.includes('/'))) {
+    const birth = new Date(dob);
+    if (!isNaN(birth.getTime())) {
+      const today = new Date();
+      let years = today.getFullYear() - birth.getFullYear();
+      let months = today.getMonth() - birth.getMonth();
+      if (months < 0 || (months === 0 && today.getDate() < birth.getDate())) {
+        years--;
+        months += 12;
+      }
+      if (years < 1) {
+        return `${Math.max(months, 1)} Months`;
+      }
+      if (years < 10) {
+        return months > 0 ? `${years} Years ${months} Months` : `${years} Years`;
+      }
+      return `${years} Years`;
+    }
+  }
+
+  const strAge = String(rawAge || dob || '').trim();
+  if (strAge && strAge !== '—') {
+    const yearsMatch = strAge.match(/(\d+)\s*(?:years?|yrs?|y)/i) || strAge.match(/^(\d+)/);
+    const monthsMatch = strAge.match(/(\d+)\s*(?:months?|mos?|m)/i);
+
+    let years = yearsMatch ? parseInt(yearsMatch[1], 10) : 0;
+    let months = monthsMatch ? parseInt(monthsMatch[1], 10) : 0;
+
+    if (!yearsMatch && !monthsMatch && !isNaN(parseInt(strAge, 10))) {
+      years = parseInt(strAge, 10);
+    }
+
+    if (years < 1) {
+      return `${Math.max(months, 1)} Months`;
+    }
+    if (years < 10) {
+      return months > 0 ? `${years} Years ${months} Months` : `${years} Years`;
+    }
+    return `${years} Years`;
+  }
+
+  return '—';
+}

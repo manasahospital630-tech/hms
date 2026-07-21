@@ -11,7 +11,7 @@ import { PatientSearchBar } from '../../components/shared/PatientSearchBar';
 import { StatusBadge } from '../../components/shared/StatusBadge';
 import { useAuth } from '../../hooks/useAuth';
 import api from '../../api/client';
-import { formatCurrency, formatDateTime } from '../../utils/formatters';
+import { formatCurrency, formatDateTime, formatDisplayAge } from '../../utils/formatters';
 import { getHospitalLogoHtml } from '../../utils/logoHelper';
 
 const GENDER_OPTIONS = [
@@ -32,35 +32,7 @@ const BLOOD_GROUPS = [
 ];
 
 const calculateAge = (dob?: string, ageVal?: any) => {
-  if (dob) {
-    const birthDate = new Date(dob);
-    if (!isNaN(birthDate.getTime())) {
-      const today = new Date();
-      let years = today.getFullYear() - birthDate.getFullYear();
-      let months = today.getMonth() - birthDate.getMonth();
-      if (months < 0 || (months === 0 && today.getDate() < birthDate.getDate())) {
-        years--;
-        months += 12;
-      }
-      if (years < 1) {
-        return `${Math.max(months, 1)} Months`;
-      }
-      if (years < 10) {
-        return months > 0 ? `${years} Years ${months} Months` : `${years} Years`;
-      }
-      return `${years} Years`;
-    }
-  }
-
-  if (ageVal !== undefined && ageVal !== null && ageVal !== '' && ageVal !== 0) {
-    const numAge = Number(ageVal);
-    if (!isNaN(numAge)) {
-      if (numAge < 1) return '6 Months';
-      if (numAge < 10) return `${numAge} Years`;
-      return `${numAge} Years`;
-    }
-  }
-  return '—';
+  return formatDisplayAge(dob, ageVal);
 };
 
 const numberToWords = (num: number) => {
