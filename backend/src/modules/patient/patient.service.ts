@@ -277,7 +277,7 @@ export const getPatientFullTimeline = async (patientId: string) => {
      FROM test_orders tor
      LEFT JOIN users u ON tor.doctor_id = u.user_id
      WHERE tor.patient_id = $1
-     ORDER BY tor.order_date DESC`,
+     ORDER BY tor.created_at DESC`,
     [patientId]
   );
   const labOrders = labOrdersRes.rows;

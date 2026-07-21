@@ -215,7 +215,7 @@ const getPatientFullTimeline = async (patientId) => {
      FROM test_orders tor
      LEFT JOIN users u ON tor.doctor_id = u.user_id
      WHERE tor.patient_id = $1
-     ORDER BY tor.order_date DESC`, [patientId]);
+     ORDER BY tor.created_at DESC`, [patientId]);
     const labOrders = labOrdersRes.rows;
     for (const order of labOrders) {
         const orderItemsRes = await (0, database_1.query)(`SELECT toi.*, ds.name as test_name, ds.service_code, ds.sample_required,

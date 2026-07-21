@@ -121,7 +121,7 @@ export const PatientProfile: React.FC = () => {
     timelineFeed.push({
       id: `lab-${order.order_id}`,
       type: 'lab',
-      timestamp: order.order_date,
+      timestamp: order.created_at || order.order_date,
       title: `Diagnostic Lab & Scans Report`,
       subtitle: `Order #${order.order_number} • ${order.items?.length || 0} Test Items`,
       data: order
