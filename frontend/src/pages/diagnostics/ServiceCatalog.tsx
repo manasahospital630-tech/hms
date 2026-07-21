@@ -447,6 +447,17 @@ export const ServiceCatalog: React.FC = () => {
         'SERUM URIC ACID': 'Male 3.4-7.0',
         'OCCULT BLOOD': 'Negative',
         'PROFILE STATUS': 'All Included',
+        // 4 PDF batch 8 serology manual tests
+        'HIV 1 ANTIBODY': 'Non-Reactive',
+        'HIV 2 ANTIBODY': 'Non-Reactive',
+        'RPR': 'Non-Reactive',
+        'HBA': '95-98',
+        'HBA2': '2.0-3.5',
+        'HBF': '<1.0',
+        'HBS': 'Absent',
+        'HBD/HBE/OTHER VARIANTS': 'Absent',
+        'RUBELLA IGG ANTIBODY': '>=10 Immune',
+        'RUBELLA IGG': '>=10 Immune',
         // RFT parameters
         'BLOOD UREA': '15–40',
         'BLOOD UREA NITROGEN': '7–20',
