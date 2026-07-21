@@ -21,8 +21,29 @@ const InvoiceGenerator: React.FC = () => {
   const [insurance, setInsurance] = useState('0');
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [paymentStatus, setPaymentStatus] = useState('Paid');
-  const [consultantDoctor, setConsultantDoctor] = useState('Dr. Priya Nair (Dermatology) M.B.B.S, M.D.');
-  const [referredBy, setReferredBy] = useState('Self');
+  const DEFAULT_DOCTORS = useMemo(() => [
+    'Dr. Priya Nair (Dermatology) M.B.B.S, M.D.',
+    'Dr. Alex Nguyen (General Medicine) M.D.',
+    'Dr. Rajesh Kumar (Cardiology) M.D., DM',
+    'Dr. Ananya Sharma (Pediatrics) M.D.',
+    'Dr. K. V. Rao (Orthopedics) M.S.'
+  ], []);
+
+  const [hospitalDoctors, setHospitalDoctors] = useState<string[]>(DEFAULT_DOCTORS);
+  const [consultantSelect, setConsultantSelect] = useState<string>(DEFAULT_DOCTORS[0]);
+  const [consultantCustomName, setConsultantCustomName] = useState<string>('');
+  
+  const [referredBySelect, setReferredBySelect] = useState<string>('Self');
+  const [referredByCustomName, setReferredByCustomName] = useState<string>('');
+
+  const effectiveConsultantDoctor = consultantSelect === 'OTHER' 
+    ? (consultantCustomName || 'Other Consultant Doctor') 
+    : consultantSelect;
+
+  const effectiveReferredBy = referredBySelect === 'OTHER' 
+    ? (referredByCustomName || 'Other Hospital Doctor') 
+    : referredBySelect;
+
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
 
@@ -122,10 +143,11 @@ const InvoiceGenerator: React.FC = () => {
 
   const loadDiagnosticsAndInvoices = async () => {
     try {
-      const [diagRes, catsRes, pkgsRes] = await Promise.all([
+      const [diagRes, catsRes, pkgsRes, docsRes] = await Promise.all([
         api.get('/diagnostics/services'),
         api.get('/diagnostics/categories'),
-        api.get('/diagnostics/packages')
+        api.get('/diagnostics/packages'),
+        api.get('/admin/consultations').catch(() => ({ data: { success: false, data: [] } }))
       ]);
       if (diagRes.data.success) {
         setDiagServices(diagRes.data.data || []);
@@ -135,6 +157,14 @@ const InvoiceGenerator: React.FC = () => {
       }
       if (pkgsRes.data.success) {
         setDiagPackages(pkgsRes.data.data || []);
+      }
+      if (docsRes.data?.success && Array.isArray(docsRes.data.data) && docsRes.data.data.length > 0) {
+        const fetched = docsRes.data.data.map((d: any) => 
+          d.doctorName ? `Dr. ${d.doctorName}${d.department ? ` (${d.department})` : ''}` : d.name
+        ).filter(Boolean);
+        if (fetched.length > 0) {
+          setHospitalDoctors(Array.from(new Set([...fetched, ...DEFAULT_DOCTORS])));
+        }
       }
     } catch (err) {
       console.error('Failed to load diagnostics services, categories or packages:', err);
@@ -564,9 +594,9 @@ const InvoiceGenerator: React.FC = () => {
                     </tr>
                     <tr>
                       <td style="padding: 4px 0; color: #475569; font-weight: 600;">Consultant</td>
-                      <td style="padding: 4px 0; font-weight: 700;">: ${consultantDoctor || inv.doctor_name || 'Dr. Priya Nair (Dermatology) M.B.B.S, M.D.'}</td>
+                      <td style="padding: 4px 0; font-weight: 700;">: ${inv.doctor_name || effectiveConsultantDoctor}</td>
                       <td style="padding: 4px 0; color: #475569; font-weight: 600;">Referred By</td>
-                      <td style="padding: 4px 0; font-weight: 700;">: ${referredBy || inv.referred_by || 'Self'}</td>
+                      <td style="padding: 4px 0; font-weight: 700;">: ${effectiveReferredBy}</td>
                     </tr>
                     <tr>
                       <td style="padding: 4px 0; color: #475569; font-weight: 600;">Date</td>
@@ -941,52 +971,64 @@ const InvoiceGenerator: React.FC = () => {
           <div className="card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', padding: '20px', borderRadius: '12px', marginBottom: '24px' }}>
             <div className="form-section-title" style={{ fontWeight: 700, marginBottom: '16px' }}>Consultant Doctor & Referral Information</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              
+              {/* Consultant Doctor Selection */}
               <div>
                 <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: '6px' }}>
                   Consultant Doctor
                 </label>
                 <Select
-                  value={consultantDoctor}
-                  onChange={(e) => setConsultantDoctor(e.target.value)}
+                  value={consultantSelect}
+                  onChange={(e) => setConsultantSelect(e.target.value)}
                   options={[
-                    { value: 'Dr. Priya Nair (Dermatology) M.B.B.S, M.D.', label: 'Dr. Priya Nair (Dermatology) M.B.B.S, M.D.' },
-                    { value: 'Dr. Alex Nguyen (General Medicine) M.D.', label: 'Dr. Alex Nguyen (General Medicine) M.D.' },
-                    { value: 'Dr. Rajesh Kumar (Cardiology) M.D., DM', label: 'Dr. Rajesh Kumar (Cardiology) M.D., DM' },
-                    { value: 'Dr. Ananya Sharma (Pediatrics) M.D.', label: 'Dr. Ananya Sharma (Pediatrics) M.D.' },
-                    { value: 'Dr. K. V. Rao (Orthopedics) M.S.', label: 'Dr. K. V. Rao (Orthopedics) M.S.' },
-                    { value: 'Self / General OPD', label: 'Self / General OPD' }
+                    ...hospitalDoctors.map(doc => ({ value: doc, label: doc })),
+                    { value: 'OTHER', label: '+ Other / Custom Doctor Name...' }
                   ]}
                 />
-                <Input
-                  placeholder="Or type custom doctor name..."
-                  value={consultantDoctor}
-                  onChange={(e) => setConsultantDoctor(e.target.value)}
-                  style={{ marginTop: '8px', background: 'var(--bg-primary)' }}
-                />
+                {consultantSelect === 'OTHER' && (
+                  <div style={{ marginTop: '8px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent-primary)', display: 'block', marginBottom: '4px' }}>
+                      Doctor Name (Custom)
+                    </label>
+                    <Input
+                      placeholder="Type consultant doctor name..."
+                      value={consultantCustomName}
+                      onChange={(e) => setConsultantCustomName(e.target.value)}
+                      style={{ background: 'var(--bg-primary)' }}
+                    />
+                  </div>
+                )}
               </div>
 
+              {/* Referred By Selection */}
               <div>
                 <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: '6px' }}>
                   Referred By
                 </label>
                 <Select
-                  value={referredBy}
-                  onChange={(e) => setReferredBy(e.target.value)}
+                  value={referredBySelect}
+                  onChange={(e) => setReferredBySelect(e.target.value)}
                   options={[
-                    { value: 'Self', label: 'Self' },
-                    { value: 'Dr. S. K. Sharma (General Physician)', label: 'Dr. S. K. Sharma (General Physician)' },
-                    { value: 'Dr. Sunita Reddy (Gynaecologist)', label: 'Dr. Sunita Reddy (Gynaecologist)' },
-                    { value: 'Dr. V. Prasad (Surgeon)', label: 'Dr. V. Prasad (Surgeon)' },
-                    { value: 'City Diagnostic Center', label: 'City Diagnostic Center' }
+                    { value: 'Self', label: 'Self (Direct Walk-in)' },
+                    ...hospitalDoctors.map(doc => ({ value: doc, label: doc })),
+                    { value: 'OTHER', label: '+ Other Hospital / External Doctor' }
                   ]}
                 />
-                <Input
-                  placeholder="Or type custom referral source..."
-                  value={referredBy}
-                  onChange={(e) => setReferredBy(e.target.value)}
-                  style={{ marginTop: '8px', background: 'var(--bg-primary)' }}
-                />
+                {referredBySelect === 'OTHER' && (
+                  <div style={{ marginTop: '8px' }}>
+                    <label style={{ fontSize: '11px', fontWeight: 600, color: 'var(--accent-primary)', display: 'block', marginBottom: '4px' }}>
+                      External Doctor Name / Hospital Name
+                    </label>
+                    <Input
+                      placeholder="Type referring doctor or hospital name..."
+                      value={referredByCustomName}
+                      onChange={(e) => setReferredByCustomName(e.target.value)}
+                      style={{ background: 'var(--bg-primary)' }}
+                    />
+                  </div>
+                )}
               </div>
+
             </div>
           </div>
 
