@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { FileText, Plus, Trash2, RefreshCw, AlertTriangle, CheckCircle, XCircle, Check, Ban, ArrowLeftRight, Printer, Search, X, Edit } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { FileText, Plus, Trash2, RefreshCw, AlertTriangle, CheckCircle, XCircle, Check, Ban, ArrowLeftRight, Printer, Search, X, Edit, Package } from 'lucide-react';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Button } from '../../components/ui/Button';
@@ -95,6 +95,7 @@ const InvoiceGenerator: React.FC = () => {
 
   // Diagnostic Catalog State
   const [diagServices, setDiagServices] = useState<any[]>([]);
+  const [diagPackages, setDiagPackages] = useState<any[]>([]);
 
   // List States
   const [invoices, setInvoices] = useState<any[]>([]);
@@ -119,9 +120,10 @@ const InvoiceGenerator: React.FC = () => {
 
   const loadDiagnosticsAndInvoices = async () => {
     try {
-      const [diagRes, catsRes] = await Promise.all([
+      const [diagRes, catsRes, pkgsRes] = await Promise.all([
         api.get('/diagnostics/services'),
-        api.get('/diagnostics/categories')
+        api.get('/diagnostics/categories'),
+        api.get('/diagnostics/packages')
       ]);
       if (diagRes.data.success) {
         setDiagServices(diagRes.data.data || []);
@@ -129,10 +131,35 @@ const InvoiceGenerator: React.FC = () => {
       if (catsRes.data.success) {
         setCategories(catsRes.data.data || []);
       }
+      if (pkgsRes.data.success) {
+        setDiagPackages(pkgsRes.data.data || []);
+      }
     } catch (err) {
-      console.error('Failed to load diagnostics services or categories:', err);
+      console.error('Failed to load diagnostics services, categories or packages:', err);
     }
   };
+
+  const allCatalogItems = useMemo(() => {
+    const serviceItems = diagServices.map(s => ({
+      id: `svc-${s.service_id}`,
+      name: s.name,
+      code: s.service_code,
+      type: 'Service',
+      category: s.category_name || 'Diagnostics',
+      price: s.price,
+      count: 0
+    }));
+    const packageItems = diagPackages.map(p => ({
+      id: `pkg-${p.package_id}`,
+      name: p.name,
+      code: 'PROFILE',
+      type: 'Profile/Package',
+      category: 'Diagnostics',
+      price: p.price,
+      count: p.services ? p.services.length : 0
+    }));
+    return [...serviceItems, ...packageItems];
+  }, [diagServices, diagPackages]);
 
   const loadInvoices = async () => {
     setListLoading(true);
@@ -888,17 +915,17 @@ const InvoiceGenerator: React.FC = () => {
             <div className="form-section-title" style={{ fontWeight: 700, marginBottom: '12px' }}>Line Items</div>
             
             {/* Catalog search box */}
-            {diagServices.length > 0 && (
+            {allCatalogItems.length > 0 && (
               <div style={{ marginBottom: '16px', background: 'var(--bg-primary)', padding: '12px', borderRadius: '8px', border: '1px dashed var(--border-primary)' }}>
                 <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px', fontWeight: 600 }}>
-                  Quick Search Diagnostics Services Catalog (By Short Code or Test Name)
+                  Quick Search Diagnostics Services & Profiles / Packages Catalog (By Code, Test Name, or Package Title)
                 </label>
                 <div style={{ position: 'relative' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-card)', border: '1px solid var(--border-primary)', padding: '8px 12px', borderRadius: '8px' }}>
                     <Search size={16} color="var(--text-muted)" />
                     <input 
                       type="text" 
-                      placeholder="Type to search catalog (e.g. CBP, ESR, LFT...)" 
+                      placeholder="Type to search test services or packages (e.g. CBP, LFT, Executive Health Profile...)" 
                       value={diagSearchQuery}
                       onChange={(e) => {
                         setDiagSearchQuery(e.target.value);
@@ -932,28 +959,28 @@ const InvoiceGenerator: React.FC = () => {
                       border: '1px solid var(--border-primary)', 
                       borderRadius: '8px', 
                       boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)', 
-                      maxHeight: '220px', 
+                      maxHeight: '260px', 
                       overflowY: 'auto', 
                       zIndex: 50,
                       marginTop: '4px'
                     }}>
-                      {diagServices
-                        .filter(s => 
-                          s.name.toLowerCase().includes(diagSearchQuery.toLowerCase()) || 
-                          s.service_code.toLowerCase().includes(diagSearchQuery.toLowerCase())
+                      {allCatalogItems
+                        .filter(item => 
+                          item.name.toLowerCase().includes(diagSearchQuery.toLowerCase()) || 
+                          item.code.toLowerCase().includes(diagSearchQuery.toLowerCase())
                         )
-                        .slice(0, 15) // Limit results for performance
-                        .map(s => (
+                        .slice(0, 20)
+                        .map(item => (
                           <div 
-                            key={s.service_id} 
+                            key={item.id} 
                             onClick={() => {
                               setItemForm({
-                                description: s.name,
-                                category: s.category_name || 'Diagnostics',
+                                description: item.name,
+                                category: 'Diagnostics',
                                 quantity: '1',
-                                unitPrice: parseFloat(s.price).toString()
+                                unitPrice: parseFloat(item.price).toString()
                               });
-                              setDiagSearchQuery(`${s.name} (${s.service_code})`);
+                              setDiagSearchQuery(`${item.name} (${item.code})`);
                               setDiagDropdownOpen(false);
                             }}
                             style={{ 
@@ -963,24 +990,36 @@ const InvoiceGenerator: React.FC = () => {
                               transition: 'background 0.2s',
                               display: 'flex',
                               justifyContent: 'space-between',
+                              alignItems: 'center',
                               fontSize: '13px'
                             }}
                             onMouseEnter={(e) => e.currentTarget.style.background = 'var(--bg-primary)'}
                             onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
                           >
-                            <div>
-                              <strong style={{ fontFamily: 'monospace', color: 'var(--accent-primary)', marginRight: '8px' }}>[{s.service_code}]</strong>
-                              <span>{s.name}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              {item.type === 'Profile/Package' ? (
+                                <span style={{ fontFamily: 'sans-serif', fontSize: '10px', background: 'rgba(59, 130, 246, 0.15)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '2px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                                  PROFILE / PACKAGE
+                                </span>
+                              ) : (
+                                <span style={{ fontFamily: 'monospace', fontSize: '11px', color: 'var(--accent-primary)', fontWeight: 700 }}>
+                                  [{item.code}]
+                                </span>
+                              )}
+                              <span style={{ fontWeight: item.type === 'Profile/Package' ? 700 : 500 }}>{item.name}</span>
+                              {item.type === 'Profile/Package' && item.count > 0 && (
+                                <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>({item.count} Tests Included)</span>
+                              )}
                             </div>
-                            <span style={{ fontWeight: 700, color: 'var(--accent-success)' }}>Rs. {parseFloat(s.price).toFixed(0)}</span>
+                            <span style={{ fontWeight: 700, color: 'var(--accent-success)' }}>Rs. {parseFloat(item.price).toFixed(0)}</span>
                           </div>
                         ))}
-                      {diagServices.filter(s => 
-                        s.name.toLowerCase().includes(diagSearchQuery.toLowerCase()) || 
-                        s.service_code.toLowerCase().includes(diagSearchQuery.toLowerCase())
+                      {allCatalogItems.filter(item => 
+                        item.name.toLowerCase().includes(diagSearchQuery.toLowerCase()) || 
+                        item.code.toLowerCase().includes(diagSearchQuery.toLowerCase())
                       ).length === 0 && (
                         <div style={{ padding: '12px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px' }}>
-                          No matching tests found.
+                          No matching diagnostic services or profiles/packages found.
                         </div>
                       )}
                     </div>
