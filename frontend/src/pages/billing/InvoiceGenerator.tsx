@@ -21,6 +21,8 @@ const InvoiceGenerator: React.FC = () => {
   const [insurance, setInsurance] = useState('0');
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [paymentStatus, setPaymentStatus] = useState('Paid');
+  const [consultantDoctor, setConsultantDoctor] = useState('Dr. Priya Nair (Dermatology) M.B.B.S, M.D.');
+  const [referredBy, setReferredBy] = useState('Self');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
 
@@ -562,9 +564,9 @@ const InvoiceGenerator: React.FC = () => {
                     </tr>
                     <tr>
                       <td style="padding: 4px 0; color: #475569; font-weight: 600;">Consultant</td>
-                      <td style="padding: 4px 0; font-weight: 700;">: ${inv.doctor_name || 'Dr. Priya Nair (Dermatology) M.B.B.S, M.D.'}</td>
+                      <td style="padding: 4px 0; font-weight: 700;">: ${consultantDoctor || inv.doctor_name || 'Dr. Priya Nair (Dermatology) M.B.B.S, M.D.'}</td>
                       <td style="padding: 4px 0; color: #475569; font-weight: 600;">Referred By</td>
-                      <td style="padding: 4px 0; font-weight: 700;">: self</td>
+                      <td style="padding: 4px 0; font-weight: 700;">: ${referredBy || inv.referred_by || 'Self'}</td>
                     </tr>
                     <tr>
                       <td style="padding: 4px 0; color: #475569; font-weight: 600;">Date</td>
@@ -934,6 +936,58 @@ const InvoiceGenerator: React.FC = () => {
                 </button>
               </div>
             )}
+          </div>
+
+          <div className="card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', padding: '20px', borderRadius: '12px', marginBottom: '24px' }}>
+            <div className="form-section-title" style={{ fontWeight: 700, marginBottom: '16px' }}>Consultant Doctor & Referral Information</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: '6px' }}>
+                  Consultant Doctor
+                </label>
+                <Select
+                  value={consultantDoctor}
+                  onChange={(e) => setConsultantDoctor(e.target.value)}
+                  options={[
+                    { value: 'Dr. Priya Nair (Dermatology) M.B.B.S, M.D.', label: 'Dr. Priya Nair (Dermatology) M.B.B.S, M.D.' },
+                    { value: 'Dr. Alex Nguyen (General Medicine) M.D.', label: 'Dr. Alex Nguyen (General Medicine) M.D.' },
+                    { value: 'Dr. Rajesh Kumar (Cardiology) M.D., DM', label: 'Dr. Rajesh Kumar (Cardiology) M.D., DM' },
+                    { value: 'Dr. Ananya Sharma (Pediatrics) M.D.', label: 'Dr. Ananya Sharma (Pediatrics) M.D.' },
+                    { value: 'Dr. K. V. Rao (Orthopedics) M.S.', label: 'Dr. K. V. Rao (Orthopedics) M.S.' },
+                    { value: 'Self / General OPD', label: 'Self / General OPD' }
+                  ]}
+                />
+                <Input
+                  placeholder="Or type custom doctor name..."
+                  value={consultantDoctor}
+                  onChange={(e) => setConsultantDoctor(e.target.value)}
+                  style={{ marginTop: '8px', background: 'var(--bg-primary)' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: '6px' }}>
+                  Referred By
+                </label>
+                <Select
+                  value={referredBy}
+                  onChange={(e) => setReferredBy(e.target.value)}
+                  options={[
+                    { value: 'Self', label: 'Self' },
+                    { value: 'Dr. S. K. Sharma (General Physician)', label: 'Dr. S. K. Sharma (General Physician)' },
+                    { value: 'Dr. Sunita Reddy (Gynaecologist)', label: 'Dr. Sunita Reddy (Gynaecologist)' },
+                    { value: 'Dr. V. Prasad (Surgeon)', label: 'Dr. V. Prasad (Surgeon)' },
+                    { value: 'City Diagnostic Center', label: 'City Diagnostic Center' }
+                  ]}
+                />
+                <Input
+                  placeholder="Or type custom referral source..."
+                  value={referredBy}
+                  onChange={(e) => setReferredBy(e.target.value)}
+                  style={{ marginTop: '8px', background: 'var(--bg-primary)' }}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', padding: '20px', borderRadius: '12px', marginBottom: '24px' }}>
