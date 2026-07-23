@@ -29,7 +29,6 @@ const navByRole: Record<string, NavItem[]> = {
       ]
     },
     { icon: ShieldAlert, label: 'Emergency Care', path: '/doctor/emergency' },
-    { icon: Stethoscope, label: 'EMR', path: '/doctor/dashboard' },
     { icon: Stethoscope, label: 'Doctor Consultations', path: '/admin/consultations' },
     {
       icon: Beaker,
@@ -143,7 +142,6 @@ const navByRole: Record<string, NavItem[]> = {
       ]
     },
     { icon: ShieldAlert, label: 'Emergency Care', path: '/doctor/emergency' },
-    { icon: Stethoscope, label: 'EMR', path: '/doctor/dashboard' },
     {
       icon: Beaker,
       label: 'Diagnostics',
