@@ -1,0 +1,1 @@
+ALTER TABLE test_order_items ADD COLUMN IF NOT EXISTS correction_required BOOLEAN DEFAULT FALSE;

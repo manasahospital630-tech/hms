@@ -278,6 +278,7 @@ const getOrders = async () => {
                'normal_range', ds.normal_range,
                'price', ds.price,
                'status', toi.status,
+               'correction_required', toi.correction_required,
                'sample', (SELECT json_build_object('sample_id', sc.sample_id, 'container_type', sc.container_type, 'barcode', sc.barcode, 'status', sc.status) FROM sample_collections sc WHERE sc.order_item_id = toi.item_id LIMIT 1),
                'lab_result', (SELECT row_to_json(lr) FROM lab_results lr WHERE lr.order_item_id = toi.item_id LIMIT 1),
                'radiology_report', (SELECT row_to_json(rr) FROM radiology_reports rr WHERE rr.order_item_id = toi.item_id LIMIT 1),
@@ -455,7 +456,7 @@ const submitLabResult = async (input, userId) => {
                 ]);
             }
         }
-        await (0, database_1.query)(`UPDATE test_order_items SET status = 'Resulted' WHERE item_id = $1`, [input.itemId]);
+        await (0, database_1.query)(`UPDATE test_order_items SET status = 'Resulted', correction_required = FALSE WHERE item_id = $1`, [input.itemId]);
         await (0, database_1.query)('COMMIT');
         return result.rows[0];
     }
@@ -473,7 +474,7 @@ const submitRadiologyReport = async (input, userId) => {
       VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
     `, [input.itemId, userId, input.radiologistId || userId, input.imageUrls || [], input.findings, input.impression, input.conclusion || '']);
-        await (0, database_1.query)(`UPDATE test_order_items SET status = 'Resulted' WHERE item_id = $1`, [input.itemId]);
+        await (0, database_1.query)(`UPDATE test_order_items SET status = 'Resulted', correction_required = FALSE WHERE item_id = $1`, [input.itemId]);
         await (0, database_1.query)('COMMIT');
         return result.rows[0];
     }
@@ -491,7 +492,7 @@ const submitUltrasoundReport = async (input, userId) => {
       VALUES ($1, $2, $3, $4, $5, $6)
       RETURNING *
     `, [input.itemId, input.sonologistId || userId, input.clinicalHistory || '', input.findings, input.impression, input.recommendations || '']);
-        await (0, database_1.query)(`UPDATE test_order_items SET status = 'Resulted' WHERE item_id = $1`, [input.itemId]);
+        await (0, database_1.query)(`UPDATE test_order_items SET status = 'Resulted', correction_required = FALSE WHERE item_id = $1`, [input.itemId]);
         await (0, database_1.query)('COMMIT');
         return result.rows[0];
     }
@@ -524,7 +525,7 @@ const submitEcgReport = async (input, userId) => {
                 ]);
             }
         }
-        await (0, database_1.query)(`UPDATE test_order_items SET status = 'Resulted' WHERE item_id = $1`, [input.itemId]);
+        await (0, database_1.query)(`UPDATE test_order_items SET status = 'Resulted', correction_required = FALSE WHERE item_id = $1`, [input.itemId]);
         await (0, database_1.query)('COMMIT');
         return result.rows[0];
     }
@@ -543,8 +544,24 @@ const verifyReport = async (input, userId) => {
       VALUES ($1, $2, $3, $4, $5)
       RETURNING *
     `, [input.itemId, userId, input.digitalSignatureUsed || 'Verified digitally', input.status, input.notes || '']);
-        const finalStatus = input.status === 'Approved' ? 'Verified' : 'Ordered';
-        await (0, database_1.query)(`UPDATE test_order_items SET status = $1 WHERE item_id = $2`, [finalStatus, input.itemId]);
+        let finalStatus = 'Ordered';
+        let correctionRequired = false;
+        if (input.status === 'Approved') {
+            finalStatus = 'Verified';
+        }
+        else if (input.status === 'Correction') {
+            correctionRequired = true;
+            const itemRes = await (0, database_1.query)(`
+        SELECT ds.sample_required 
+        FROM test_order_items toi
+        JOIN diagnostic_services ds ON toi.service_id = ds.service_id
+        WHERE toi.item_id = $1
+      `, [input.itemId]);
+            const sampleReq = itemRes.rows[0]?.sample_required;
+            const requiresSample = sampleReq && sampleReq !== 'None' && sampleReq !== '';
+            finalStatus = requiresSample ? 'SampleCollected' : 'Ordered';
+        }
+        await (0, database_1.query)(`UPDATE test_order_items SET status = $1, correction_required = $2 WHERE item_id = $3`, [finalStatus, correctionRequired, input.itemId]);
         await (0, database_1.query)('COMMIT');
         return result.rows[0];
     }

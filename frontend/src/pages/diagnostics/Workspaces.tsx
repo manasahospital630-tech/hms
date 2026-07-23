@@ -61,6 +61,108 @@ export const Workspaces: React.FC = () => {
     return 'Plain Tube (Red Top)';
   };
 
+  const refRanges: { [key: string]: string } = {
+    'HAEMOGLOBIN': '12.0 - 15.0 g/dL',
+    'TOTAL RBC COUNT': '3.8 - 4.8 X 10¹²/L',
+    'PCV / HCT': '36 - 46 %',
+    'MCV': '83 - 101 fl',
+    'MCH': '27 - 32 pg',
+    'MCHC': '31.5 - 34.5 g/dl',
+    'RDW': '11.5 - 13.5 %',
+    'TOTAL WBC COUNT': '4.0-10.0 X 10³/uL',
+    'PLATELET COUNT': '150 - 410 X 10³/uL',
+    'NEUTROPHILS': '40 - 80%',
+    'LYMPHOCYTES': '20 - 40%',
+    'MONOCYTES': '2 - 10%',
+    'EOSINOPHILS': '1 - 6%',
+    'BASOPHILS': '1 - 2%',
+    'POLYMORPHS': '40 - 80 %',
+    'RBC MORPHOLOGY': 'Normocytic Normochromic',
+    'WBC ON SMEAR': 'Normal count & distribution',
+    'PLATELETS ON SMEAR': 'Adequate',
+    'COLOUR': 'PALE YELLOW',
+    'APPEARANCE': 'CLEAR',
+    'REACTION / PH': '4.6 - 8.0',
+    'SPECIFIC GRAVITY': '1.003 - 1.035',
+    'PROTEINS': 'NIL',
+    'GLUCOSE': 'NIL',
+    'BLOOD': 'NIL',
+    'KETONE BODIES': 'Negative',
+    'BILIRUBIN': 'Negative',
+    'UROBILINOGEN': 'Present in normal amount',
+    'NITRITE': 'Negative',
+    'PUS CELLS': '0 - 5 /HPF',
+    'EPITHELIAL CELLS': '0 - 8 /HPF',
+    'RBC': 'Nil',
+    'CASTS': 'Nil',
+    'CRYSTALS': 'Nil',
+    'OTHERS': 'Nil',
+    'ABSOLUTE EOSINOPHIL COUNT': '40-440 cells/µL',
+    'ACTIVATED PARTIAL THROMBOPLASTIN TIME': '25-35 sec',
+    'CONTROL': 'Laboratory Control',
+    'APTT RATIO': '0.8-1.2',
+    'ALKALINE PHOSPHATASE': '44-147 U/L',
+    'ERYTHROCYTE SEDIMENTATION RATE': '0-15 (Male)',
+    'RANDOM BLOOD SUGAR': '70-140 mg/dL',
+    'FASTING BLOOD SUGAR': '70-99 mg/dL'
+  };
+
+  const checkIsAbnormal = (valStr: string, rangeStr: string): boolean => {
+    if (!valStr || !rangeStr || rangeStr === '—' || rangeStr === '-') return false;
+    
+    const valClean = valStr.trim();
+    const rangeClean = rangeStr.replace(/\s+/g, ' ').trim();
+
+    if (valClean.includes(':') && rangeClean.includes(':')) {
+      const valParts = valClean.split(':');
+      const valTiter = parseFloat(valParts[1]);
+      if (!isNaN(valTiter)) {
+        if (rangeClean.startsWith('<')) {
+          const limitParts = rangeClean.substring(1).trim().split(':');
+          const limitTiter = parseFloat(limitParts[1]);
+          if (!isNaN(limitTiter)) {
+            return valTiter >= limitTiter;
+          }
+        }
+        if (rangeClean.startsWith('>')) {
+          const limitParts = rangeClean.substring(1).trim().split(':');
+          const limitTiter = parseFloat(limitParts[1]);
+          if (!isNaN(limitTiter)) {
+            return valTiter <= limitTiter;
+          }
+        }
+      }
+    }
+    
+    const val = parseFloat(valClean);
+    if (isNaN(val)) return false;
+
+    const cleanRange = rangeClean;
+    if (cleanRange.includes('-')) {
+      const parts = cleanRange.split('-');
+      const low = parseFloat(parts[0].trim());
+      const high = parseFloat(parts[1].trim());
+      if (!isNaN(low) && !isNaN(high)) {
+        return val < low || val > high;
+      }
+    } else {
+      if (cleanRange.startsWith('<=')) {
+        const limit = parseFloat(cleanRange.substring(2).trim());
+        if (!isNaN(limit)) return val > limit;
+      } else if (cleanRange.startsWith('>=')) {
+        const limit = parseFloat(cleanRange.substring(2).trim());
+        if (!isNaN(limit)) return val < limit;
+      } else if (cleanRange.startsWith('<')) {
+        const limit = parseFloat(cleanRange.substring(1).trim());
+        if (!isNaN(limit)) return val >= limit;
+      } else if (cleanRange.startsWith('>')) {
+        const limit = parseFloat(cleanRange.substring(1).trim());
+        if (!isNaN(limit)) return val <= limit;
+      }
+    }
+    return false;
+  };
+
   const parseConcatenatedResult = (actualResult: string) => {
     if (!actualResult || !actualResult.includes(':')) return null;
     try {
@@ -165,6 +267,30 @@ export const Workspaces: React.FC = () => {
     setParamValues(initialParams);
 
     setActionModalOpen(true);
+  };
+
+  const handleSendCorrection = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setActionLoading(true);
+    setActionError('');
+    try {
+      const itemsToVerify = actionItem.type === 'package' ? actionItem.items : [actionItem.item];
+      for (const targetItem of itemsToVerify) {
+        const payload = {
+          itemId: targetItem.item_id,
+          status: 'Correction',
+          notes: verifyNotes || 'Requested clinician correction',
+          digitalSignatureUsed: 'Dr. Pathologist Digital Approval Stamp'
+        };
+        await api.post('/diagnostics/results/verify', payload);
+      }
+      setActionModalOpen(false);
+      loadWorkspaceData();
+    } catch (err: any) {
+      setActionError(err.response?.data?.error || 'Failed to submit correction request.');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const handleActionSubmit = async (e: React.FormEvent) => {
@@ -517,7 +643,14 @@ export const Workspaces: React.FC = () => {
                             <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>MRN: {group.patientMrn}</div>
                           </td>
                           <td style={{ padding: '12px 16px' }}>
-                            <div style={{ fontWeight: 700, color: 'var(--accent-primary)' }}>{group.packageName}</div>
+                            <div style={{ fontWeight: 700, color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              {group.packageName}
+                              {group.items.some((i: any) => i.correction_required) && (
+                                <span style={{ fontSize: '10px', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                                  CORRECTION TAG
+                                </span>
+                              )}
+                            </div>
                             <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
                               <span style={{ fontSize: '10px', background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
                                 Package Profile ({group.items.length} Tests)
@@ -567,7 +700,14 @@ export const Workspaces: React.FC = () => {
                                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', paddingLeft: '14px' }}>
                                       {sampleTypeGroups[container].map((pItem: any) => (
                                         <div key={pItem.item_id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: '6px', padding: '6px 10px', display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '160px' }}>
-                                          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-primary)' }}>{pItem.service_name}</div>
+                                          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                                            {pItem.service_name}
+                                            {pItem.correction_required && (
+                                              <span style={{ fontSize: '9px', background: 'rgba(239, 68, 68, 0.12)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '1px 4px', borderRadius: '3px', fontWeight: 700 }}>
+                                                Needs Correction
+                                              </span>
+                                            )}
+                                          </div>
                                           <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Status: <span style={{ color: pItem.status === 'SampleCollected' ? 'var(--accent-success)' : 'var(--text-secondary)', fontWeight: 600 }}>{pItem.status}</span></div>
                                         </div>
                                       ))}
@@ -590,7 +730,14 @@ export const Workspaces: React.FC = () => {
                           <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>MRN: {group.patientMrn}</div>
                         </td>
                         <td style={{ padding: '12px 16px' }}>
-                          <div style={{ fontWeight: 600 }}>{standaloneItem.service_name}</div>
+                          <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            {standaloneItem.service_name}
+                            {standaloneItem.correction_required && (
+                              <span style={{ fontSize: '10px', background: 'rgba(239, 68, 68, 0.15)', color: '#ef4444', border: '1px solid rgba(239, 68, 68, 0.3)', padding: '1px 6px', borderRadius: '4px', fontWeight: 700 }}>
+                                CORRECTION TAG
+                              </span>
+                            )}
+                          </div>
                           <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px', flexWrap: 'wrap' }}>
                             <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Code: {standaloneItem.service_code} ({standaloneItem.category_name})</span>
                           </div>
@@ -897,32 +1044,44 @@ export const Workspaces: React.FC = () => {
                               <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse' }}>
                                 <thead>
                                   <tr style={{ borderBottom: '1px solid var(--border-primary)', textAlign: 'left', color: 'var(--text-secondary)' }}>
-                                    <th style={{ padding: '4px 8px' }}>Parameter</th>
-                                    <th style={{ padding: '4px 8px', textAlign: 'center' }}>Observed Value</th>
-                                    <th style={{ padding: '4px 8px', textAlign: 'center' }}>Unit</th>
-                                    <th style={{ padding: '4px 8px', textAlign: 'right' }}>Reference Range</th>
+                                    <th style={{ padding: '6px 8px' }}>TEST PARAMETER</th>
+                                    <th style={{ padding: '6px 8px', textAlign: 'center' }}>OBSERVED VALUE</th>
+                                    <th style={{ padding: '6px 8px', textAlign: 'center' }}>FLAG / UNIT</th>
+                                    <th style={{ padding: '6px 8px', textAlign: 'right' }}>REFERENCE RANGE</th>
                                   </tr>
                                 </thead>
                                 <tbody>
                                   {pParams && pParams.length > 0 ? (
-                                    pParams.map((rp: any, idx: number) => (
-                                      <tr key={idx} style={{ borderBottom: '1px solid var(--border-secondary)' }}>
-                                        <td style={{ padding: '4px 8px' }}>{rp.parameter_name || rp.name || ''}</td>
-                                        <td style={{ padding: '4px 8px', textAlign: 'center', fontWeight: rp.status !== 'Normal' ? '700' : '400', color: rp.status !== 'Normal' ? 'var(--accent-danger)' : 'var(--text-primary)' }}>
-                                          {rp.actual_value || rp.actualValue || '—'}
-                                        </td>
-                                        <td style={{ padding: '4px 8px', textAlign: 'center' }}>{rp.unit || '—'}</td>
-                                        <td style={{ padding: '4px 8px', textAlign: 'right' }}>{rp.reference_range || '—'}</td>
-                                      </tr>
-                                    ))
+                                    pParams.map((rp: any, idx: number) => {
+                                      const rpName = (rp.parameter_name || rp.name || '').toUpperCase();
+                                      const refVal = rp.reference_range && rp.reference_range !== '-' ? rp.reference_range : (refRanges[rpName] || '—');
+                                      const valClean = (rp.actual_value || rp.actualValue || '—').trim();
+                                      const isAbnormal = (rp.status && rp.status !== 'Normal') || checkIsAbnormal(valClean, refVal);
+                                      const flagUnitStr = isAbnormal ? `Abnormal / ${rp.unit || '%'}` : (rp.unit || '—');
+                                      
+                                      return (
+                                        <tr key={idx} style={{ borderBottom: '1px solid var(--border-secondary)' }}>
+                                          <td style={{ padding: '6px 8px', fontWeight: 600 }}>{rp.parameter_name || rp.name || ''}</td>
+                                          <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: isAbnormal ? '700' : '400', color: isAbnormal ? '#ef4444' : 'var(--text-primary)' }}>
+                                            {valClean}
+                                          </td>
+                                          <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: isAbnormal ? '700' : '400', color: isAbnormal ? '#ef4444' : 'var(--text-secondary)' }}>
+                                            {flagUnitStr}
+                                          </td>
+                                          <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-secondary)' }}>{refVal}</td>
+                                        </tr>
+                                      );
+                                    })
                                   ) : (
                                     <tr>
-                                      <td style={{ padding: '4px 8px' }}>{pkgItem.service_name}</td>
-                                      <td style={{ padding: '4px 8px', textAlign: 'center', fontWeight: pLr.status !== 'Normal' ? '700' : '400', color: pLr.status !== 'Normal' ? 'var(--accent-danger)' : 'var(--text-primary)' }}>
+                                      <td style={{ padding: '6px 8px', fontWeight: 600 }}>{pkgItem.service_name}</td>
+                                      <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: pLr.status !== 'Normal' ? '700' : '400', color: pLr.status !== 'Normal' ? '#ef4444' : 'var(--text-primary)' }}>
                                         {pLr.actual_result || '—'}
                                       </td>
-                                      <td style={{ padding: '4px 8px', textAlign: 'center' }}>—</td>
-                                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{pLr.reference_range || pkgItem.normal_range || '—'}</td>
+                                      <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: pLr.status !== 'Normal' ? '700' : '400', color: pLr.status !== 'Normal' ? '#ef4444' : 'var(--text-secondary)' }}>
+                                        {pLr.status !== 'Normal' ? 'Abnormal / —' : '—'}
+                                      </td>
+                                      <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-secondary)' }}>{pLr.reference_range || pkgItem.normal_range || '—'}</td>
                                     </tr>
                                   )}
                                 </tbody>
@@ -936,39 +1095,72 @@ export const Workspaces: React.FC = () => {
                             {actionItem.item.service_name} ({actionItem.item.service_code})
                           </div>
                           {actionItem.item.category_name === 'Laboratory' ? (
-                            <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse' }}>
-                              <thead>
-                                <tr style={{ borderBottom: '1px solid var(--border-primary)', textAlign: 'left', color: 'var(--text-secondary)' }}>
-                                  <th style={{ padding: '4px 8px' }}>Parameter</th>
-                                  <th style={{ padding: '4px 8px', textAlign: 'center' }}>Observed Value</th>
-                                  <th style={{ padding: '4px 8px', textAlign: 'center' }}>Unit</th>
-                                  <th style={{ padding: '4px 8px', textAlign: 'right' }}>Reference Range</th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {actionItem.item.result_parameters && actionItem.item.result_parameters.length > 0 ? (
-                                  actionItem.item.result_parameters.map((rp: any, idx: number) => (
-                                    <tr key={idx} style={{ borderBottom: '1px solid var(--border-secondary)' }}>
-                                      <td style={{ padding: '4px 8px' }}>{rp.parameter_name || rp.name || ''}</td>
-                                      <td style={{ padding: '4px 8px', textAlign: 'center', fontWeight: rp.status !== 'Normal' ? '700' : '400', color: rp.status !== 'Normal' ? 'var(--accent-danger)' : 'var(--text-primary)' }}>
-                                        {rp.actual_value || rp.actualValue || '—'}
-                                      </td>
-                                      <td style={{ padding: '4px 8px', textAlign: 'center' }}>{rp.unit || '—'}</td>
-                                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{rp.reference_range || '—'}</td>
+                            (() => {
+                              const sLr = actionItem.item.lab_result || {};
+                              let sParams = actionItem.item.result_parameters || [];
+                              
+                              if ((!sParams || sParams.length === 0) && sLr.actual_result) {
+                                const parsed = parseConcatenatedResult(sLr.actual_result);
+                                if (parsed) {
+                                  sParams = parsed.map((p: any, idx: number) => ({
+                                    parameter_id: `parsed-${idx}`,
+                                    parameter_name: p.name,
+                                    actual_value: p.value,
+                                    unit: p.unit,
+                                    reference_range: '-',
+                                    status: 'Normal'
+                                  }));
+                                }
+                              }
+
+                              return (
+                                <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse' }}>
+                                  <thead>
+                                    <tr style={{ borderBottom: '1px solid var(--border-primary)', textAlign: 'left', color: 'var(--text-secondary)' }}>
+                                      <th style={{ padding: '6px 8px' }}>TEST PARAMETER</th>
+                                      <th style={{ padding: '6px 8px', textAlign: 'center' }}>OBSERVED VALUE</th>
+                                      <th style={{ padding: '6px 8px', textAlign: 'center' }}>FLAG / UNIT</th>
+                                      <th style={{ padding: '6px 8px', textAlign: 'right' }}>REFERENCE RANGE</th>
                                     </tr>
-                                  ))
-                                ) : (
-                                  <tr>
-                                    <td style={{ padding: '4px 8px' }}>{actionItem.item.service_name}</td>
-                                    <td style={{ padding: '4px 8px', textAlign: 'center', fontWeight: actionItem.item.lab_result?.status !== 'Normal' ? '700' : '400', color: actionItem.item.lab_result?.status !== 'Normal' ? 'var(--accent-danger)' : 'var(--text-primary)' }}>
-                                      {actionItem.item.lab_result?.actual_result || '—'}
-                                    </td>
-                                    <td style={{ padding: '4px 8px', textAlign: 'center' }}>—</td>
-                                    <td style={{ padding: '4px 8px', textAlign: 'right' }}>{actionItem.item.lab_result?.reference_range || actionItem.item.normal_range || '—'}</td>
-                                  </tr>
-                                )}
-                              </tbody>
-                            </table>
+                                  </thead>
+                                  <tbody>
+                                    {sParams && sParams.length > 0 ? (
+                                      sParams.map((rp: any, idx: number) => {
+                                        const rpName = (rp.parameter_name || rp.name || '').toUpperCase();
+                                        const refVal = rp.reference_range && rp.reference_range !== '-' ? rp.reference_range : (refRanges[rpName] || '—');
+                                        const valClean = (rp.actual_value || rp.actualValue || '—').trim();
+                                        const isAbnormal = (rp.status && rp.status !== 'Normal') || checkIsAbnormal(valClean, refVal);
+                                        const flagUnitStr = isAbnormal ? `Abnormal / ${rp.unit || '%'}` : (rp.unit || '—');
+                                        
+                                        return (
+                                          <tr key={idx} style={{ borderBottom: '1px solid var(--border-secondary)' }}>
+                                            <td style={{ padding: '6px 8px', fontWeight: 600 }}>{rp.parameter_name || rp.name || ''}</td>
+                                            <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: isAbnormal ? '700' : '400', color: isAbnormal ? '#ef4444' : 'var(--text-primary)' }}>
+                                              {valClean}
+                                            </td>
+                                            <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: isAbnormal ? '700' : '400', color: isAbnormal ? '#ef4444' : 'var(--text-secondary)' }}>
+                                              {flagUnitStr}
+                                            </td>
+                                            <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-secondary)' }}>{refVal}</td>
+                                          </tr>
+                                        );
+                                      })
+                                    ) : (
+                                      <tr>
+                                        <td style={{ padding: '6px 8px', fontWeight: 600 }}>{actionItem.item.service_name}</td>
+                                        <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: sLr.status !== 'Normal' ? '700' : '400', color: sLr.status !== 'Normal' ? '#ef4444' : 'var(--text-primary)' }}>
+                                          {sLr.actual_result || '—'}
+                                        </td>
+                                        <td style={{ padding: '6px 8px', textAlign: 'center', fontWeight: sLr.status !== 'Normal' ? '700' : '400', color: sLr.status !== 'Normal' ? '#ef4444' : 'var(--text-secondary)' }}>
+                                          {sLr.status !== 'Normal' ? 'Abnormal / —' : '—'}
+                                        </td>
+                                        <td style={{ padding: '6px 8px', textAlign: 'right', color: 'var(--text-secondary)' }}>{sLr.reference_range || actionItem.item.normal_range || '—'}</td>
+                                      </tr>
+                                    )}
+                                  </tbody>
+                                </table>
+                              );
+                            })()
                           ) : (
                             <div style={{ fontSize: '12px', color: 'var(--text-primary)' }}>
                               <div><strong>Findings:</strong></div>
@@ -1000,6 +1192,17 @@ export const Workspaces: React.FC = () => {
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', borderTop: '1px solid var(--border-primary)', paddingTop: '16px' }}>
                   <Button variant="secondary" type="button" onClick={() => setActionModalOpen(false)}>Cancel</Button>
+                  {activeWorkspace === 'verification' && (
+                    <Button 
+                      variant="secondary" 
+                      type="button" 
+                      onClick={(e) => handleSendCorrection(e)} 
+                      loading={actionLoading}
+                      style={{ background: 'var(--accent-warning, #f59e0b)', color: '#ffffff', fontWeight: 600 }}
+                    >
+                      Send for Correction
+                    </Button>
+                  )}
                   <Button variant="primary" type="submit" loading={actionLoading}>
                     {activeWorkspace === 'collection' && 'Log Collection'}
                     {activeWorkspace === 'lab' && 'Submit Results'}
