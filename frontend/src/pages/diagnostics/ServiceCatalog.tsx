@@ -13,6 +13,16 @@ export const ServiceCatalog: React.FC = () => {
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState<'services' | 'packages' | 'reports'>('services');
 
+  // Search & Filter States
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
+
+  // Bulk Import States
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importPreview, setImportPreview] = useState<any[]>([]);
+  const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [importLoading, setImportLoading] = useState(false);
+
   // Completed Test Reports States
   const [orders, setOrders] = useState<any[]>([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
@@ -50,6 +60,12 @@ export const ServiceCatalog: React.FC = () => {
       maxValue?: string;
       ageGroup?: string;
       gender?: string;
+      refMinMale?: string;
+      refMaxMale?: string;
+      refMinFemale?: string;
+      refMaxFemale?: string;
+      refMinChild?: string;
+      refMaxChild?: string;
     }>;
     qualitativeInputType: string;
     qualitativeOptions: string;
@@ -909,7 +925,13 @@ export const ServiceCatalog: React.FC = () => {
       minValue: p.min_value !== null && p.min_value !== undefined ? p.min_value.toString() : '',
       maxValue: p.max_value !== null && p.max_value !== undefined ? p.max_value.toString() : '',
       ageGroup: p.age_group || 'Universal',
-      gender: p.gender || 'Universal'
+      gender: p.gender || 'Universal',
+      refMinMale: p.ref_min_male !== null && p.ref_min_male !== undefined ? p.ref_min_male.toString() : '',
+      refMaxMale: p.ref_max_male !== null && p.ref_max_male !== undefined ? p.ref_max_male.toString() : '',
+      refMinFemale: p.ref_min_female !== null && p.ref_min_female !== undefined ? p.ref_min_female.toString() : '',
+      refMaxFemale: p.ref_max_female !== null && p.ref_max_female !== undefined ? p.ref_max_female.toString() : '',
+      refMinChild: p.ref_min_child !== null && p.ref_min_child !== undefined ? p.ref_min_child.toString() : '',
+      refMaxChild: p.ref_max_child !== null && p.ref_max_child !== undefined ? p.ref_max_child.toString() : ''
     }));
 
     let qualitativeInputType = 'Dropdown';
@@ -977,7 +999,13 @@ export const ServiceCatalog: React.FC = () => {
         minValue: '',
         maxValue: '',
         ageGroup: 'Universal',
-        gender: 'Universal'
+        gender: 'Universal',
+        refMinMale: '',
+        refMaxMale: '',
+        refMinFemale: '',
+        refMaxFemale: '',
+        refMinChild: '',
+        refMaxChild: ''
       }]
     }));
   };
@@ -1030,7 +1058,13 @@ export const ServiceCatalog: React.FC = () => {
         minValue: p.minValue || null,
         maxValue: p.maxValue || null,
         ageGroup: p.ageGroup || 'Universal',
-        gender: p.gender || 'Universal'
+        gender: p.gender || 'Universal',
+        refMinMale: p.refMinMale || null,
+        refMaxMale: p.refMaxMale || null,
+        refMinFemale: p.refMinFemale || null,
+        refMaxFemale: p.refMaxFemale || null,
+        refMinChild: p.refMinChild || null,
+        refMaxChild: p.refMaxChild || null
       }));
     } else if (serviceForm.reportType === 'Qualitative') {
       finalNormalRange = serviceForm.qualitativeNotes;
@@ -1085,6 +1119,249 @@ export const ServiceCatalog: React.FC = () => {
       setModalLoading(false);
     }
   };
+
+  const downloadCsvTemplate = () => {
+    const headers = [
+      'Test_Code', 'Test_Name', 'Category', 'Price_USD', 'Report_Format',
+      'Parameter_Name', 'Unit', 'Ref_Min_Male', 'Ref_Max_Male', 'Ref_Min_Female',
+      'Ref_Max_Female', 'Ref_Min_Child', 'Ref_Max_Child', 'Allowed_Values',
+      'Default_Findings', 'Default_Impression'
+    ];
+    
+    const rows = [
+      ['CBC001', 'Complete Blood Count', 'Haematology', '35.00', 'STRUCTURED', 'Hemoglobin', 'g/dL', '13.5', '17.5', '12.0', '15.5', '11.0', '16.0', '', '', ''],
+      ['CBC001', 'Complete Blood Count', 'Haematology', '35.00', 'STRUCTURED', 'Serum Creatinine', 'mg/dL', '0.74', '1.35', '0.59', '1.04', '0.20', '0.70', '', '', ''],
+      ['CBC001', 'Complete Blood Count', 'Haematology', '35.00', 'STRUCTURED', 'WBC Total Count', 'cells/mcL', '4000', '11000', '4000', '11000', '5000', '14000', '', '', ''],
+      ['DENGUE01', 'Dengue NS1 Rapid', 'Serology', '15.00', 'QUALITATIVE', 'Result', '', '', '', '', '', '', '', 'Positive, Negative, Equivocal', '', ''],
+      ['XRAY001', 'Chest X-Ray PA', 'Radiology', '25.00', 'DESCRIPTIVE', '', '', '', '', '', '', '', '', '', 'Both lung fields demonstrate normal vascularity..', 'Normal chest radiograph.']
+    ];
+    
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(val => `"${(val || '').toString().replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'Diagnostic_Services_Import_Template.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      const text = evt.target?.result as string;
+      parseAndValidateCsv(text);
+    };
+    reader.readAsText(file);
+  };
+
+  const parseAndValidateCsv = (text: string) => {
+    const lines = [];
+    let currentLine = [];
+    let currentField = '';
+    let insideQuote = false;
+    
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      const nextChar = text[i + 1];
+      
+      if (insideQuote) {
+        if (char === '"') {
+          if (nextChar === '"') {
+            currentField += '"';
+            i++;
+          } else {
+            insideQuote = false;
+          }
+        } else {
+          currentField += char;
+        }
+      } else {
+        if (char === '"') {
+          insideQuote = true;
+        } else if (char === ',') {
+          currentLine.push(currentField.trim());
+          currentField = '';
+        } else if (char === '\r' || char === '\n') {
+          currentLine.push(currentField.trim());
+          if (currentLine.length > 1 || currentLine[0] !== '') {
+            lines.push(currentLine);
+          }
+          currentLine = [];
+          currentField = '';
+          if (char === '\r' && nextChar === '\n') {
+            i++;
+          }
+        } else {
+          currentField += char;
+        }
+      }
+    }
+    if (currentField || currentLine.length > 0) {
+      currentLine.push(currentField.trim());
+      lines.push(currentLine);
+    }
+    
+    if (lines.length < 2) {
+      setImportErrors(['CSV file is empty or only contains headers.']);
+      setImportPreview([]);
+      return;
+    }
+    
+    const dataLines = lines.slice(1);
+    const errors: string[] = [];
+    const groupedServices: { [code: string]: any } = {};
+    
+    dataLines.forEach((row, rowIdx) => {
+      while (row.length < 16) row.push('');
+      
+      const testCode = row[0];
+      const testName = row[1];
+      const category = row[2];
+      const priceStr = row[3];
+      const format = (row[4] || '').toUpperCase();
+      const paramName = row[5];
+      const unit = row[6];
+      const refMinMale = row[7];
+      const refMaxMale = row[8];
+      const refMinFemale = row[9];
+      const refMaxFemale = row[10];
+      const refMinChild = row[11];
+      const refMaxChild = row[12];
+      const allowedValues = row[13];
+      const defaultFindings = row[14];
+      const defaultImpression = row[15];
+      
+      const lineNum = rowIdx + 2;
+      
+      if (!testCode) {
+        errors.push(`Row ${lineNum}: Missing Test_Code.`);
+        return;
+      }
+      
+      if (!groupedServices[testCode]) {
+        if (!testName) errors.push(`Row ${lineNum}: Missing Test_Name.`);
+        if (!category) errors.push(`Row ${lineNum}: Missing Category.`);
+        if (!priceStr || isNaN(parseFloat(priceStr))) {
+          errors.push(`Row ${lineNum}: Invalid or missing Price_USD ("${priceStr}").`);
+        }
+        if (format !== 'STRUCTURED' && format !== 'QUALITATIVE' && format !== 'DESCRIPTIVE') {
+          errors.push(`Row ${lineNum}: Report_Format must be STRUCTURED, QUALITATIVE, or DESCRIPTIVE (found: "${format}").`);
+        }
+        
+        groupedServices[testCode] = {
+          service_code: testCode,
+          name: testName,
+          category: category,
+          price: parseFloat(priceStr) || 0,
+          report_type: format === 'STRUCTURED' ? 'Structured' : (format === 'QUALITATIVE' ? 'Qualitative' : 'Descriptive'),
+          normal_range: '',
+          parameters: [],
+          qualitativeInputType: 'Dropdown',
+          qualitativeOptions: allowedValues || 'Positive, Negative, Equivocal',
+          techniqueTemplate: '',
+          findingsTemplate: defaultFindings || '',
+          impressionTemplate: defaultImpression || ''
+        };
+      }
+      
+      const service = groupedServices[testCode];
+      
+      if (service.report_type === 'Structured') {
+        if (!paramName) {
+          errors.push(`Row ${lineNum}: Parameter_Name is mandatory for STRUCTURED tests.`);
+        } else {
+          service.parameters.push({
+            name: paramName,
+            unit: unit || '',
+            referenceRange: `${refMinMale || ''}-${refMaxMale || ''}`,
+            inputType: 'Number',
+            dropdownOptions: '',
+            refMinMale: refMinMale ? refMinMale : null,
+            refMaxMale: refMaxMale ? refMaxMale : null,
+            refMinFemale: refMinFemale ? refMinFemale : null,
+            refMaxFemale: refMaxFemale ? refMaxFemale : null,
+            refMinChild: refMinChild ? refMinChild : null,
+            refMaxChild: refMaxChild ? refMaxChild : null
+          });
+        }
+      } else if (service.report_type === 'Qualitative') {
+        service.normal_range = allowedValues || 'Positive, Negative';
+        service.qualitativeInputType = allowedValues ? 'Dropdown' : 'Text';
+        service.qualitativeOptions = allowedValues || 'Positive, Negative, Equivocal';
+      } else if (service.report_type === 'Descriptive') {
+        service.normal_range = JSON.stringify({
+          technique: '',
+          findings: defaultFindings || '',
+          impression: defaultImpression || ''
+        });
+      }
+    });
+    
+    setImportErrors(errors);
+    setImportPreview(Object.values(groupedServices));
+  };
+
+  const handleCommitImport = async () => {
+    setImportLoading(true);
+    setError('');
+    try {
+      for (const service of importPreview) {
+        let category = categories.find(c => c.name.toLowerCase() === service.category.toLowerCase());
+        let catId = category?.category_id;
+        
+        if (!catId) {
+          const catRes = await api.post('/diagnostics/categories', { name: service.category, description: `${service.category} Department` });
+          catId = catRes.data.category_id || catRes.data.data?.category_id;
+          const refreshCats = await api.get('/diagnostics/categories');
+          setCategories(refreshCats.data.data || refreshCats.data);
+        }
+        
+        const payload = {
+          name: service.name,
+          categoryId: catId,
+          serviceCode: service.service_code,
+          price: service.price,
+          gstPercentage: 18,
+          durationMinutes: 30,
+          sampleRequired: service.report_type === 'Structured' ? 'Blood' : 'None',
+          normalRange: service.normal_range,
+          machineRequired: '',
+          homeCollectionAvailable: false,
+          emergencyAvailable: false,
+          isActive: true,
+          reportType: service.report_type,
+          parameters: service.parameters
+        };
+        
+        await api.post('/diagnostics/services', payload);
+      }
+      
+      setImportModalOpen(false);
+      setImportPreview([]);
+      loadCatalogData();
+      alert('Bulk Diagnostic Services imported successfully!');
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to import bulk services.');
+    } finally {
+      setImportLoading(false);
+    }
+  };
+
+  const filteredServices = services.filter((s) => {
+    const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          s.service_code.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === '' || s.category_id === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   return (
     <div style={{ color: 'var(--text-primary)' }}>
@@ -1185,76 +1462,167 @@ export const ServiceCatalog: React.FC = () => {
           </span>
         </div>
       ) : activeTab === 'services' ? (
-        <Card style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)' }}>
-          <div className="table-responsive">
-            <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-primary)', textAlign: 'left' }}>
-                  <th style={{ padding: '12px 16px' }}>Code</th>
-                  <th style={{ padding: '12px 16px' }}>Test / Service Name</th>
-                  <th style={{ padding: '12px 16px' }}>Department</th>
-                  <th style={{ padding: '12px 16px' }}>Parameters</th>
-                  <th style={{ padding: '12px 16px' }}>Sample Type</th>
-                  <th style={{ padding: '12px 16px' }}>Price (Rs.)</th>
-                  <th style={{ padding: '12px 16px' }}>Status</th>
-                  <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {services.map((s) => (
-                  <tr key={s.service_id} style={{ borderBottom: '1px solid var(--border-primary)' }}>
-                    <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-secondary)' }}>{s.service_code}</td>
-                    <td style={{ padding: '12px 16px', fontWeight: 600 }}>{s.name}</td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{ background: 'var(--bg-primary)', padding: '2px 8px', borderRadius: '50px', fontSize: '11px', fontWeight: 500 }}>
-                        {s.category_name}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <button
-                        onClick={() => openParamViewModal(s)}
-                        style={{
-                          background: s.parameters && s.parameters.length > 0 ? 'rgba(59, 130, 246, 0.12)' : 'var(--bg-primary)',
-                          color: s.parameters && s.parameters.length > 0 ? '#3b82f6' : 'var(--text-muted)',
-                          border: `1px solid ${s.parameters && s.parameters.length > 0 ? 'rgba(59, 130, 246, 0.3)' : 'var(--border-primary)'}`,
-                          padding: '4px 10px',
-                          borderRadius: '20px',
-                          fontSize: '11px',
-                          fontWeight: 600,
-                          cursor: 'pointer',
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '5px'
-                        }}
-                        title="Click to view or edit parameters"
-                      >
-                        <List size={12} />
-                        {s.parameters && s.parameters.length > 0 ? `${s.parameters.length} Parameters` : '+ Add Parameters'}
-                      </button>
-                    </td>
-                    <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>{s.sample_required || 'None'}</td>
-                    <td style={{ padding: '12px 16px', fontWeight: 600 }}>Rs. {parseFloat(s.price).toFixed(2)}</td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{ 
-                        fontSize: '11px', padding: '2px 8px', borderRadius: '50px', fontWeight: 600,
-                        background: s.is_active ? 'rgba(16,185,129,0.15)' : 'rgba(244,63,94,0.15)',
-                        color: s.is_active ? 'var(--accent-success)' : 'var(--accent-danger)'
-                      }}>
-                        {s.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                        <button onClick={() => openEditServiceModal(s)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><Edit size={14} /></button>
-                        <button onClick={() => handleDeleteService(s.service_id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--accent-danger)' }}><Trash2 size={14} /></button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+          {/* Action Bar (Top Navigation) */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-card)', padding: '12px 16px', borderRadius: '10px', border: '1px solid var(--border-primary)', gap: '12px', flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: '10px', flex: 1, minWidth: '280px' }}>
+              <div style={{ position: 'relative', flex: 1 }}>
+                <Search size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                <input
+                  type="text"
+                  className="input"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search test name/code..."
+                  style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', paddingLeft: '36px', height: '36px', fontSize: '13px' }}
+                />
+              </div>
+              <select
+                className="select"
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', width: '180px', height: '36px', fontSize: '13px' }}
+              >
+                <option value="">All Categories</option>
+                {categories.map(c => <option key={c.category_id} value={c.category_id}>{c.name}</option>)}
+              </select>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <button
+                type="button"
+                onClick={downloadCsvTemplate}
+                style={{
+                  background: 'var(--bg-primary)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border-primary)',
+                  borderRadius: '6px',
+                  padding: '8px 14px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  height: '36px'
+                }}
+              >
+                <span>📥</span>
+                Download Excel Template
+              </button>
+
+              <label
+                style={{
+                  background: 'var(--bg-primary)',
+                  color: 'var(--text-primary)',
+                  border: '1px solid var(--border-primary)',
+                  borderRadius: '6px',
+                  padding: '8px 14px',
+                  fontSize: '12px',
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  height: '36px',
+                  margin: 0
+                }}
+              >
+                <span>📦</span>
+                Bulk Upload Services
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={(e) => {
+                    handleFileUpload(e);
+                    setImportModalOpen(true);
+                  }}
+                  style={{ display: 'none' }}
+                />
+              </label>
+
+              <Button
+                variant="primary"
+                onClick={openAddServiceModal}
+                icon={<Plus size={14} />}
+                style={{ height: '36px', padding: '0 14px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                Add Individual Service
+              </Button>
+            </div>
           </div>
-        </Card>
+
+          <Card style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)' }}>
+            <div className="table-responsive">
+              <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead>
+                  <tr style={{ borderBottom: '1px solid var(--border-primary)', textAlign: 'left' }}>
+                    <th style={{ padding: '12px 16px' }}>Code</th>
+                    <th style={{ padding: '12px 16px' }}>Test / Service Name</th>
+                    <th style={{ padding: '12px 16px' }}>Department</th>
+                    <th style={{ padding: '12px 16px' }}>Parameters</th>
+                    <th style={{ padding: '12px 16px' }}>Sample Type</th>
+                    <th style={{ padding: '12px 16px' }}>Price (Rs.)</th>
+                    <th style={{ padding: '12px 16px' }}>Status</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredServices.map((s) => (
+                    <tr key={s.service_id} style={{ borderBottom: '1px solid var(--border-primary)' }}>
+                      <td style={{ padding: '12px 16px', fontWeight: 600, color: 'var(--text-secondary)' }}>{s.service_code}</td>
+                      <td style={{ padding: '12px 16px', fontWeight: 600 }}>{s.name}</td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{ background: 'var(--bg-primary)', padding: '2px 8px', borderRadius: '50px', fontSize: '11px', fontWeight: 500 }}>
+                          {s.category_name}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <button
+                          onClick={() => openParamViewModal(s)}
+                          style={{
+                            background: s.parameters && s.parameters.length > 0 ? 'rgba(59, 130, 246, 0.12)' : 'var(--bg-primary)',
+                            color: s.parameters && s.parameters.length > 0 ? '#3b82f6' : 'var(--text-muted)',
+                            border: `1px solid ${s.parameters && s.parameters.length > 0 ? 'rgba(59, 130, 246, 0.3)' : 'var(--border-primary)'}`,
+                            padding: '4px 10px',
+                            borderRadius: '20px',
+                            fontSize: '11px',
+                            fontWeight: 600,
+                            cursor: 'pointer',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '5px'
+                          }}
+                          title="Click to view or edit parameters"
+                        >
+                          <List size={12} />
+                          {s.parameters && s.parameters.length > 0 ? `${s.parameters.length} Parameters` : '+ Add Parameters'}
+                        </button>
+                      </td>
+                      <td style={{ padding: '12px 16px', color: 'var(--text-secondary)' }}>{s.sample_required || 'None'}</td>
+                      <td style={{ padding: '12px 16px', fontWeight: 600 }}>Rs. {parseFloat(s.price).toFixed(2)}</td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <span style={{ 
+                          fontSize: '11px', padding: '2px 8px', borderRadius: '50px', fontWeight: 600,
+                          background: s.is_active ? 'rgba(16,185,129,0.15)' : 'rgba(244,63,94,0.15)',
+                          color: s.is_active ? 'var(--accent-success)' : 'var(--accent-danger)'
+                        }}>
+                          {s.is_active ? 'Active' : 'Inactive'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                          <button onClick={() => openEditServiceModal(s)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><Edit size={14} /></button>
+                          <button onClick={() => handleDeleteService(s.service_id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--accent-danger)' }}><Trash2 size={14} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+        </div>
       ) : activeTab === 'packages' ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
           {packages.map((pkg) => (
@@ -1570,59 +1938,103 @@ export const ServiceCatalog: React.FC = () => {
                               </button>
                             </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr 1.2fr 2fr', gap: '8px', alignItems: 'center', background: 'var(--bg-card)', padding: '6px', borderRadius: '6px' }}>
-                              <input
-                                type="number"
-                                className="input"
-                                value={p.minValue || ''}
-                                onChange={(e) => handleParameterChange(pIdx, 'minValue', e.target.value)}
-                                placeholder="Min Value"
-                                style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '4px 6px', fontSize: '11px' }}
-                              />
-                              <input
-                                type="number"
-                                className="input"
-                                value={p.maxValue || ''}
-                                onChange={(e) => handleParameterChange(pIdx, 'maxValue', e.target.value)}
-                                placeholder="Max Value"
-                                style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '4px 6px', fontSize: '11px' }}
-                              />
-                              <select
-                                className="select"
-                                value={p.ageGroup || 'Universal'}
-                                onChange={(e) => handleParameterChange(pIdx, 'ageGroup', e.target.value)}
-                                style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '4px 6px', fontSize: '11px', height: '26px' }}
-                              >
-                                <option value="Universal">Universal Age</option>
-                                <option value="Adult">Adult</option>
-                                <option value="Child">Child</option>
-                                <option value="Infant">Infant</option>
-                              </select>
-                              <select
-                                className="select"
-                                value={p.gender || 'Universal'}
-                                onChange={(e) => handleParameterChange(pIdx, 'gender', e.target.value)}
-                                style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '4px 6px', fontSize: '11px', height: '26px' }}
-                              >
-                                <option value="Universal">Universal Gender</option>
-                                <option value="Male">Male</option>
-                                <option value="Female">Female</option>
-                              </select>
-                              {p.inputType === 'Dropdown' ? (
-                                <input
-                                  type="text"
-                                  className="input"
-                                  value={p.dropdownOptions || ''}
-                                  onChange={(e) => handleParameterChange(pIdx, 'dropdownOptions', e.target.value)}
-                                  placeholder="Options (comma-separated, e.g. Positive,Negative)"
-                                  required
-                                  style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '4px 6px', fontSize: '11px' }}
-                                />
-                              ) : (
-                                <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic', paddingLeft: '6px' }}>
-                                  Range config auto-highlights out of range values
-                                </span>
-                              )}
+                            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 1.2fr 2fr', gap: '10px', background: 'var(--bg-card)', padding: '8px', borderRadius: '6px' }}>
+                              {/* Child Range (Min-Max) */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 600 }}>Child Min/Max</span>
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                  <input
+                                    type="number"
+                                    step="any"
+                                    className="input"
+                                    value={p.refMinChild || ''}
+                                    onChange={(e) => handleParameterChange(pIdx, 'refMinChild', e.target.value)}
+                                    placeholder="Min"
+                                    style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '2px 4px', fontSize: '11px', height: '24px' }}
+                                  />
+                                  <input
+                                    type="number"
+                                    step="any"
+                                    className="input"
+                                    value={p.refMaxChild || ''}
+                                    onChange={(e) => handleParameterChange(pIdx, 'refMaxChild', e.target.value)}
+                                    placeholder="Max"
+                                    style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '2px 4px', fontSize: '11px', height: '24px' }}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Adult Male Range (Min-Max) */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 600 }}>Male Min/Max</span>
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                  <input
+                                    type="number"
+                                    step="any"
+                                    className="input"
+                                    value={p.refMinMale || ''}
+                                    onChange={(e) => handleParameterChange(pIdx, 'refMinMale', e.target.value)}
+                                    placeholder="Min"
+                                    style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '2px 4px', fontSize: '11px', height: '24px' }}
+                                  />
+                                  <input
+                                    type="number"
+                                    step="any"
+                                    className="input"
+                                    value={p.refMaxMale || ''}
+                                    onChange={(e) => handleParameterChange(pIdx, 'refMaxMale', e.target.value)}
+                                    placeholder="Max"
+                                    style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '2px 4px', fontSize: '11px', height: '24px' }}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Adult Female Range (Min-Max) */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 600 }}>Female Min/Max</span>
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                  <input
+                                    type="number"
+                                    step="any"
+                                    className="input"
+                                    value={p.refMinFemale || ''}
+                                    onChange={(e) => handleParameterChange(pIdx, 'refMinFemale', e.target.value)}
+                                    placeholder="Min"
+                                    style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '2px 4px', fontSize: '11px', height: '24px' }}
+                                  />
+                                  <input
+                                    type="number"
+                                    step="any"
+                                    className="input"
+                                    value={p.refMaxFemale || ''}
+                                    onChange={(e) => handleParameterChange(pIdx, 'refMaxFemale', e.target.value)}
+                                    placeholder="Max"
+                                    style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '2px 4px', fontSize: '11px', height: '24px' }}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Dropdown Options or Helper text */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', justifyContent: 'center' }}>
+                                {p.inputType === 'Dropdown' ? (
+                                  <>
+                                    <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 600 }}>Dropdown Options</span>
+                                    <input
+                                      type="text"
+                                      className="input"
+                                      value={p.dropdownOptions || ''}
+                                      onChange={(e) => handleParameterChange(pIdx, 'dropdownOptions', e.target.value)}
+                                      placeholder="Options (e.g. Positive,Negative)"
+                                      required
+                                      style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '4px 6px', fontSize: '11px', height: '24px' }}
+                                    />
+                                  </>
+                                ) : (
+                                  <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '12px', paddingLeft: '6px' }}>
+                                    Demographic ranges auto-flag abnormal values.
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
                         ))}
@@ -1857,6 +2269,101 @@ export const ServiceCatalog: React.FC = () => {
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {importModalOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', zIndex: 1000, overflowY: 'auto', padding: '40px 16px' }}>
+          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '12px', width: '100%', maxWidth: '800px', padding: '24px', position: 'relative', margin: 'auto' }}>
+            <button onClick={() => { setImportModalOpen(false); setImportPreview([]); setImportErrors([]); }} style={{ position: 'absolute', right: '16px', top: '16px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
+            
+            <h2 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 4px 0', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>📦</span> Bulk Import Diagnostics Catalog
+            </h2>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '0 0 20px 0' }}>
+              Preview and verify diagnostic test records extracted from your template file before insertion.
+            </p>
+
+            {/* Error detection panel */}
+            {importErrors.length > 0 && (
+              <div style={{ background: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '8px', padding: '12px', marginBottom: '16px', maxHeight: '180px', overflowY: 'auto' }}>
+                <h4 style={{ color: '#ef4444', margin: '0 0 6px 0', fontSize: '13px', fontWeight: 700 }}>
+                  Validation Errors Found ({importErrors.length}) - Please fix template before importing:
+                </h4>
+                <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--text-primary)', fontSize: '12px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                  {importErrors.map((err, idx) => (
+                    <li key={idx} style={{ color: 'var(--text-primary)' }}>{err}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {importErrors.length === 0 && importPreview.length > 0 && (
+              <div style={{ background: 'rgba(16, 185, 129, 0.1)', border: '1px solid var(--accent-success)', borderRadius: '8px', padding: '12px', marginBottom: '16px', color: 'var(--accent-success)', fontSize: '13px', fontWeight: 600 }}>
+                ✓ No errors found. All {importPreview.length} test service profiles are verified and ready for import!
+              </div>
+            )}
+
+            {/* Live Preview List */}
+            <div style={{ border: '1px solid var(--border-primary)', borderRadius: '8px', overflow: 'hidden', marginBottom: '20px', background: 'var(--bg-primary)' }}>
+              <div style={{ background: 'var(--bg-card)', padding: '10px 16px', borderBottom: '1px solid var(--border-primary)', fontWeight: 700, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                PREVIEWING EXTRACTED SERVICES ({importPreview.length})
+              </div>
+              <div style={{ maxHeight: '300px', overflowY: 'auto' }}>
+                {importPreview.length === 0 ? (
+                  <div style={{ padding: '24px', textAlign: 'center', color: 'var(--text-muted)', fontSize: '13px', fontStyle: 'italic' }}>
+                    Select a CSV template file to begin validation preview.
+                  </div>
+                ) : (
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px', textAlign: 'left' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--bg-card)', borderBottom: '1px solid var(--border-primary)', color: 'var(--text-muted)' }}>
+                        <th style={{ padding: '8px 12px' }}>Code</th>
+                        <th style={{ padding: '8px 12px' }}>Service Name</th>
+                        <th style={{ padding: '8px 12px' }}>Department</th>
+                        <th style={{ padding: '8px 12px' }}>Format</th>
+                        <th style={{ padding: '8px 12px' }}>Price</th>
+                        <th style={{ padding: '8px 12px' }}>Parameters</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {importPreview.map((item, idx) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}>
+                          <td style={{ padding: '8px 12px', fontWeight: 700 }}>{item.service_code}</td>
+                          <td style={{ padding: '8px 12px', fontWeight: 600 }}>{item.name}</td>
+                          <td style={{ padding: '8px 12px' }}>{item.category}</td>
+                          <td style={{ padding: '8px 12px' }}>
+                            <span style={{ fontSize: '10px', background: 'var(--bg-card)', padding: '2px 6px', borderRadius: '4px', textTransform: 'uppercase', fontWeight: 600 }}>
+                              {item.report_type}
+                            </span>
+                          </td>
+                          <td style={{ padding: '8px 12px', fontWeight: 600 }}>${item.price.toFixed(2)}</td>
+                          <td style={{ padding: '8px 12px', color: 'var(--text-secondary)' }}>
+                            {item.report_type === 'Structured' ? `${item.parameters.length} params` : '—'}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', borderTop: '1px solid var(--border-primary)', paddingTop: '16px' }}>
+              <Button variant="secondary" onClick={() => { setImportModalOpen(false); setImportPreview([]); setImportErrors([]); }}>
+                Cancel
+              </Button>
+              <Button 
+                variant="primary" 
+                onClick={handleCommitImport} 
+                loading={importLoading} 
+                disabled={importErrors.length > 0 || importPreview.length === 0}
+              >
+                Import Verified Catalog
+              </Button>
+            </div>
+
           </div>
         </div>
       )}

@@ -106,7 +106,13 @@ export const getServices = async () => {
                'min_value', dp.min_value,
                'max_value', dp.max_value,
                'age_group', dp.age_group,
-               'gender', dp.gender
+               'gender', dp.gender,
+               'ref_min_male', dp.ref_min_male,
+               'ref_max_male', dp.ref_max_male,
+               'ref_min_female', dp.ref_min_female,
+               'ref_max_female', dp.ref_max_female,
+               'ref_min_child', dp.ref_min_child,
+               'ref_max_child', dp.ref_max_child
              ) ORDER BY dp.display_order)
              FROM diagnostic_parameters dp
              WHERE dp.service_id = s.service_id
@@ -139,8 +145,12 @@ export const addService = async (input: any) => {
         const p = input.parameters[i];
         if (p.name && p.name.trim()) {
           await query(`
-            INSERT INTO diagnostic_parameters (service_id, name, unit, reference_range, display_order, input_type, dropdown_options, min_value, max_value, age_group, gender)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            INSERT INTO diagnostic_parameters (
+              service_id, name, unit, reference_range, display_order, input_type, dropdown_options, 
+              min_value, max_value, age_group, gender,
+              ref_min_male, ref_max_male, ref_min_female, ref_max_female, ref_min_child, ref_max_child
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
           `, [
             service.service_id, 
             p.name.trim(), 
@@ -149,10 +159,16 @@ export const addService = async (input: any) => {
             i + 1,
             p.inputType || p.input_type || 'Number',
             p.dropdownOptions || p.dropdown_options || null,
-            p.minValue !== undefined && p.minValue !== '' ? p.minValue : (p.min_value !== undefined && p.min_value !== '' ? p.min_value : null),
-            p.maxValue !== undefined && p.maxValue !== '' ? p.maxValue : (p.max_value !== undefined && p.max_value !== '' ? p.max_value : null),
+            p.minValue !== undefined && p.minValue !== '' && p.minValue !== null ? p.minValue : (p.min_value !== undefined && p.min_value !== '' && p.min_value !== null ? p.min_value : null),
+            p.maxValue !== undefined && p.maxValue !== '' && p.maxValue !== null ? p.maxValue : (p.max_value !== undefined && p.max_value !== '' && p.max_value !== null ? p.max_value : null),
             p.ageGroup || p.age_group || 'Universal',
-            p.gender || 'Universal'
+            p.gender || 'Universal',
+            p.refMinMale !== undefined && p.refMinMale !== '' && p.refMinMale !== null ? p.refMinMale : (p.ref_min_male !== undefined && p.ref_min_male !== '' && p.ref_min_male !== null ? p.ref_min_male : null),
+            p.refMaxMale !== undefined && p.refMaxMale !== '' && p.refMaxMale !== null ? p.refMaxMale : (p.ref_max_male !== undefined && p.ref_max_male !== '' && p.ref_max_male !== null ? p.ref_max_male : null),
+            p.refMinFemale !== undefined && p.refMinFemale !== '' && p.refMinFemale !== null ? p.refMinFemale : (p.ref_min_female !== undefined && p.ref_min_female !== '' && p.ref_min_female !== null ? p.ref_min_female : null),
+            p.refMaxFemale !== undefined && p.refMaxFemale !== '' && p.refMaxFemale !== null ? p.refMaxFemale : (p.ref_max_female !== undefined && p.ref_max_female !== '' && p.ref_max_female !== null ? p.ref_max_female : null),
+            p.refMinChild !== undefined && p.refMinChild !== '' && p.refMinChild !== null ? p.refMinChild : (p.ref_min_child !== undefined && p.ref_min_child !== '' && p.ref_min_child !== null ? p.ref_min_child : null),
+            p.refMaxChild !== undefined && p.refMaxChild !== '' && p.refMaxChild !== null ? p.refMaxChild : (p.ref_max_child !== undefined && p.ref_max_child !== '' && p.ref_max_child !== null ? p.ref_max_child : null)
           ]);
         }
       }
@@ -188,8 +204,12 @@ export const editService = async (serviceId: string, input: any) => {
         const p = input.parameters[i];
         if (p.name && p.name.trim()) {
           await query(`
-            INSERT INTO diagnostic_parameters (service_id, name, unit, reference_range, display_order, input_type, dropdown_options, min_value, max_value, age_group, gender)
-            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+            INSERT INTO diagnostic_parameters (
+              service_id, name, unit, reference_range, display_order, input_type, dropdown_options, 
+              min_value, max_value, age_group, gender,
+              ref_min_male, ref_max_male, ref_min_female, ref_max_female, ref_min_child, ref_max_child
+            )
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
           `, [
             serviceId, 
             p.name.trim(), 
@@ -198,10 +218,16 @@ export const editService = async (serviceId: string, input: any) => {
             i + 1,
             p.inputType || p.input_type || 'Number',
             p.dropdownOptions || p.dropdown_options || null,
-            p.minValue !== undefined && p.minValue !== '' ? p.minValue : (p.min_value !== undefined && p.min_value !== '' ? p.min_value : null),
-            p.maxValue !== undefined && p.maxValue !== '' ? p.maxValue : (p.max_value !== undefined && p.max_value !== '' ? p.max_value : null),
+            p.minValue !== undefined && p.minValue !== '' && p.minValue !== null ? p.minValue : (p.min_value !== undefined && p.min_value !== '' && p.min_value !== null ? p.min_value : null),
+            p.maxValue !== undefined && p.maxValue !== '' && p.maxValue !== null ? p.maxValue : (p.max_value !== undefined && p.max_value !== '' && p.max_value !== null ? p.max_value : null),
             p.ageGroup || p.age_group || 'Universal',
-            p.gender || 'Universal'
+            p.gender || 'Universal',
+            p.refMinMale !== undefined && p.refMinMale !== '' && p.refMinMale !== null ? p.refMinMale : (p.ref_min_male !== undefined && p.ref_min_male !== '' && p.ref_min_male !== null ? p.ref_min_male : null),
+            p.refMaxMale !== undefined && p.refMaxMale !== '' && p.refMaxMale !== null ? p.refMaxMale : (p.ref_max_male !== undefined && p.ref_max_male !== '' && p.ref_max_male !== null ? p.ref_max_male : null),
+            p.refMinFemale !== undefined && p.refMinFemale !== '' && p.refMinFemale !== null ? p.refMinFemale : (p.ref_min_female !== undefined && p.ref_min_female !== '' && p.ref_min_female !== null ? p.ref_min_female : null),
+            p.refMaxFemale !== undefined && p.refMaxFemale !== '' && p.refMaxFemale !== null ? p.refMaxFemale : (p.ref_max_female !== undefined && p.ref_max_female !== '' && p.ref_max_female !== null ? p.ref_max_female : null),
+            p.refMinChild !== undefined && p.refMinChild !== '' && p.refMinChild !== null ? p.refMinChild : (p.ref_min_child !== undefined && p.ref_min_child !== '' && p.ref_min_child !== null ? p.ref_min_child : null),
+            p.refMaxChild !== undefined && p.refMaxChild !== '' && p.refMaxChild !== null ? p.refMaxChild : (p.ref_max_child !== undefined && p.ref_max_child !== '' && p.ref_max_child !== null ? p.ref_max_child : null)
           ]);
         }
       }

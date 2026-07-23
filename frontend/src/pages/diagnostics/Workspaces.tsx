@@ -107,6 +107,61 @@ export const Workspaces: React.FC = () => {
     'FASTING BLOOD SUGAR': '70-99 mg/dL'
   };
 
+  const getPatientReferenceRange = (p: any, patientAge: any, patientGender: string) => {
+    const age = parseInt(patientAge || '30', 10);
+    const gender = (patientGender || 'Universal').toLowerCase();
+    
+    if (age < 18) {
+      if (p.ref_min_child !== null && p.ref_max_child !== null && p.ref_min_child !== undefined && p.ref_max_child !== undefined) {
+        return `${p.ref_min_child} - ${p.ref_max_child}`;
+      }
+    } else {
+      if (gender === 'male' || gender === 'm') {
+        if (p.ref_min_male !== null && p.ref_max_male !== null && p.ref_min_male !== undefined && p.ref_max_male !== undefined) {
+          return `${p.ref_min_male} - ${p.ref_max_male}`;
+        }
+      } else if (gender === 'female' || gender === 'f') {
+        if (p.ref_min_female !== null && p.ref_max_female !== null && p.ref_min_female !== undefined && p.ref_max_female !== undefined) {
+          return `${p.ref_min_female} - ${p.ref_max_female}`;
+        }
+      }
+    }
+    
+    return p.reference_range || p.referenceRange || '—';
+  };
+
+  const getAbnormalStatus = (valStr: string, rangeStr: string): 'Normal' | 'Low' | 'High' => {
+    if (!valStr || !rangeStr || rangeStr === '—' || rangeStr === '-') return 'Normal';
+    const val = parseFloat(valStr.trim());
+    if (isNaN(val)) return 'Normal';
+    
+    const rangeClean = rangeStr.replace(/\s+/g, ' ').trim();
+    if (rangeClean.includes('-')) {
+      const parts = rangeClean.split('-');
+      const low = parseFloat(parts[0].trim());
+      const high = parseFloat(parts[1].trim());
+      if (!isNaN(low) && !isNaN(high)) {
+        if (val < low) return 'Low';
+        if (val > high) return 'High';
+      }
+    } else {
+      if (rangeClean.startsWith('<=')) {
+        const limit = parseFloat(rangeClean.substring(2).trim());
+        if (!isNaN(limit) && val > limit) return 'High';
+      } else if (rangeClean.startsWith('>=')) {
+        const limit = parseFloat(rangeClean.substring(2).trim());
+        if (!isNaN(limit) && val < limit) return 'Low';
+      } else if (rangeClean.startsWith('<')) {
+        const limit = parseFloat(rangeClean.substring(1).trim());
+        if (!isNaN(limit) && val >= limit) return 'High';
+      } else if (rangeClean.startsWith('>')) {
+        const limit = parseFloat(rangeClean.substring(1).trim());
+        if (!isNaN(limit) && val <= limit) return 'Low';
+      }
+    }
+    return 'Normal';
+  };
+
   const checkIsAbnormal = (valStr: string, rangeStr: string): boolean => {
     if (!valStr || !rangeStr || rangeStr === '—' || rangeStr === '-') return false;
     
@@ -383,23 +438,38 @@ export const Workspaces: React.FC = () => {
             let submitParams = undefined;
 
             if (hasParams) {
-              submitParams = targetItem.parameters.map((p: any) => ({
-                parameterId: p.parameter_id,
-                name: p.name,
-                unit: p.unit,
-                referenceRange: p.reference_range,
-                actualValue: paramValues[p.parameter_id] || ''
-              }));
+              submitParams = targetItem.parameters.map((p: any) => {
+                const activeRange = getPatientReferenceRange(p, actionItem.patientAge, actionItem.patientGender);
+                const val = paramValues[p.parameter_id] || '';
+                const pStatus = getAbnormalStatus(val, activeRange);
+                return {
+                  parameterId: p.parameter_id,
+                  name: p.name,
+                  unit: p.unit,
+                  referenceRange: activeRange,
+                  actualValue: val,
+                  status: pStatus
+                };
+              });
               submitActualResult = submitParams.map((p: any) => `${p.name}: ${p.actualValue} ${p.unit || ''}`).join(', ');
             } else {
               submitActualResult = paramValues[`svc-${targetItem.item_id}`] || 'Normal';
+            }
+
+            let computedStatus = labStatus;
+            if (submitParams) {
+              if (submitParams.some((p: any) => p.status === 'High')) {
+                computedStatus = 'High';
+              } else if (submitParams.some((p: any) => p.status === 'Low')) {
+                computedStatus = 'Low';
+              }
             }
 
             const payload = {
               itemId: targetItem.item_id,
               actualResult: submitActualResult,
               referenceRange: targetItem.normal_range || 'Normal',
-              status: labStatus,
+              status: computedStatus,
               machineId: selectedMachineId || null,
               remarks: 'Grouped profile lab values entered',
               parameters: submitParams
@@ -413,21 +483,36 @@ export const Workspaces: React.FC = () => {
           let submitParams = undefined;
 
           if (hasParams) {
-            submitParams = target.parameters.map((p: any) => ({
-              parameterId: p.parameter_id,
-              name: p.name,
-              unit: p.unit,
-              referenceRange: p.reference_range,
-              actualValue: paramValues[p.parameter_id] || ''
-            }));
+            submitParams = target.parameters.map((p: any) => {
+              const activeRange = getPatientReferenceRange(p, actionItem.patientAge, actionItem.patientGender);
+              const val = paramValues[p.parameter_id] || '';
+              const pStatus = getAbnormalStatus(val, activeRange);
+              return {
+                parameterId: p.parameter_id,
+                name: p.name,
+                unit: p.unit,
+                referenceRange: activeRange,
+                actualValue: val,
+                status: pStatus
+              };
+            });
             submitActualResult = submitParams.map((p: any) => `${p.name}: ${p.actualValue} ${p.unit || ''}`).join(', ');
+          }
+
+          let computedStatus = labStatus;
+          if (submitParams) {
+            if (submitParams.some((p: any) => p.status === 'High')) {
+              computedStatus = 'High';
+            } else if (submitParams.some((p: any) => p.status === 'Low')) {
+              computedStatus = 'Low';
+            }
           }
 
           const payload = {
             itemId: target.item_id,
             actualResult: submitActualResult,
             referenceRange: target.normal_range,
-            status: labStatus,
+            status: computedStatus,
             machineId: selectedMachineId || null,
             remarks: 'Lab values entered',
             parameters: submitParams
@@ -932,14 +1017,20 @@ export const Workspaces: React.FC = () => {
                                   <span>UNIT</span>
                                   <span>REF INTERVAL</span>
                                 </div>
-                                {groupSvc.parameters.map((p: any) => (
-                                  <div key={p.parameter_id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1.2fr', gap: '8px', alignItems: 'center', fontSize: '12px' }}>
-                                    <span style={{ fontWeight: 600 }}>{p.name}</span>
-                                    {renderParameterInput(p)}
-                                    <span style={{ color: 'var(--text-muted)' }}>{p.unit || '-'}</span>
-                                    <span style={{ color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.reference_range || '-'}</span>
-                                  </div>
-                                ))}
+                                {groupSvc.parameters.map((p: any) => {
+                                  const activeRange = getPatientReferenceRange(p, actionItem.patientAge, actionItem.patientGender);
+                                  const isOut = checkIsAbnormal(paramValues[p.parameter_id] || '', activeRange);
+                                  return (
+                                    <div key={p.parameter_id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1.2fr', gap: '8px', alignItems: 'center', fontSize: '12px' }}>
+                                      <span style={{ fontWeight: 600, color: isOut ? '#ef4444' : 'inherit' }}>
+                                        {p.name} {isOut && <span style={{ fontWeight: 800, fontSize: '10px' }}>(ABNORMAL)</span>}
+                                      </span>
+                                      {renderParameterInput(p)}
+                                      <span style={{ color: 'var(--text-muted)' }}>{p.unit || '-'}</span>
+                                      <span style={{ color: isOut ? '#ef4444' : 'var(--text-secondary)', fontWeight: isOut ? '700' : '400', fontFamily: 'monospace' }}>{activeRange}</span>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             ) : (
                               <div>
@@ -964,14 +1055,20 @@ export const Workspaces: React.FC = () => {
                           <span>UNIT</span>
                           <span>REF INTERVAL</span>
                         </div>
-                        {actionItem.item.parameters.map((p: any) => (
-                          <div key={p.parameter_id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1.2fr', gap: '8px', alignItems: 'center', fontSize: '12px' }}>
-                            <span style={{ fontWeight: 600 }}>{p.name}</span>
-                            {renderParameterInput(p)}
-                            <span style={{ color: 'var(--text-muted)' }}>{p.unit || '-'}</span>
-                            <span style={{ color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.reference_range || '-'}</span>
-                          </div>
-                        ))}
+                        {actionItem.item.parameters.map((p: any) => {
+                          const activeRange = getPatientReferenceRange(p, actionItem.patientAge, actionItem.patientGender);
+                          const isOut = checkIsAbnormal(paramValues[p.parameter_id] || '', activeRange);
+                          return (
+                            <div key={p.parameter_id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1.2fr', gap: '8px', alignItems: 'center', fontSize: '12px' }}>
+                              <span style={{ fontWeight: 600, color: isOut ? '#ef4444' : 'inherit' }}>
+                                {p.name} {isOut && <span style={{ fontWeight: 800, fontSize: '10px' }}>(ABNORMAL)</span>}
+                              </span>
+                              {renderParameterInput(p)}
+                              <span style={{ color: 'var(--text-muted)' }}>{p.unit || '-'}</span>
+                              <span style={{ color: isOut ? '#ef4444' : 'var(--text-secondary)', fontWeight: isOut ? '700' : '400', fontFamily: 'monospace' }}>{activeRange}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     ) : (
                       <div>
