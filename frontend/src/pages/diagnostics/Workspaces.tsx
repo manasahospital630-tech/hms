@@ -35,6 +35,55 @@ export const Workspaces: React.FC = () => {
   const [verifyStatus, setVerifyStatus] = useState('Approved');
   const [verifyNotes, setVerifyNotes] = useState('');
   const [paramValues, setParamValues] = useState<{ [paramId: string]: string }>({});
+  const [expandedPackages, setExpandedPackages] = useState<{ [key: string]: boolean }>({});
+  const [pkgBarcodes, setPkgBarcodes] = useState<{ [container: string]: string }>({});
+
+  const getSpecimenCategory = (sampleReq: string) => {
+    const req = (sampleReq || '').toLowerCase().trim();
+    if (!req || req === 'none' || req.includes('ecg')) {
+      return 'Non-Sample / ECG';
+    }
+    if (req.includes('fluoride') || req.includes('grey') || req.includes('gray') || req.includes('glucose') || req.includes('rbs') || req.includes('fbs') || req.includes('ppbs')) {
+      return 'Sodium Fluoride Tube (Grey Top)';
+    }
+    if (req.includes('edta') || req.includes('purple') || req.includes('blood') || req.includes('cbp') || req.includes('cbc')) {
+      return 'EDTA Tube (Purple Top)';
+    }
+    if (req.includes('serum') || req.includes('red') || req.includes('plain') || req.includes('clot') || req.includes('biochem') || req.includes('lft') || req.includes('rft') || req.includes('electrolytes') || req.includes('widal')) {
+      return 'Plain Tube (Red Top)';
+    }
+    if (req.includes('urine') || req.includes('cue')) {
+      return 'Urine Sterile Container';
+    }
+    if (req.includes('stool')) {
+      return 'Stool Collection Cup';
+    }
+    return 'Plain Tube (Red Top)';
+  };
+
+  const parseConcatenatedResult = (actualResult: string) => {
+    if (!actualResult || !actualResult.includes(':')) return null;
+    try {
+      const parts = actualResult.split(',');
+      return parts.map(part => {
+        const colonIdx = part.indexOf(':');
+        if (colonIdx === -1) return null;
+        const name = part.substring(0, colonIdx).trim();
+        const remaining = part.substring(colonIdx + 1).trim();
+        
+        const spaceIdx = remaining.indexOf(' ');
+        let value = remaining;
+        let unit = '';
+        if (spaceIdx !== -1) {
+          value = remaining.substring(0, spaceIdx).trim();
+          unit = remaining.substring(spaceIdx + 1).trim();
+        }
+        return { name, value, unit };
+      }).filter(Boolean);
+    } catch (e) {
+      return null;
+    }
+  };
 
   const loadWorkspaceData = async () => {
     setLoading(true);
@@ -63,9 +112,13 @@ export const Workspaces: React.FC = () => {
 
   const openActionModal = (item: any) => {
     setActionItem(item);
+    
+    const isPkg = item.type === 'package';
+    const firstItem = isPkg ? item.items[0] : item.item;
+    
     setBarcode(`BAR-${Date.now().toString().substring(8)}`);
-    setActualResult(item.lab_result?.actual_result || '');
-    setLabStatus(item.lab_result?.status || 'Normal');
+    setActualResult(firstItem?.lab_result?.actual_result || '');
+    setLabStatus(firstItem?.lab_result?.status || 'Normal');
     setFindings('');
     setImpression('');
     setConclusion('');
@@ -74,16 +127,40 @@ export const Workspaces: React.FC = () => {
     setVerifyNotes('');
     setActionError('');
 
+    // Pre-populate barcodes for packages if activeWorkspace is collection
+    if (isPkg && activeWorkspace === 'collection') {
+      const barcodes: { [container: string]: string } = {};
+      const uniqueContainers = Array.from(new Set(item.items.map((i: any) => getSpecimenCategory(i.sample_required))));
+      uniqueContainers.forEach((container: any, idx: number) => {
+        barcodes[container] = `BAR-${container.substring(0, 4).toUpperCase().replace(/[^A-Z]/g, '')}-${Date.now().toString().substring(8)}-${idx + 1}`;
+      });
+      setPkgBarcodes(barcodes);
+    }
+
     // Initialize parameter values
     const initialParams: { [key: string]: string } = {};
-    if (item.result_parameters && Array.isArray(item.result_parameters) && item.result_parameters.length > 0) {
-      item.result_parameters.forEach((rp: any) => {
-        initialParams[rp.parameter_id] = rp.actual_value || '';
+    if (isPkg) {
+      item.items.forEach((pItem: any) => {
+        if (pItem.result_parameters && Array.isArray(pItem.result_parameters) && pItem.result_parameters.length > 0) {
+          pItem.result_parameters.forEach((rp: any) => {
+            initialParams[rp.parameter_id] = rp.actual_value || '';
+          });
+        } else if (pItem.parameters && Array.isArray(pItem.parameters)) {
+          pItem.parameters.forEach((p: any) => {
+            initialParams[p.parameter_id] = '';
+          });
+        }
       });
-    } else if (item.parameters && Array.isArray(item.parameters)) {
-      item.parameters.forEach((p: any) => {
-        initialParams[p.parameter_id] = '';
-      });
+    } else if (firstItem) {
+      if (firstItem.result_parameters && Array.isArray(firstItem.result_parameters) && firstItem.result_parameters.length > 0) {
+        firstItem.result_parameters.forEach((rp: any) => {
+          initialParams[rp.parameter_id] = rp.actual_value || '';
+        });
+      } else if (firstItem.parameters && Array.isArray(firstItem.parameters)) {
+        firstItem.parameters.forEach((p: any) => {
+          initialParams[p.parameter_id] = '';
+        });
+      }
     }
     setParamValues(initialParams);
 
@@ -97,10 +174,21 @@ export const Workspaces: React.FC = () => {
 
     try {
       if (activeWorkspace === 'collection') {
-        const itemsToCollect = getPackageGroupItems(actionItem);
-        for (const targetItem of itemsToCollect) {
+        if (actionItem.type === 'package') {
+          for (const targetItem of actionItem.items) {
+            const container = getSpecimenCategory(targetItem.sample_required);
+            const targetBarcode = pkgBarcodes[container] || barcode;
+            const payload = {
+              itemId: targetItem.item_id,
+              containerType: container,
+              barcode: targetBarcode,
+              remarks: 'Grouped profile sample collection logged successfully'
+            };
+            await api.post('/diagnostics/samples/collect', payload);
+          }
+        } else {
           const payload = {
-            itemId: targetItem.item_id,
+            itemId: actionItem.item.item_id,
             containerType,
             barcode,
             remarks: 'Sample collection logged successfully'
@@ -108,9 +196,8 @@ export const Workspaces: React.FC = () => {
           await api.post('/diagnostics/samples/collect', payload);
         }
       } else if (activeWorkspace === 'lab') {
-        if (actionItem.package_id) {
-          const groupItems = getPackageGroupItems(actionItem);
-          for (const targetItem of groupItems) {
+        if (actionItem.type === 'package') {
+          for (const targetItem of actionItem.items) {
             const hasParams = targetItem.parameters && Array.isArray(targetItem.parameters) && targetItem.parameters.length > 0;
             let submitActualResult = '';
             let submitParams = undefined;
@@ -140,12 +227,13 @@ export const Workspaces: React.FC = () => {
             await api.post('/diagnostics/results/submit?type=lab', payload);
           }
         } else {
-          const hasParams = actionItem.parameters && Array.isArray(actionItem.parameters) && actionItem.parameters.length > 0;
+          const target = actionItem.item;
+          const hasParams = target.parameters && Array.isArray(target.parameters) && target.parameters.length > 0;
           let submitActualResult = actualResult;
           let submitParams = undefined;
 
           if (hasParams) {
-            submitParams = actionItem.parameters.map((p: any) => ({
+            submitParams = target.parameters.map((p: any) => ({
               parameterId: p.parameter_id,
               name: p.name,
               unit: p.unit,
@@ -156,9 +244,9 @@ export const Workspaces: React.FC = () => {
           }
 
           const payload = {
-            itemId: actionItem.item_id,
+            itemId: target.item_id,
             actualResult: submitActualResult,
-            referenceRange: actionItem.normal_range,
+            referenceRange: target.normal_range,
             status: labStatus,
             machineId: selectedMachineId || null,
             remarks: 'Lab values entered',
@@ -167,12 +255,13 @@ export const Workspaces: React.FC = () => {
           await api.post('/diagnostics/results/submit?type=lab', payload);
         }
       } else if (activeWorkspace === 'imaging') {
-        const isXray = actionItem.category_name === 'Radiology';
-        const isUsg = actionItem.category_name === 'Ultrasound';
+        const target = actionItem.item;
+        const isXray = target.category_name === 'Radiology';
+        const isUsg = target.category_name === 'Ultrasound';
         
         if (isXray) {
           const payload = {
-            itemId: actionItem.item_id,
+            itemId: target.item_id,
             findings,
             impression,
             conclusion,
@@ -181,7 +270,7 @@ export const Workspaces: React.FC = () => {
           await api.post('/diagnostics/results/submit?type=radiology', payload);
         } else if (isUsg) {
           const payload = {
-            itemId: actionItem.item_id,
+            itemId: target.item_id,
             findings,
             impression,
             clinicalHistory,
@@ -190,11 +279,11 @@ export const Workspaces: React.FC = () => {
           await api.post('/diagnostics/results/submit?type=ultrasound', payload);
         } else {
           // ECG
-          const hasParams = actionItem.parameters && Array.isArray(actionItem.parameters) && actionItem.parameters.length > 0;
+          const hasParams = target.parameters && Array.isArray(target.parameters) && target.parameters.length > 0;
           let submitParams = undefined;
           let submitFindings = findings;
           if (hasParams) {
-            submitParams = actionItem.parameters.map((p: any) => ({
+            submitParams = target.parameters.map((p: any) => ({
               parameterId: p.parameter_id,
               name: p.name,
               unit: p.unit,
@@ -205,7 +294,7 @@ export const Workspaces: React.FC = () => {
           }
 
           const payload = {
-            itemId: actionItem.item_id,
+            itemId: target.item_id,
             findings: submitFindings,
             interpretation: impression || 'ECG Analysis Completed',
             recommendation: conclusion,
@@ -215,7 +304,7 @@ export const Workspaces: React.FC = () => {
           await api.post('/diagnostics/results/submit?type=ecg', payload);
         }
       } else if (activeWorkspace === 'verification') {
-        const itemsToVerify = getPackageGroupItems(actionItem);
+        const itemsToVerify = actionItem.type === 'package' ? actionItem.items : [actionItem.item];
         for (const targetItem of itemsToVerify) {
           const payload = {
             itemId: targetItem.item_id,
@@ -236,43 +325,91 @@ export const Workspaces: React.FC = () => {
     }
   };
 
-  // Filter items in orders based on current workspace
-  const getWorkspaceItems = () => {
-    const items: any[] = [];
+  // Filter items in orders based on current workspace, preserving package grouping
+  const getGroupedWorkspaceItems = () => {
+    const groups: any[] = [];
+    
     orders.forEach(o => {
-      (o.items || []).forEach((item: any) => {
+      const matchingItems = (o.items || []).filter((item: any) => {
         const requiresSample = item.sample_required && item.sample_required !== 'None' && item.sample_required !== '';
-        const matchesWorkspace = 
+        return (
           (activeWorkspace === 'collection' && requiresSample && item.status === 'Ordered') ||
           (activeWorkspace === 'lab' && requiresSample && item.status === 'SampleCollected') ||
           (activeWorkspace === 'imaging' && !requiresSample && (item.status === 'Ordered' || item.status === 'SampleCollected')) ||
-          (activeWorkspace === 'verification' && item.status === 'Resulted');
-          
-        if (matchesWorkspace) {
-          items.push({
-            ...item,
-            order_id: o.order_id,
-            patient_name: `${o.first_name} ${o.last_name}`,
-            patient_mrn: o.medical_record_number,
-            order_number: o.order_number,
-            priority: o.priority,
-            clinical_notes: o.clinical_notes,
-            diagnosis: o.diagnosis,
-            all_order_items: o.items || []
-          });
+          (activeWorkspace === 'verification' && item.status === 'Resulted')
+        );
+      });
+
+      if (matchingItems.length === 0) return;
+
+      const packageGroups: { [packageId: string]: any[] } = {};
+      const standaloneItems: any[] = [];
+
+      matchingItems.forEach((item: any) => {
+        const fullItem = {
+          ...item,
+          order_id: o.order_id,
+          patient_name: `${o.first_name} ${o.last_name}`,
+          patient_mrn: o.medical_record_number,
+          order_number: o.order_number,
+          priority: o.priority,
+          clinical_notes: o.clinical_notes,
+          diagnosis: o.diagnosis,
+          all_order_items: o.items || []
+        };
+
+        if (item.package_id) {
+          if (!packageGroups[item.package_id]) {
+            packageGroups[item.package_id] = [];
+          }
+          packageGroups[item.package_id].push(fullItem);
+        } else {
+          standaloneItems.push(fullItem);
         }
       });
+
+      Object.keys(packageGroups).forEach(packageId => {
+        const pItems = packageGroups[packageId];
+        groups.push({
+          type: 'package',
+          orderId: o.order_id,
+          orderNumber: o.order_number,
+          patientName: `${o.first_name} ${o.last_name}`,
+          patientMrn: o.medical_record_number,
+          patientAge: o.patient_age || o.age,
+          patientGender: o.patient_gender || o.gender,
+          priority: o.priority,
+          clinicalNotes: o.clinical_notes,
+          diagnosis: o.diagnosis,
+          createdAt: o.created_at,
+          packageId: packageId,
+          packageName: pItems[0].package_name,
+          items: pItems
+        });
+      });
+
+      standaloneItems.forEach(item => {
+        groups.push({
+          type: 'standalone',
+          orderId: o.order_id,
+          orderNumber: o.order_number,
+          patientName: `${o.first_name} ${o.last_name}`,
+          patientMrn: o.medical_record_number,
+          patientAge: o.patient_age || o.age,
+          patientGender: o.patient_gender || o.gender,
+          priority: o.priority,
+          clinicalNotes: o.clinical_notes,
+          diagnosis: o.diagnosis,
+          createdAt: o.created_at,
+          item: item
+        });
+      });
     });
-    return items;
+
+    return groups;
   };
 
-  const workspaceItems = getWorkspaceItems();
-
-  // Helper to get all items belonging to the same package in an order
-  const getPackageGroupItems = (item: any) => {
-    if (!item || !item.package_id || !item.all_order_items) return [item];
-    return item.all_order_items.filter((i: any) => i.package_id === item.package_id);
-  };
+  const workspaceItems = getGroupedWorkspaceItems();
 
   return (
     <div style={{ color: 'var(--text-primary)' }}>
@@ -355,46 +492,133 @@ export const Workspaces: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {workspaceItems.map((item, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid var(--border-primary)' }}>
-                    <td style={{ padding: '12px 16px', fontWeight: 700 }}>{item.order_number}</td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{ fontWeight: 600 }}>{item.patient_name}</div>
-                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>MRN: {item.patient_mrn}</div>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <div style={{ fontWeight: 600 }}>{item.service_name}</div>
-                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px', flexWrap: 'wrap' }}>
-                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Code: {item.service_code} ({item.category_name})</span>
-                        {item.package_name && (
-                          <span style={{ fontSize: '10px', background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
-                            Profile: {item.package_name}
-                          </span>
+                {workspaceItems.map((group, idx) => {
+                  const isPkg = group.type === 'package';
+                  
+                  if (isPkg) {
+                    const isExpanded = expandedPackages[group.packageId] || false;
+                    
+                    // Group package items by specimen category for rendering
+                    const sampleTypeGroups: { [container: string]: any[] } = {};
+                    group.items.forEach((pItem: any) => {
+                      const container = getSpecimenCategory(pItem.sample_required);
+                      if (!sampleTypeGroups[container]) {
+                        sampleTypeGroups[container] = [];
+                      }
+                      sampleTypeGroups[container].push(pItem);
+                    });
+
+                    return (
+                      <React.Fragment key={`pkg-${group.packageId}-${idx}`}>
+                        <tr style={{ borderBottom: '1px solid var(--border-primary)', background: 'rgba(59, 130, 246, 0.02)' }}>
+                          <td style={{ padding: '12px 16px', fontWeight: 700 }}>{group.orderNumber}</td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <div style={{ fontWeight: 600 }}>{group.patientName}</div>
+                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>MRN: {group.patientMrn}</div>
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <div style={{ fontWeight: 700, color: 'var(--accent-primary)' }}>{group.packageName}</div>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
+                              <span style={{ fontSize: '10px', background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6', border: '1px solid rgba(59, 130, 246, 0.3)', padding: '1px 6px', borderRadius: '4px', fontWeight: 600 }}>
+                                Package Profile ({group.items.length} Tests)
+                              </span>
+                              <button 
+                                type="button"
+                                onClick={() => setExpandedPackages({ ...expandedPackages, [group.packageId]: !isExpanded })}
+                                style={{ fontSize: '11px', color: 'var(--accent-primary)', background: 'transparent', border: 'none', cursor: 'pointer', fontWeight: 600, padding: 0, textDecoration: 'underline' }}
+                              >
+                                {isExpanded ? 'Hide Included Tests' : 'Show Included Tests'}
+                              </button>
+                            </div>
+                          </td>
+                          <td style={{ padding: '12px 16px' }}>
+                            <span style={{ 
+                              fontSize: '11px', padding: '2px 8px', borderRadius: '50px', fontWeight: 600,
+                              background: group.priority === 'Emergency' ? 'rgba(244,63,94,0.12)' : 'rgba(100,116,139,0.1)',
+                              color: group.priority === 'Emergency' ? 'var(--accent-danger)' : 'var(--text-secondary)'
+                            }}>
+                              {group.priority}
+                            </span>
+                          </td>
+                          <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                            {group.diagnosis || group.clinicalNotes || 'Routine checkup'}
+                          </td>
+                          <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                            <Button variant="primary" size="sm" onClick={() => openActionModal(group)}>
+                              {activeWorkspace === 'collection' && 'Collect Profile Samples'}
+                              {activeWorkspace === 'lab' && 'Enter Group Results'}
+                              {activeWorkspace === 'verification' && 'Review & Verify'}
+                            </Button>
+                          </td>
+                        </tr>
+                        {isExpanded && (
+                          <tr>
+                            <td colSpan={6} style={{ padding: '12px 24px', background: 'var(--bg-primary)', borderBottom: '1.5px solid var(--border-primary)' }}>
+                              <div style={{ paddingLeft: '24px', borderLeft: '3px solid var(--accent-primary)' }}>
+                                <div style={{ fontWeight: 700, fontSize: '12px', color: 'var(--text-primary)', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                  Test Parameters Grouped By Specimen Matrix / Container:
+                                </div>
+                                {Object.keys(sampleTypeGroups).map((container: string) => (
+                                  <div key={container} style={{ marginBottom: '10px' }}>
+                                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-secondary)', marginBottom: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                      <span style={{ display: 'inline-block', width: '8px', height: '8px', borderRadius: '50%', background: container.includes('Purple') ? '#a855f7' : container.includes('Red') ? '#ef4444' : container.includes('Grey') ? '#94a3b8' : '#3b82f6' }}></span>
+                                      {container}
+                                    </div>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', paddingLeft: '14px' }}>
+                                      {sampleTypeGroups[container].map((pItem: any) => (
+                                        <div key={pItem.item_id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: '6px', padding: '6px 10px', display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '160px' }}>
+                                          <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--text-primary)' }}>{pItem.service_name}</div>
+                                          <div style={{ fontSize: '10px', color: 'var(--text-muted)' }}>Status: <span style={{ color: pItem.status === 'SampleCollected' ? 'var(--accent-success)' : 'var(--text-secondary)', fontWeight: 600 }}>{pItem.status}</span></div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </td>
+                          </tr>
                         )}
-                      </div>
-                    </td>
-                    <td style={{ padding: '12px 16px' }}>
-                      <span style={{ 
-                        fontSize: '11px', padding: '2px 8px', borderRadius: '50px', fontWeight: 600,
-                        background: item.priority === 'Emergency' ? 'rgba(244,63,94,0.12)' : 'rgba(100,116,139,0.1)',
-                        color: item.priority === 'Emergency' ? 'var(--accent-danger)' : 'var(--text-secondary)'
-                      }}>
-                        {item.priority}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                      {item.diagnosis || item.clinical_notes || 'Routine checkup'}
-                    </td>
-                    <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                      <Button variant="primary" size="sm" onClick={() => openActionModal(item)}>
-                        {activeWorkspace === 'collection' && (item.package_id ? 'Collect Profile Samples' : 'Collect Sample')}
-                        {activeWorkspace === 'lab' && (item.package_id ? 'Enter Group Results' : 'Enter Results')}
-                        {activeWorkspace === 'imaging' && 'Perform & Document'}
-                        {activeWorkspace === 'verification' && 'Review & Verify'}
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
+                      </React.Fragment>
+                    );
+                  } else {
+                    const standaloneItem = group.item;
+                    return (
+                      <tr key={`std-${standaloneItem.item_id}-${idx}`} style={{ borderBottom: '1px solid var(--border-primary)' }}>
+                        <td style={{ padding: '12px 16px', fontWeight: 700 }}>{group.orderNumber}</td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ fontWeight: 600 }}>{group.patientName}</div>
+                          <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>MRN: {group.patientMrn}</div>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <div style={{ fontWeight: 600 }}>{standaloneItem.service_name}</div>
+                          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '2px', flexWrap: 'wrap' }}>
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>Code: {standaloneItem.service_code} ({standaloneItem.category_name})</span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{ 
+                            fontSize: '11px', padding: '2px 8px', borderRadius: '50px', fontWeight: 600,
+                            background: group.priority === 'Emergency' ? 'rgba(244,63,94,0.12)' : 'rgba(100,116,139,0.1)',
+                            color: group.priority === 'Emergency' ? 'var(--accent-danger)' : 'var(--text-secondary)'
+                          }}>
+                            {group.priority}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                          {group.diagnosis || group.clinicalNotes || 'Routine checkup'}
+                        </td>
+                        <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                          <Button variant="primary" size="sm" onClick={() => openActionModal(group)}>
+                            {activeWorkspace === 'collection' && 'Collect Sample'}
+                            {activeWorkspace === 'lab' && 'Enter Results'}
+                            {activeWorkspace === 'imaging' && 'Perform & Document'}
+                            {activeWorkspace === 'verification' && 'Review & Verify'}
+                          </Button>
+                        </td>
+                      </tr>
+                    );
+                  }
+                })}
               </tbody>
             </table>
           </div>
@@ -404,19 +628,19 @@ export const Workspaces: React.FC = () => {
       {/* Action Dialog Modal */}
       {actionModalOpen && actionItem && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '12px', width: '100%', maxWidth: actionItem.package_id ? '640px' : '520px', padding: '24px', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '12px', width: '100%', maxWidth: actionItem.type === 'package' ? '640px' : '520px', padding: '24px', position: 'relative', maxHeight: '90vh', overflowY: 'auto' }}>
             <button onClick={() => setActionModalOpen(false)} style={{ position: 'absolute', right: '16px', top: '16px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
             
             <h2 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 4px 0', color: 'var(--text-primary)' }}>
-              {activeWorkspace === 'collection' && (actionItem.package_id ? 'Phlebotomy Profile Sample Collection' : 'Phlebotomy Sample Collection')}
-              {activeWorkspace === 'lab' && (actionItem.package_id ? 'Grouped Profile Lab Result Entry' : 'Hematology & Biochemistry Entry')}
+              {activeWorkspace === 'collection' && (actionItem.type === 'package' ? 'Phlebotomy Profile Sample Collection' : 'Phlebotomy Sample Collection')}
+              {activeWorkspace === 'lab' && (actionItem.type === 'package' ? 'Grouped Profile Lab Result Entry' : 'Hematology & Biochemistry Entry')}
               {activeWorkspace === 'imaging' && 'Diagnostic Imaging Documentation'}
               {activeWorkspace === 'verification' && 'Sign-Off Report Verification'}
             </h2>
             <p style={{ margin: '0 0 16px 0', fontSize: '12px', color: 'var(--text-secondary)' }}>
-              Patient: <strong>{actionItem.patient_name}</strong> | Test: <strong>{actionItem.service_name}</strong>
-              {actionItem.package_name && (
-                <span style={{ color: '#3b82f6', fontWeight: 600, marginLeft: '6px' }}>[Package: {actionItem.package_name}]</span>
+              Patient: <strong>{actionItem.type === 'package' ? actionItem.patientName : actionItem.item.patient_name}</strong> | Test: <strong>{actionItem.type === 'package' ? actionItem.packageName : actionItem.item.service_name}</strong>
+              {actionItem.type === 'package' && (
+                <span style={{ color: '#3b82f6', fontWeight: 600, marginLeft: '6px' }}>[Package: {actionItem.packageName}]</span>
               )}
             </p>
 
@@ -432,47 +656,69 @@ export const Workspaces: React.FC = () => {
                 {/* 1. Sample Collection Desk Form */}
                 {activeWorkspace === 'collection' && (
                   <>
-                    {actionItem.package_id && (
-                      <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', borderRadius: '8px', padding: '10px', fontSize: '12px' }}>
-                        <div style={{ fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px' }}>
-                          Profile Grouped Tests ({getPackageGroupItems(actionItem).length} Tests):
+                    {actionItem.type === 'package' ? (
+                      <>
+                        <div style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px' }}>
+                          Provide barcodes for each required specimen type/container in the package:
                         </div>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                          {getPackageGroupItems(actionItem).map((pItem: any) => (
-                            <span key={pItem.item_id} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', padding: '2px 8px', borderRadius: '4px', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: 500 }}>
-                              ✓ {pItem.service_name}
-                            </span>
-                          ))}
+                        {Array.from(new Set(actionItem.items.map((i: any) => getSpecimenCategory(i.sample_required)))).map((container: any) => {
+                          const matchingTests = actionItem.items.filter((i: any) => getSpecimenCategory(i.sample_required) === container);
+                          return (
+                            <div key={container} style={{ border: '1px solid var(--border-primary)', borderRadius: '8px', padding: '12px', marginBottom: '12px', background: 'var(--bg-primary)' }}>
+                              <div style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '13px', display: 'flex', justifyContent: 'space-between' }}>
+                                <span>{container}</span>
+                                <span style={{ fontSize: '11px', background: 'var(--accent-primary)', color: '#fff', padding: '1px 6px', borderRadius: '4px' }}>
+                                  {matchingTests.length} {matchingTests.length === 1 ? 'Test' : 'Tests'}
+                                </span>
+                              </div>
+                              <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px', marginBottom: '8px' }}>
+                                Used for: {matchingTests.map((t: any) => t.service_name).join(', ')}
+                              </div>
+                              <div>
+                                <label style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Barcode Reference ID *</label>
+                                <input
+                                  type="text"
+                                  className="input"
+                                  required
+                                  value={pkgBarcodes[container] || ''}
+                                  onChange={(e) => setPkgBarcodes({ ...pkgBarcodes, [container]: e.target.value })}
+                                  style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', fontFamily: 'monospace', fontSize: '13px', marginTop: '4px' }}
+                                />
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Container Tube Type *</label>
+                          <select className="select" value={containerType} onChange={(e) => setContainerType(e.target.value)} required style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
+                            <option value="EDTA Tube (Purple Top)">EDTA Tube (Purple Top) - Hematology</option>
+                            <option value="Plain Tube (Red Top)">Plain Tube (Red Top) - Serum/Biochemistry</option>
+                            <option value="Sodium Fluoride (Grey Top)">Sodium Fluoride Tube (Grey Top) - Glucose</option>
+                            <option value="Urine Sterile Container">Urine Sterile Container</option>
+                            <option value="Stool Collection Cup">Stool Collection Cup</option>
+                          </select>
                         </div>
-                      </div>
+                        <div>
+                          <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Barcode Reference ID *</label>
+                          <input type="text" className="input" value={barcode} onChange={(e) => setBarcode(e.target.value)} required style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', fontFamily: 'monospace' }} />
+                        </div>
+                      </>
                     )}
-
-                    <div>
-                      <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Container Tube Type *</label>
-                      <select className="select" value={containerType} onChange={(e) => setContainerType(e.target.value)} required style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }}>
-                        <option value="EDTA Tube (Purple Top)">EDTA Tube (Purple Top) - Hematology</option>
-                        <option value="Plain Tube (Red Top)">Plain Tube (Red Top) - Serum/Biochemistry</option>
-                        <option value="Sodium Fluoride (Grey Top)">Sodium Fluoride Tube (Grey Top) - Glucose</option>
-                        <option value="Urine Sterile Container">Urine Sterile Container</option>
-                        <option value="Stool Collection Cup">Stool Collection Cup</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Barcode Reference ID *</label>
-                      <input type="text" className="input" value={barcode} onChange={(e) => setBarcode(e.target.value)} required style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', fontFamily: 'monospace' }} />
-                    </div>
                   </>
                 )}
 
                 {/* 2. Lab Results Entry Form */}
                 {activeWorkspace === 'lab' && (
                   <>
-                    {actionItem.package_id ? (
+                    {actionItem.type === 'package' ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
                         <div style={{ fontSize: '12px', color: 'var(--accent-primary)', fontWeight: 700 }}>
-                          Grouped Package Parameters ({actionItem.package_name}):
+                          Grouped Package Parameters ({actionItem.packageName}):
                         </div>
-                        {getPackageGroupItems(actionItem).map((groupSvc: any) => (
+                        {actionItem.items.map((groupSvc: any) => (
                           <div key={groupSvc.item_id} style={{ border: '1px solid var(--border-primary)', borderRadius: '8px', padding: '12px', background: 'var(--bg-primary)' }}>
                             <div style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px', borderBottom: '1px solid var(--border-primary)', paddingBottom: '4px' }}>
                               {groupSvc.service_name} ({groupSvc.service_code})
@@ -516,7 +762,7 @@ export const Workspaces: React.FC = () => {
                           </div>
                         ))}
                       </div>
-                    ) : actionItem.parameters && Array.isArray(actionItem.parameters) && actionItem.parameters.length > 0 ? (
+                    ) : actionItem.item.parameters && Array.isArray(actionItem.item.parameters) && actionItem.item.parameters.length > 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '280px', overflowY: 'auto', border: '1px solid var(--border-primary)', borderRadius: '8px', padding: '12px', background: 'var(--bg-primary)' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1.2fr', gap: '8px', fontWeight: 'bold', fontSize: '11px', borderBottom: '1px solid var(--border-primary)', paddingBottom: '6px', color: 'var(--text-secondary)' }}>
                           <span>PARAMETER</span>
@@ -524,7 +770,7 @@ export const Workspaces: React.FC = () => {
                           <span>UNIT</span>
                           <span>REF INTERVAL</span>
                         </div>
-                        {actionItem.parameters.map((p: any) => (
+                        {actionItem.item.parameters.map((p: any) => (
                           <div key={p.parameter_id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1.2fr', gap: '8px', alignItems: 'center', fontSize: '12px' }}>
                             <span style={{ fontWeight: 600 }}>{p.name}</span>
                             <input 
@@ -570,7 +816,7 @@ export const Workspaces: React.FC = () => {
                 {/* 3. Imaging Department Form */}
                 {activeWorkspace === 'imaging' && (
                   <>
-                    {actionItem.parameters && Array.isArray(actionItem.parameters) && actionItem.parameters.length > 0 ? (
+                    {actionItem.item.parameters && Array.isArray(actionItem.item.parameters) && actionItem.item.parameters.length > 0 ? (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '280px', overflowY: 'auto', border: '1px solid var(--border-primary)', borderRadius: '8px', padding: '12px', background: 'var(--bg-primary)', marginBottom: '10px' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1.2fr', gap: '8px', fontWeight: 'bold', fontSize: '11px', borderBottom: '1px solid var(--border-primary)', paddingBottom: '6px', color: 'var(--text-secondary)' }}>
                           <span>PARAMETER</span>
@@ -578,7 +824,7 @@ export const Workspaces: React.FC = () => {
                           <span>UNIT</span>
                           <span>REF INTERVAL</span>
                         </div>
-                        {actionItem.parameters.map((p: any) => (
+                        {actionItem.item.parameters.map((p: any) => (
                           <div key={p.parameter_id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1.2fr', gap: '8px', alignItems: 'center', fontSize: '12px' }}>
                             <span style={{ fontWeight: 600 }}>{p.name}</span>
                             <input 
@@ -596,7 +842,7 @@ export const Workspaces: React.FC = () => {
                       </div>
                     ) : (
                       <>
-                        {actionItem.category_name === 'Ultrasound' && (
+                        {actionItem.item.category_name === 'Ultrasound' && (
                           <div>
                             <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Clinical History</label>
                             <input type="text" className="input" value={clinicalHistory} onChange={(e) => setClinicalHistory(e.target.value)} placeholder="Indication for scan" style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
@@ -622,14 +868,115 @@ export const Workspaces: React.FC = () => {
                 {/* 4. Pathologist/Doctor Verification Form */}
                 {activeWorkspace === 'verification' && (
                   <>
-                    <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', borderRadius: '8px', padding: '12px', marginBottom: '10px' }}>
-                      <h4 style={{ margin: '0 0 6px 0', fontSize: '12px', fontWeight: 700 }}>Resulted Data Findings:</h4>
-                      <p style={{ margin: 0, fontSize: '13px', fontFamily: 'monospace', whiteSpace: 'pre-wrap' }}>
-                        {actionItem.lab_result?.actual_result || actionItem.radiology_report?.findings || actionItem.ultrasound_report?.findings || actionItem.ecg_report?.findings}
-                      </p>
-                      {actionItem.lab_result?.status !== 'Normal' && (
-                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginTop: '8px', color: 'var(--accent-danger)', fontSize: '11px', fontWeight: 700 }}>
-                          <ShieldAlert size={14} /> Critical Flag: {actionItem.lab_result?.status} Value Alert!
+                    <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', borderRadius: '8px', padding: '12px', marginBottom: '10px', maxHeight: '300px', overflowY: 'auto' }}>
+                      <h4 style={{ margin: '0 0 8px 0', fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)' }}>Resulted Data Findings:</h4>
+                      {actionItem.type === 'package' ? (
+                        actionItem.items.map((pkgItem: any) => {
+                          const pLr = pkgItem.lab_result || {};
+                          let pParams = pkgItem.result_parameters || [];
+                          
+                          if ((!pParams || pParams.length === 0) && pLr.actual_result) {
+                            const parsed = parseConcatenatedResult(pLr.actual_result);
+                            if (parsed) {
+                              pParams = parsed.map((p: any, idx: number) => ({
+                                parameter_id: `parsed-${idx}`,
+                                parameter_name: p.name,
+                                actual_value: p.value,
+                                unit: p.unit,
+                                reference_range: '-',
+                                status: 'Normal'
+                              }));
+                            }
+                          }
+
+                          return (
+                            <div key={pkgItem.item_id} style={{ marginBottom: '16px', borderBottom: '1px dashed var(--border-primary)', paddingBottom: '12px' }}>
+                              <div style={{ fontWeight: 700, color: 'var(--accent-primary)', fontSize: '13px', marginBottom: '6px' }}>
+                                {pkgItem.service_name} ({pkgItem.service_code})
+                              </div>
+                              <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse' }}>
+                                <thead>
+                                  <tr style={{ borderBottom: '1px solid var(--border-primary)', textAlign: 'left', color: 'var(--text-secondary)' }}>
+                                    <th style={{ padding: '4px 8px' }}>Parameter</th>
+                                    <th style={{ padding: '4px 8px', textAlign: 'center' }}>Observed Value</th>
+                                    <th style={{ padding: '4px 8px', textAlign: 'center' }}>Unit</th>
+                                    <th style={{ padding: '4px 8px', textAlign: 'right' }}>Reference Range</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {pParams && pParams.length > 0 ? (
+                                    pParams.map((rp: any, idx: number) => (
+                                      <tr key={idx} style={{ borderBottom: '1px solid var(--border-secondary)' }}>
+                                        <td style={{ padding: '4px 8px' }}>{rp.parameter_name || rp.name || ''}</td>
+                                        <td style={{ padding: '4px 8px', textAlign: 'center', fontWeight: rp.status !== 'Normal' ? '700' : '400', color: rp.status !== 'Normal' ? 'var(--accent-danger)' : 'var(--text-primary)' }}>
+                                          {rp.actual_value || rp.actualValue || '—'}
+                                        </td>
+                                        <td style={{ padding: '4px 8px', textAlign: 'center' }}>{rp.unit || '—'}</td>
+                                        <td style={{ padding: '4px 8px', textAlign: 'right' }}>{rp.reference_range || '—'}</td>
+                                      </tr>
+                                    ))
+                                  ) : (
+                                    <tr>
+                                      <td style={{ padding: '4px 8px' }}>{pkgItem.service_name}</td>
+                                      <td style={{ padding: '4px 8px', textAlign: 'center', fontWeight: pLr.status !== 'Normal' ? '700' : '400', color: pLr.status !== 'Normal' ? 'var(--accent-danger)' : 'var(--text-primary)' }}>
+                                        {pLr.actual_result || '—'}
+                                      </td>
+                                      <td style={{ padding: '4px 8px', textAlign: 'center' }}>—</td>
+                                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{pLr.reference_range || pkgItem.normal_range || '—'}</td>
+                                    </tr>
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div>
+                          <div style={{ fontWeight: 700, color: 'var(--accent-primary)', fontSize: '13px', marginBottom: '6px' }}>
+                            {actionItem.item.service_name} ({actionItem.item.service_code})
+                          </div>
+                          {actionItem.item.category_name === 'Laboratory' ? (
+                            <table style={{ width: '100%', fontSize: '11px', borderCollapse: 'collapse' }}>
+                              <thead>
+                                <tr style={{ borderBottom: '1px solid var(--border-primary)', textAlign: 'left', color: 'var(--text-secondary)' }}>
+                                  <th style={{ padding: '4px 8px' }}>Parameter</th>
+                                  <th style={{ padding: '4px 8px', textAlign: 'center' }}>Observed Value</th>
+                                  <th style={{ padding: '4px 8px', textAlign: 'center' }}>Unit</th>
+                                  <th style={{ padding: '4px 8px', textAlign: 'right' }}>Reference Range</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {actionItem.item.result_parameters && actionItem.item.result_parameters.length > 0 ? (
+                                  actionItem.item.result_parameters.map((rp: any, idx: number) => (
+                                    <tr key={idx} style={{ borderBottom: '1px solid var(--border-secondary)' }}>
+                                      <td style={{ padding: '4px 8px' }}>{rp.parameter_name || rp.name || ''}</td>
+                                      <td style={{ padding: '4px 8px', textAlign: 'center', fontWeight: rp.status !== 'Normal' ? '700' : '400', color: rp.status !== 'Normal' ? 'var(--accent-danger)' : 'var(--text-primary)' }}>
+                                        {rp.actual_value || rp.actualValue || '—'}
+                                      </td>
+                                      <td style={{ padding: '4px 8px', textAlign: 'center' }}>{rp.unit || '—'}</td>
+                                      <td style={{ padding: '4px 8px', textAlign: 'right' }}>{rp.reference_range || '—'}</td>
+                                    </tr>
+                                  ))
+                                ) : (
+                                  <tr>
+                                    <td style={{ padding: '4px 8px' }}>{actionItem.item.service_name}</td>
+                                    <td style={{ padding: '4px 8px', textAlign: 'center', fontWeight: actionItem.item.lab_result?.status !== 'Normal' ? '700' : '400', color: actionItem.item.lab_result?.status !== 'Normal' ? 'var(--accent-danger)' : 'var(--text-primary)' }}>
+                                      {actionItem.item.lab_result?.actual_result || '—'}
+                                    </td>
+                                    <td style={{ padding: '4px 8px', textAlign: 'center' }}>—</td>
+                                    <td style={{ padding: '4px 8px', textAlign: 'right' }}>{actionItem.item.lab_result?.reference_range || actionItem.item.normal_range || '—'}</td>
+                                  </tr>
+                                )}
+                              </tbody>
+                            </table>
+                          ) : (
+                            <div style={{ fontSize: '12px', color: 'var(--text-primary)' }}>
+                              <div><strong>Findings:</strong></div>
+                              <p style={{ margin: '4px 0 8px 0', whiteSpace: 'pre-wrap' }}>{actionItem.item.radiology_report?.findings || actionItem.item.ultrasound_report?.findings || actionItem.item.ecg_report?.findings || '—'}</p>
+                              <div><strong>Impression:</strong></div>
+                              <p style={{ margin: '4px 0 0 0', whiteSpace: 'pre-wrap' }}>{actionItem.item.radiology_report?.impression || actionItem.item.ultrasound_report?.impression || actionItem.item.ecg_report?.interpretation || '—'}</p>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>

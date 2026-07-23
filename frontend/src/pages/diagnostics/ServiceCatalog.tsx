@@ -608,88 +608,106 @@ export const ServiceCatalog: React.FC = () => {
 
       let resultHtml = '';
       if (isLab) {
-        if (finalParameters.length > 0) {
-          const isHaematology = item.service_name.toUpperCase().includes('BLOOD') || item.service_name.toUpperCase().includes('HEM') || item.service_name.toUpperCase().includes('CBC') || item.service_name.toUpperCase().includes('CBP');
-          const refHeader = isHaematology ? 'Normal Reference Range' : 'Biological Reference Interval';
+        const targetItems = item.package_id
+          ? (item.order?.items || []).filter((i: any) => i.package_id === item.package_id)
+          : [item];
 
-          resultHtml = `
-            <div style="text-align: center; margin-top: 10px; margin-bottom: 15px;">
-              <h2 style="font-size: 14px; font-weight: 800; letter-spacing: 1px; margin: 0; color: #0f172a; text-transform: uppercase;">
-                ${deptTitle}
-              </h2>
-              <h3 style="font-size: 12px; font-weight: 700; text-decoration: underline; margin: 4px 0 0 0; text-transform: uppercase; color: #1e3a8a; letter-spacing: 0.5px;">
-                ${item.service_name}
-              </h3>
-            </div>
+        resultHtml = `
+          <div style="text-align: center; margin-top: 10px; margin-bottom: 15px;">
+            <h2 style="font-size: 14px; font-weight: 800; letter-spacing: 1px; margin: 0; color: #0f172a; text-transform: uppercase;">
+              ${deptTitle}
+            </h2>
+            <h3 style="font-size: 12px; font-weight: 700; text-decoration: underline; margin: 4px 0 0 0; text-transform: uppercase; color: #1e3a8a; letter-spacing: 0.5px;">
+              ${item.package_name || item.service_name}
+            </h3>
+          </div>
+        `;
 
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px;">
-              <thead>
-                 <tr style="border-top: 1.5px solid #0f172a; border-bottom: 1.5px solid #0f172a; text-align: left; font-size: 11px; color: #475569;">
-                   <th style="padding: 8px 0; font-weight: 700; width: 45%; text-transform: uppercase;">Investigation</th>
-                   <th style="padding: 8px 0; font-weight: 700; width: 25%; text-align: center; text-transform: uppercase;">Result</th>
-                   <th style="padding: 8px 0; font-weight: 700; width: 30%; text-align: right; text-transform: uppercase;">${refHeader}</th>
-                 </tr>
-              </thead>
-              <tbody>
-                 ${finalParameters.map((rp: any) => {
-                   const name = rp.parameter_name || rp.name || '';
-                   const isHeader = name.toUpperCase() === 'DIFFERENTIAL LEUKOCYTE COUNT' || name.toUpperCase() === 'PHYSICAL EXAMINATION' || name.toUpperCase() === 'CHEMICAL EXAMINATION' || name.toUpperCase() === 'MICROSCOPIC EXAMINATION' || name.toUpperCase() === 'PERIPHERAL SMEAR';
-                   
-                   if (isHeader) {
-                     return `
-                       <tr style="background: #f8fafc;">
-                         <td colspan="3" style="padding: 8px 0; font-weight: 800; font-size: 12px; text-transform: uppercase; color: #1e3a8a; border-bottom: 1px solid #cbd5e1;">
-                           ${name}
-                         </td>
-                       </tr>
-                     `;
-                   }
+        targetItems.forEach((tItem: any) => {
+          const tLr = tItem.lab_result || {};
+          let tParams = tItem.result_parameters || [];
+          if ((!tParams || tParams.length === 0) && tLr.actual_result) {
+            const parsed = parseConcatenatedResult(tLr.actual_result);
+            if (parsed) {
+              tParams = parsed.map((p: any, idx: number) => ({
+                parameter_id: `parsed-${idx}`,
+                parameter_name: p.name,
+                actual_value: p.value,
+                unit: p.unit,
+                reference_range: refRanges[p.name.toUpperCase()] || '',
+                status: 'Normal'
+              }));
+            }
+          }
 
-                   const refVal = rp.reference_range || refRanges[name.toUpperCase()] || '—';
-                   const isAbnormal = (rp.status && rp.status !== 'Normal') || checkIsAbnormal(rp.actual_value || rp.actualValue || '', refVal);
-                   return `
-                     <tr style="border-bottom: 1px solid #f1f5f9;">
-                       <td style="padding: 8px 0; font-weight: 500;">
-                         <div>${name}</div>
-                       </td>
-                       <td style="padding: 8px 0; text-align: center;">
-                         <span style="font-size: 13px; font-weight: ${isAbnormal ? '700' : '400'}; color: ${isAbnormal ? '#ef4444' : '#0f172a'};">${rp.actual_value || rp.actualValue || '—'}</span>
-                         <span style="font-size: 11px; color: #64748b; margin-left: 2px;">${rp.unit || ''}</span>
-                       </td>
-                       <td style="padding: 8px 0; text-align: right; color: #475569; font-family: monospace; font-size: 11px;">
-                         ${refVal}
-                       </td>
-                     </tr>
-                   `;
-                 }).join('')}
-              </tbody>
-            </table>
+          resultHtml += `
+            <div style="margin-top: 14px; margin-bottom: 8px;">
+              <div style="font-size: 12px; font-weight: 700; color: #1e3a8a; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px;">
+                ${tItem.service_name} (${tItem.service_code})
+              </div>
+              <table style="width: 100%; border-collapse: collapse; margin-top: 4px; margin-bottom: 8px; font-size: 11px;">
+                <thead>
+                  <tr style="border-bottom: 1px solid #94a3b8; text-align: left; font-size: 10px; color: #475569;">
+                    <th style="padding: 6px 0; font-weight: 700; width: 40%; text-transform: uppercase;">Test Parameter</th>
+                    <th style="padding: 6px 0; font-weight: 700; width: 20%; text-align: center; text-transform: uppercase;">Observed Value</th>
+                    <th style="padding: 6px 0; font-weight: 700; width: 20%; text-align: center; text-transform: uppercase;">Flag / Unit</th>
+                    <th style="padding: 6px 0; font-weight: 700; width: 20%; text-align: right; text-transform: uppercase;">Reference Range</th>
+                  </tr>
+                </thead>
+                <tbody>
+          `;
 
-            <div style="margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 10px;">
-              <h4 style="margin: 0 0 6px 0; color: #475569; text-transform: uppercase; font-size: 12px; font-weight: 700;">Interpretation</h4>
-              <p style="margin: 0; font-size: 12px; color: #334155; white-space: pre-wrap;">${lr.remarks || lr.interpretation || 'Within normal limits. Please correlate clinically.'}</p>
+          if (tParams && tParams.length > 0) {
+            resultHtml += tParams.map((rp: any) => {
+              const name = rp.parameter_name || rp.name || '';
+              const isHeader = name.toUpperCase() === 'DIFFERENTIAL LEUKOCYTE COUNT' || name.toUpperCase() === 'PHYSICAL EXAMINATION' || name.toUpperCase() === 'CHEMICAL EXAMINATION' || name.toUpperCase() === 'MICROSCOPIC EXAMINATION' || name.toUpperCase() === 'PERIPHERAL SMEAR';
+
+              if (isHeader) {
+                return `
+                  <tr style="background: #f8fafc;">
+                    <td colspan="4" style="padding: 6px 0; font-weight: 800; font-size: 11px; text-transform: uppercase; color: #1e3a8a; border-bottom: 1px solid #e2e8f0;">
+                      ${name}
+                    </td>
+                  </tr>
+                `;
+              }
+
+              const refVal = rp.reference_range || refRanges[name.toUpperCase()] || '—';
+              const isAbnormal = (rp.status && rp.status !== 'Normal') || checkIsAbnormal(rp.actual_value || rp.actualValue || '', refVal);
+              const flagText = rp.status && rp.status !== 'Normal' ? `${rp.status} / ` : (isAbnormal ? 'Abnormal / ' : '');
+              const displayVal = rp.actual_value || rp.actualValue || '—';
+
+              return `
+                <tr style="border-bottom: 1px solid #f1f5f9;">
+                  <td style="padding: 5px 0; font-weight: 500; color: #334155;">${name}</td>
+                  <td style="padding: 5px 0; text-align: center; font-size: 12px; font-weight: ${isAbnormal ? '700' : '400'}; color: ${isAbnormal ? '#ef4444' : '#0f172a'};">${displayVal}</td>
+                  <td style="padding: 5px 0; text-align: center; color: ${isAbnormal ? '#ef4444' : '#64748b'}; font-weight: ${isAbnormal ? '700' : '400'};">${flagText}${rp.unit || '—'}</td>
+                  <td style="padding: 5px 0; text-align: right; color: #475569; font-family: monospace; font-size: 10px;">${refVal}</td>
+                </tr>
+              `;
+            }).join('');
+          } else {
+            const refVal = tLr.reference_range || tItem.normal_range || '—';
+            const isAbnormal = tLr.status && tLr.status !== 'Normal';
+            const flagText = isAbnormal ? `${tLr.status} / ` : '';
+            const displayVal = tLr.actual_result || '—';
+
+            resultHtml += `
+              <tr style="border-bottom: 1px solid #f1f5f9;">
+                <td style="padding: 6px 0; font-weight: 700; color: #334155;">${tItem.service_name}</td>
+                <td style="padding: 6px 0; text-align: center; font-size: 12px; font-weight: ${isAbnormal ? '700' : '400'}; color: ${isAbnormal ? '#ef4444' : '#0f172a'};">${displayVal}</td>
+                <td style="padding: 6px 0; text-align: center; color: ${isAbnormal ? '#ef4444' : '#64748b'}; font-weight: ${isAbnormal ? '700' : '400'};">${flagText}—</td>
+                <td style="padding: 6px 0; text-align: right; color: #475569; font-family: monospace; font-size: 10px;">${refVal}</td>
+              </tr>
+            `;
+          }
+
+          resultHtml += `
+                </tbody>
+              </table>
             </div>
           `;
-        } else {
-          resultHtml = `
-            <table class="table" style="margin-top: 15px; width: 100%; border-collapse: collapse;">
-              <thead>
-                 <tr style="border-top: 1.5px solid #0f172a; border-bottom: 1.5px solid #0f172a; text-align: left; font-size: 11px; color: #475569;">
-                   <th style="padding: 8px 0; font-weight: 700; width: 45%; text-transform: uppercase;">Investigation</th>
-                   <th style="padding: 8px 0; font-weight: 700; width: 25%; text-align: center; text-transform: uppercase;">Result</th>
-                   <th style="padding: 8px 0; font-weight: 700; width: 30%; text-align: right; text-transform: uppercase;">Biological Reference Interval</th>
-                 </tr>
-              </thead>
-              <tbody>
-                 <tr style="border-bottom: 1px solid #f1f5f9;">
-                   <td style="padding: 10px 0; font-weight: 700;">${item.service_name}</td>
-                   <td style="padding: 10px 0; text-align: center; font-weight: ${lr.status !== 'Normal' ? '700' : '400'}; color: ${lr.status !== 'Normal' ? '#ef4444' : '#0f172a'};">${lr.actual_result || '—'}</td>
-                   <td style="padding: 10px 0; text-align: right; font-family: monospace;">${lr.reference_range || item.normal_range || '—'}</td>
-                 </tr>
-              </tbody>
-            </table>
-          `;
-        }
+        });
       } else {
         const findings = item.radiology_report?.findings || item.ultrasound_report?.findings || item.ecg_report?.findings || '—';
         const impression = item.radiology_report?.impression || item.ultrasound_report?.impression || item.ecg_report?.interpretation || '—';

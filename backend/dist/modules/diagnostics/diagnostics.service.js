@@ -633,6 +633,8 @@ const getPublicReport = async (itemId) => {
     SELECT 
       toi.item_id,
       toi.service_id,
+      toi.package_id,
+      (SELECT dp.name FROM diagnostic_packages dp WHERE dp.package_id = toi.package_id) as package_name,
       toi.status,
       toi.created_at,
       ds.name as service_name,
@@ -684,6 +686,48 @@ const getPublicReport = async (itemId) => {
     if (result.rows.length === 0)
         return null;
     const item = result.rows[0];
+    let packageItems = [];
+    if (item.package_id) {
+        const pkgItemsRes = await (0, database_1.query)(`
+      SELECT 
+        toi.item_id,
+        toi.service_id,
+        toi.package_id,
+        (SELECT dp.name FROM diagnostic_packages dp WHERE dp.package_id = toi.package_id) as package_name,
+        toi.status,
+        toi.created_at,
+        ds.name as service_name,
+        ds.service_code,
+        c.name as category_name,
+        ds.sample_required,
+        ds.normal_range,
+        ds.price,
+        (SELECT row_to_json(lr) FROM lab_results lr WHERE lr.order_item_id = toi.item_id LIMIT 1) as lab_result,
+        (SELECT row_to_json(rr) FROM radiology_reports rr WHERE rr.order_item_id = toi.item_id LIMIT 1) as radiology_report,
+        (SELECT row_to_json(ur) FROM ultrasound_reports ur WHERE ur.order_item_id = toi.item_id LIMIT 1) as ultrasound_report,
+        (SELECT row_to_json(er) FROM ecg_reports er WHERE er.order_item_id = toi.item_id LIMIT 1) as ecg_report,
+        (SELECT row_to_json(rv) FROM report_verifications rv WHERE rv.order_item_id = toi.item_id LIMIT 1) as verification,
+        (
+          SELECT json_agg(json_build_object(
+            'result_parameter_id', lrp.result_parameter_id,
+            'parameter_id', lrp.parameter_id,
+            'name', lrp.parameter_name,
+            'unit', lrp.unit,
+            'reference_range', lrp.reference_range,
+            'actual_value', lrp.actual_value,
+            'status', lrp.status
+          ) ORDER BY lrp.created_at)
+          FROM lab_result_parameters lrp
+          WHERE lrp.order_item_id = toi.item_id
+        ) as result_parameters
+      FROM test_order_items toi
+      JOIN diagnostic_services ds ON toi.service_id = ds.service_id
+      JOIN diagnostic_categories c ON ds.category_id = c.category_id
+      WHERE toi.order_id = (SELECT order_id FROM test_order_items WHERE item_id = $1)
+        AND toi.package_id = $2
+    `, [itemId, item.package_id]);
+        packageItems = pkgItemsRes.rows;
+    }
     const cleanId = (item.item_id || 'report').replace(/[^a-zA-Z0-9_-]/g, '_');
     const s3QrUrl = `https://pamobniywbuloarioxiu.supabase.co/storage/v1/object/public/logos/qr_${cleanId}.png`;
     const frontendUrl = process.env.FRONTEND_URL || 'https://hms-simon518.vercel.app';
@@ -691,6 +735,7 @@ const getPublicReport = async (itemId) => {
     (0, s3Upload_1.generateAndUploadQrCode)(verifyUrl, item.item_id).catch(() => { });
     return {
         ...item,
+        package_items: packageItems,
         qr_code_url: s3QrUrl
     };
 };
