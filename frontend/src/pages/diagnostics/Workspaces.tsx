@@ -241,14 +241,13 @@ export const Workspaces: React.FC = () => {
     
     return (
       <input 
-        type={iType === 'Number' ? 'number' : 'text'}
-        step="any"
+        type="text"
         className="input" 
         required
         value={paramValues[p.parameter_id] || ''} 
         onChange={(e) => setParamValues({ ...paramValues, [p.parameter_id]: e.target.value })}
-        placeholder={iType === 'Number' ? 'Numeric Value' : 'Text Result'}
-        style={{ height: '28px', padding: '4px 8px', fontSize: '12px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)' }}
+        placeholder={iType === 'Number' ? 'Numeric/Text Value' : 'Text Result'}
+        style={{ height: '28px', padding: '4px 8px', fontSize: '12px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', borderRadius: '6px', width: '100%' }}
       />
     );
   };

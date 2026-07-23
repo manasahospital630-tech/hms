@@ -688,10 +688,10 @@ export const ServiceCatalog: React.FC = () => {
               <table style="width: 100%; border-collapse: collapse; margin-top: 4px; margin-bottom: 8px; font-size: 11px;">
                 <thead>
                   <tr style="border-bottom: 1px solid #94a3b8; text-align: left; font-size: 10px; color: #475569;">
-                    <th style="padding: 6px 0; font-weight: 700; width: 40%; text-transform: uppercase;">Test Parameter</th>
+                    <th style="padding: 6px 0; font-weight: 700; width: 35%; text-transform: uppercase;">Test Parameter</th>
                     <th style="padding: 6px 0; font-weight: 700; width: 20%; text-align: center; text-transform: uppercase;">Observed Value</th>
-                    <th style="padding: 6px 0; font-weight: 700; width: 20%; text-align: center; text-transform: uppercase;">Flag / Unit</th>
-                    <th style="padding: 6px 0; font-weight: 700; width: 20%; text-align: right; text-transform: uppercase;">Reference Range</th>
+                    <th style="padding: 6px 0; font-weight: 700; width: 25%; text-align: center; text-transform: uppercase;">Reference Range</th>
+                    <th style="padding: 6px 0; font-weight: 700; width: 20%; text-align: right; text-transform: uppercase;">Flag / Unit</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -721,8 +721,8 @@ export const ServiceCatalog: React.FC = () => {
                 <tr style="border-bottom: 1px solid #f1f5f9;">
                   <td style="padding: 5px 0; font-weight: 500; color: #334155;">${name}</td>
                   <td style="padding: 5px 0; text-align: center; font-size: 12px; font-weight: ${isAbnormal ? '700' : '400'}; color: ${isAbnormal ? '#ef4444' : '#0f172a'};">${displayVal}</td>
-                  <td style="padding: 5px 0; text-align: center; color: ${isAbnormal ? '#ef4444' : '#64748b'}; font-weight: ${isAbnormal ? '700' : '400'};">${flagText}${rp.unit || '—'}</td>
-                  <td style="padding: 5px 0; text-align: right; color: #475569; font-family: monospace; font-size: 10px;">${refVal}</td>
+                  <td style="padding: 5px 0; text-align: center; color: #475569; font-family: monospace; font-size: 10px;">${refVal}</td>
+                  <td style="padding: 5px 0; text-align: right; color: ${isAbnormal ? '#ef4444' : '#64748b'}; font-weight: ${isAbnormal ? '700' : '400'};">${flagText}${rp.unit || '—'}</td>
                 </tr>
               `;
             }).join('');
@@ -736,8 +736,8 @@ export const ServiceCatalog: React.FC = () => {
               <tr style="border-bottom: 1px solid #f1f5f9;">
                 <td style="padding: 6px 0; font-weight: 700; color: #334155;">${tItem.service_name}</td>
                 <td style="padding: 6px 0; text-align: center; font-size: 12px; font-weight: ${isAbnormal ? '700' : '400'}; color: ${isAbnormal ? '#ef4444' : '#0f172a'};">${displayVal}</td>
-                <td style="padding: 6px 0; text-align: center; color: ${isAbnormal ? '#ef4444' : '#64748b'}; font-weight: ${isAbnormal ? '700' : '400'};">${flagText}—</td>
-                <td style="padding: 6px 0; text-align: right; color: #475569; font-family: monospace; font-size: 10px;">${refVal}</td>
+                <td style="padding: 6px 0; text-align: center; color: #475569; font-family: monospace; font-size: 10px;">${refVal}</td>
+                <td style="padding: 6px 0; text-align: right; color: ${isAbnormal ? '#ef4444' : '#64748b'}; font-weight: ${isAbnormal ? '700' : '400'};">${flagText}—</td>
               </tr>
             `;
           }
@@ -1957,8 +1957,7 @@ export const ServiceCatalog: React.FC = () => {
                                 <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Child Ref Range</span>
                                 <div style={{ display: 'flex', gap: '4px' }}>
                                   <input
-                                    type="number"
-                                    step="any"
+                                    type="text"
                                     className="input"
                                     value={p.refMinChild || ''}
                                     onChange={(e) => handleParameterChange(pIdx, 'refMinChild', e.target.value)}
@@ -1966,8 +1965,7 @@ export const ServiceCatalog: React.FC = () => {
                                     style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '55px' }}
                                   />
                                   <input
-                                    type="number"
-                                    step="any"
+                                    type="text"
                                     className="input"
                                     value={p.refMaxChild || ''}
                                     onChange={(e) => handleParameterChange(pIdx, 'refMaxChild', e.target.value)}
@@ -1998,8 +1996,7 @@ export const ServiceCatalog: React.FC = () => {
                                   <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Male Ref Range</span>
                                   <div style={{ display: 'flex', gap: '4px' }}>
                                     <input
-                                      type="number"
-                                      step="any"
+                                      type="text"
                                       className="input"
                                       value={p.refMinMale || ''}
                                       onChange={(e) => handleParameterChange(pIdx, 'refMinMale', e.target.value)}
@@ -2007,8 +2004,7 @@ export const ServiceCatalog: React.FC = () => {
                                       style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '55px' }}
                                     />
                                     <input
-                                      type="number"
-                                      step="any"
+                                      type="text"
                                       className="input"
                                       value={p.refMaxMale || ''}
                                       onChange={(e) => handleParameterChange(pIdx, 'refMaxMale', e.target.value)}
@@ -2025,8 +2021,7 @@ export const ServiceCatalog: React.FC = () => {
                                   <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Female Ref Range</span>
                                   <div style={{ display: 'flex', gap: '4px' }}>
                                     <input
-                                      type="number"
-                                      step="any"
+                                      type="text"
                                       className="input"
                                       value={p.refMinFemale || ''}
                                       onChange={(e) => handleParameterChange(pIdx, 'refMinFemale', e.target.value)}
@@ -2034,8 +2029,7 @@ export const ServiceCatalog: React.FC = () => {
                                       style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '55px' }}
                                     />
                                     <input
-                                      type="number"
-                                      step="any"
+                                      type="text"
                                       className="input"
                                       value={p.refMaxFemale || ''}
                                       onChange={(e) => handleParameterChange(pIdx, 'refMaxFemale', e.target.value)}
