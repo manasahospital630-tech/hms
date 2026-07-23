@@ -1889,59 +1889,72 @@ export const ServiceCatalog: React.FC = () => {
                     </div>
 
                     {serviceForm.parameters && serviceForm.parameters.length > 0 ? (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '280px', overflowY: 'auto', paddingRight: '4px' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '380px', overflowY: 'auto', paddingRight: '4px' }}>
                         {serviceForm.parameters.map((p, pIdx) => (
-                          <div key={pIdx} style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 1.5fr 30px', gap: '8px', alignItems: 'center' }}>
-                              <input
-                                type="text"
-                                className="input"
-                                value={p.name}
-                                onChange={(e) => handleParameterChange(pIdx, 'name', e.target.value)}
-                                placeholder="Parameter Name (e.g. Hemoglobin)"
-                                required
-                                style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px' }}
-                              />
-                              <input
-                                type="text"
-                                className="input"
-                                value={p.unit}
-                                onChange={(e) => handleParameterChange(pIdx, 'unit', e.target.value)}
-                                placeholder="Unit (e.g. g/dL)"
-                                style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px' }}
-                              />
-                              <select
-                                className="select"
-                                value={p.inputType || 'Number'}
-                                onChange={(e) => handleParameterChange(pIdx, 'inputType', e.target.value)}
-                                style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px', height: '32px' }}
-                              >
-                                <option value="Number">Number</option>
-                                <option value="Dropdown">Dropdown</option>
-                                <option value="Text">Text</option>
-                              </select>
-                              <input
-                                type="text"
-                                className="input"
-                                value={p.referenceRange}
-                                onChange={(e) => handleParameterChange(pIdx, 'referenceRange', e.target.value)}
-                                placeholder="Ref Range (e.g. 13.5 - 17.5)"
-                                style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px' }}
-                              />
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveParameterRow(pIdx)}
-                                style={{ background: 'transparent', border: 'none', color: 'var(--accent-danger)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                title="Remove parameter"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
+                          <div key={pIdx} style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'flex-end' }}>
+                              
+                              {/* Parameter Name */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '150px', flex: 2 }}>
+                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Parameter Name *</span>
+                                <input
+                                  type="text"
+                                  className="input"
+                                  value={p.name}
+                                  onChange={(e) => handleParameterChange(pIdx, 'name', e.target.value)}
+                                  placeholder="e.g. Hemoglobin"
+                                  required
+                                  style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px', height: '32px' }}
+                                />
+                              </div>
 
-                            <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1.2fr 1.2fr 2fr', gap: '10px', background: 'var(--bg-card)', padding: '8px', borderRadius: '6px' }}>
-                              {/* Child Range (Min-Max) */}
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 600 }}>Child Min/Max</span>
+                              {/* Unit */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '80px', flex: 1 }}>
+                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Unit</span>
+                                <input
+                                  type="text"
+                                  className="input"
+                                  value={p.unit}
+                                  onChange={(e) => handleParameterChange(pIdx, 'unit', e.target.value)}
+                                  placeholder="e.g. g/dL"
+                                  style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px', height: '32px' }}
+                                />
+                              </div>
+
+                              {/* Type */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '95px', flex: 1 }}>
+                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Type</span>
+                                <select
+                                  className="select"
+                                  value={p.inputType || 'Number'}
+                                  onChange={(e) => handleParameterChange(pIdx, 'inputType', e.target.value)}
+                                  style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px', height: '32px' }}
+                                >
+                                  <option value="Number">Number</option>
+                                  <option value="Dropdown">Dropdown</option>
+                                  <option value="Text">Text</option>
+                                </select>
+                              </div>
+
+                              {/* Dropdown Options (Conditional) */}
+                              {p.inputType === 'Dropdown' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '150px', flex: 2 }}>
+                                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Dropdown Options *</span>
+                                  <input
+                                    type="text"
+                                    className="input"
+                                    value={p.dropdownOptions || ''}
+                                    onChange={(e) => handleParameterChange(pIdx, 'dropdownOptions', e.target.value)}
+                                    placeholder="Options (e.g. Positive,Negative)"
+                                    required
+                                    style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px', height: '32px' }}
+                                  />
+                                </div>
+                              )}
+
+                              {/* Child Range (Always Visible) */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '110px' }}>
+                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Child Ref Range</span>
                                 <div style={{ display: 'flex', gap: '4px' }}>
                                   <input
                                     type="number"
@@ -1950,7 +1963,7 @@ export const ServiceCatalog: React.FC = () => {
                                     value={p.refMinChild || ''}
                                     onChange={(e) => handleParameterChange(pIdx, 'refMinChild', e.target.value)}
                                     placeholder="Min"
-                                    style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '2px 4px', fontSize: '11px', height: '24px' }}
+                                    style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '55px' }}
                                   />
                                   <input
                                     type="number"
@@ -1959,82 +1972,92 @@ export const ServiceCatalog: React.FC = () => {
                                     value={p.refMaxChild || ''}
                                     onChange={(e) => handleParameterChange(pIdx, 'refMaxChild', e.target.value)}
                                     placeholder="Max"
-                                    style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '2px 4px', fontSize: '11px', height: '24px' }}
+                                    style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '55px' }}
                                   />
                                 </div>
                               </div>
 
-                              {/* Adult Male Range (Min-Max) */}
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 600 }}>Male Min/Max</span>
-                                <div style={{ display: 'flex', gap: '4px' }}>
+                              {/* Universal Adult Ref Range (Conditional) */}
+                              {(!p.refMinMale && !p.refMaxMale && !p.refMinFemale && !p.refMaxFemale) && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '150px', flex: 2 }}>
+                                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Universal Adult Ref Range</span>
                                   <input
-                                    type="number"
-                                    step="any"
+                                    type="text"
                                     className="input"
-                                    value={p.refMinMale || ''}
-                                    onChange={(e) => handleParameterChange(pIdx, 'refMinMale', e.target.value)}
-                                    placeholder="Min"
-                                    style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '2px 4px', fontSize: '11px', height: '24px' }}
-                                  />
-                                  <input
-                                    type="number"
-                                    step="any"
-                                    className="input"
-                                    value={p.refMaxMale || ''}
-                                    onChange={(e) => handleParameterChange(pIdx, 'refMaxMale', e.target.value)}
-                                    placeholder="Max"
-                                    style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '2px 4px', fontSize: '11px', height: '24px' }}
+                                    value={p.referenceRange}
+                                    onChange={(e) => handleParameterChange(pIdx, 'referenceRange', e.target.value)}
+                                    placeholder="e.g. 13.5 - 17.5"
+                                    style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px', height: '32px' }}
                                   />
                                 </div>
-                              </div>
+                              )}
 
-                              {/* Adult Female Range (Min-Max) */}
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 600 }}>Female Min/Max</span>
-                                <div style={{ display: 'flex', gap: '4px' }}>
-                                  <input
-                                    type="number"
-                                    step="any"
-                                    className="input"
-                                    value={p.refMinFemale || ''}
-                                    onChange={(e) => handleParameterChange(pIdx, 'refMinFemale', e.target.value)}
-                                    placeholder="Min"
-                                    style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '2px 4px', fontSize: '11px', height: '24px' }}
-                                  />
-                                  <input
-                                    type="number"
-                                    step="any"
-                                    className="input"
-                                    value={p.refMaxFemale || ''}
-                                    onChange={(e) => handleParameterChange(pIdx, 'refMaxFemale', e.target.value)}
-                                    placeholder="Max"
-                                    style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '2px 4px', fontSize: '11px', height: '24px' }}
-                                  />
-                                </div>
-                              </div>
-
-                              {/* Dropdown Options or Helper text */}
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', justifyContent: 'center' }}>
-                                {p.inputType === 'Dropdown' ? (
-                                  <>
-                                    <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: 600 }}>Dropdown Options</span>
+                              {/* Male Ref Range (Conditional) */}
+                              {(!p.referenceRange || p.referenceRange.trim() === '') && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '110px' }}>
+                                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Male Ref Range</span>
+                                  <div style={{ display: 'flex', gap: '4px' }}>
                                     <input
-                                      type="text"
+                                      type="number"
+                                      step="any"
                                       className="input"
-                                      value={p.dropdownOptions || ''}
-                                      onChange={(e) => handleParameterChange(pIdx, 'dropdownOptions', e.target.value)}
-                                      placeholder="Options (e.g. Positive,Negative)"
-                                      required
-                                      style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '4px 6px', fontSize: '11px', height: '24px' }}
+                                      value={p.refMinMale || ''}
+                                      onChange={(e) => handleParameterChange(pIdx, 'refMinMale', e.target.value)}
+                                      placeholder="Min"
+                                      style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '55px' }}
                                     />
-                                  </>
-                                ) : (
-                                  <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic', marginTop: '12px', paddingLeft: '6px' }}>
-                                    Demographic ranges auto-flag abnormal values.
-                                  </span>
-                                )}
+                                    <input
+                                      type="number"
+                                      step="any"
+                                      className="input"
+                                      value={p.refMaxMale || ''}
+                                      onChange={(e) => handleParameterChange(pIdx, 'refMaxMale', e.target.value)}
+                                      placeholder="Max"
+                                      style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '55px' }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Female Ref Range (Conditional) */}
+                              {(!p.referenceRange || p.referenceRange.trim() === '') && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '110px' }}>
+                                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Female Ref Range</span>
+                                  <div style={{ display: 'flex', gap: '4px' }}>
+                                    <input
+                                      type="number"
+                                      step="any"
+                                      className="input"
+                                      value={p.refMinFemale || ''}
+                                      onChange={(e) => handleParameterChange(pIdx, 'refMinFemale', e.target.value)}
+                                      placeholder="Min"
+                                      style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '55px' }}
+                                    />
+                                    <input
+                                      type="number"
+                                      step="any"
+                                      className="input"
+                                      value={p.refMaxFemale || ''}
+                                      onChange={(e) => handleParameterChange(pIdx, 'refMaxFemale', e.target.value)}
+                                      placeholder="Max"
+                                      style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '55px' }}
+                                    />
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Remove Button */}
+                              <div style={{ display: 'flex', alignItems: 'center', height: '32px', marginLeft: 'auto' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveParameterRow(pIdx)}
+                                  style={{ background: 'transparent', border: 'none', color: 'var(--accent-danger)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}
+                                  title="Remove parameter"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
                               </div>
+
                             </div>
                           </div>
                         ))}
