@@ -163,6 +163,41 @@ export const Workspaces: React.FC = () => {
     return false;
   };
 
+  const renderParameterInput = (p: any) => {
+    const iType = p.input_type || 'Number';
+    
+    if (iType === 'Dropdown') {
+      const opts = (p.dropdown_options || '').split(',').map((opt: string) => opt.trim()).filter(Boolean);
+      return (
+        <select
+          className="select"
+          required
+          value={paramValues[p.parameter_id] || ''}
+          onChange={(e) => setParamValues({ ...paramValues, [p.parameter_id]: e.target.value })}
+          style={{ height: '28px', padding: '0 8px', fontSize: '12px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', width: '100%', borderRadius: '6px' }}
+        >
+          <option value="">Select Result</option>
+          {opts.map((opt: string) => (
+            <option key={opt} value={opt}>{opt}</option>
+          ))}
+        </select>
+      );
+    }
+    
+    return (
+      <input 
+        type={iType === 'Number' ? 'number' : 'text'}
+        step="any"
+        className="input" 
+        required
+        value={paramValues[p.parameter_id] || ''} 
+        onChange={(e) => setParamValues({ ...paramValues, [p.parameter_id]: e.target.value })}
+        placeholder={iType === 'Number' ? 'Numeric Value' : 'Text Result'}
+        style={{ height: '28px', padding: '4px 8px', fontSize: '12px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)' }}
+      />
+    );
+  };
+
   const parseConcatenatedResult = (actualResult: string) => {
     if (!actualResult || !actualResult.includes(':')) return null;
     try {
@@ -265,8 +300,27 @@ export const Workspaces: React.FC = () => {
       }
     }
     setParamValues(initialParams);
-
     setActionModalOpen(true);
+  };
+
+  const handleLoadBoilerplate = () => {
+    if (!actionItem) return;
+    const firstItem = actionItem.type === 'package' ? actionItem.items[0] : actionItem.item;
+    if (!firstItem || !firstItem.normal_range) return;
+
+    try {
+      const template = JSON.parse(firstItem.normal_range);
+      if (template.technique) {
+        setFindings(`TECHNIQUE:\n${template.technique}\n\nFINDINGS:\n${template.findings || ''}`);
+      } else {
+        setFindings(template.findings || firstItem.normal_range);
+      }
+      if (template.impression) {
+        setImpression(template.impression);
+      }
+    } catch (e) {
+      setFindings(firstItem.normal_range);
+    }
   };
 
   const handleSendCorrection = async (e: React.FormEvent) => {
@@ -881,14 +935,7 @@ export const Workspaces: React.FC = () => {
                                 {groupSvc.parameters.map((p: any) => (
                                   <div key={p.parameter_id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1.2fr', gap: '8px', alignItems: 'center', fontSize: '12px' }}>
                                     <span style={{ fontWeight: 600 }}>{p.name}</span>
-                                    <input 
-                                      type="text" 
-                                      className="input" 
-                                      required
-                                      value={paramValues[p.parameter_id] || ''} 
-                                      onChange={(e) => setParamValues({ ...paramValues, [p.parameter_id]: e.target.value })}
-                                      style={{ height: '28px', padding: '4px 8px', fontSize: '12px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)' }}
-                                    />
+                                    {renderParameterInput(p)}
                                     <span style={{ color: 'var(--text-muted)' }}>{p.unit || '-'}</span>
                                     <span style={{ color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.reference_range || '-'}</span>
                                   </div>
@@ -920,14 +967,7 @@ export const Workspaces: React.FC = () => {
                         {actionItem.item.parameters.map((p: any) => (
                           <div key={p.parameter_id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1.2fr', gap: '8px', alignItems: 'center', fontSize: '12px' }}>
                             <span style={{ fontWeight: 600 }}>{p.name}</span>
-                            <input 
-                              type="text" 
-                              className="input" 
-                              required
-                              value={paramValues[p.parameter_id] || ''} 
-                              onChange={(e) => setParamValues({ ...paramValues, [p.parameter_id]: e.target.value })}
-                              style={{ height: '28px', padding: '4px 8px', fontSize: '12px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)' }}
-                            />
+                            {renderParameterInput(p)}
                             <span style={{ color: 'var(--text-muted)' }}>{p.unit || '-'}</span>
                             <span style={{ color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.reference_range || '-'}</span>
                           </div>
@@ -974,14 +1014,7 @@ export const Workspaces: React.FC = () => {
                         {actionItem.item.parameters.map((p: any) => (
                           <div key={p.parameter_id} style={{ display: 'grid', gridTemplateColumns: '2fr 1.2fr 1fr 1.2fr', gap: '8px', alignItems: 'center', fontSize: '12px' }}>
                             <span style={{ fontWeight: 600 }}>{p.name}</span>
-                            <input 
-                              type="text" 
-                              className="input" 
-                              required
-                              value={paramValues[p.parameter_id] || ''} 
-                              onChange={(e) => setParamValues({ ...paramValues, [p.parameter_id]: e.target.value })}
-                              style={{ height: '28px', padding: '4px 8px', fontSize: '12px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)' }}
-                            />
+                            {renderParameterInput(p)}
                             <span style={{ color: 'var(--text-muted)' }}>{p.unit || '-'}</span>
                             <span style={{ color: 'var(--text-muted)', fontFamily: 'monospace' }}>{p.reference_range || '-'}</span>
                           </div>
@@ -996,7 +1029,32 @@ export const Workspaces: React.FC = () => {
                           </div>
                         )}
                         <div>
-                          <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Dictated Findings *</label>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                            <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Dictated Findings *</label>
+                            {((actionItem.type !== 'package' && actionItem.item.report_type === 'Descriptive') || 
+                              (actionItem.type === 'package' && actionItem.items[0]?.report_type === 'Descriptive') ||
+                              (actionItem.type !== 'package' && actionItem.item.normal_range && actionItem.item.normal_range.startsWith('{'))) && (
+                              <button
+                                type="button"
+                                onClick={handleLoadBoilerplate}
+                                style={{
+                                  background: 'transparent',
+                                  color: 'var(--accent-primary)',
+                                  border: 'none',
+                                  fontSize: '11px',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px',
+                                  padding: 0
+                                }}
+                              >
+                                <FileText size={12} />
+                                Load Boilerplate Template
+                              </button>
+                            )}
+                          </div>
                           <textarea className="input" rows={3} value={findings} onChange={(e) => setFindings(e.target.value)} placeholder="Enter details of anatomy scanned..." required style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
                         </div>
                       </>

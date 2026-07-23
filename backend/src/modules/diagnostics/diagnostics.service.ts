@@ -100,14 +100,20 @@ export const getServices = async () => {
                'name', dp.name,
                'unit', dp.unit,
                'reference_range', dp.reference_range,
-               'display_order', dp.display_order
+               'display_order', dp.display_order,
+               'input_type', dp.input_type,
+               'dropdown_options', dp.dropdown_options,
+               'min_value', dp.min_value,
+               'max_value', dp.max_value,
+               'age_group', dp.age_group,
+               'gender', dp.gender
              ) ORDER BY dp.display_order)
              FROM diagnostic_parameters dp
              WHERE dp.service_id = s.service_id
            ), '[]'::json) as parameters
-    FROM diagnostic_services s
-    LEFT JOIN diagnostic_categories c ON s.category_id = c.category_id
-    ORDER BY c.name, s.name
+     FROM diagnostic_services s
+     LEFT JOIN diagnostic_categories c ON s.category_id = c.category_id
+     ORDER BY c.name, s.name
   `);
   return result.rows;
 };
@@ -117,13 +123,13 @@ export const addService = async (input: any) => {
   try {
     const result = await query(`
       INSERT INTO diagnostic_services 
-      (name, category_id, service_code, price, gst_percentage, duration_minutes, sample_required, normal_range, machine_required, home_collection_available, emergency_available, is_active)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      (name, category_id, service_code, price, gst_percentage, duration_minutes, sample_required, normal_range, machine_required, home_collection_available, emergency_available, is_active, report_type)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING *
     `, [
       input.name, input.categoryId, input.serviceCode.toUpperCase(), input.price, input.gstPercentage || 0,
       input.durationMinutes || 30, input.sampleRequired || 'None', input.normalRange || '', input.machineRequired || '',
-      input.homeCollectionAvailable || false, input.emergencyAvailable || false, input.isActive !== false
+      input.homeCollectionAvailable || false, input.emergencyAvailable || false, input.isActive !== false, input.reportType || 'Structured'
     ]);
 
     const service = result.rows[0];
@@ -133,9 +139,21 @@ export const addService = async (input: any) => {
         const p = input.parameters[i];
         if (p.name && p.name.trim()) {
           await query(`
-            INSERT INTO diagnostic_parameters (service_id, name, unit, reference_range, display_order)
-            VALUES ($1, $2, $3, $4, $5)
-          `, [service.service_id, p.name.trim(), p.unit || '', p.referenceRange || p.reference_range || '', i + 1]);
+            INSERT INTO diagnostic_parameters (service_id, name, unit, reference_range, display_order, input_type, dropdown_options, min_value, max_value, age_group, gender)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          `, [
+            service.service_id, 
+            p.name.trim(), 
+            p.unit || '', 
+            p.referenceRange || p.reference_range || '', 
+            i + 1,
+            p.inputType || p.input_type || 'Number',
+            p.dropdownOptions || p.dropdown_options || null,
+            p.minValue !== undefined && p.minValue !== '' ? p.minValue : (p.min_value !== undefined && p.min_value !== '' ? p.min_value : null),
+            p.maxValue !== undefined && p.maxValue !== '' ? p.maxValue : (p.max_value !== undefined && p.max_value !== '' ? p.max_value : null),
+            p.ageGroup || p.age_group || 'Universal',
+            p.gender || 'Universal'
+          ]);
         }
       }
     }
@@ -155,13 +173,13 @@ export const editService = async (serviceId: string, input: any) => {
       UPDATE diagnostic_services 
       SET name = $1, category_id = $2, service_code = $3, price = $4, gst_percentage = $5, 
           duration_minutes = $6, sample_required = $7, normal_range = $8, machine_required = $9, 
-          home_collection_available = $10, emergency_available = $11, is_active = $12
-      WHERE service_id = $13
+          home_collection_available = $10, emergency_available = $11, is_active = $12, report_type = $13
+      WHERE service_id = $14
       RETURNING *
     `, [
       input.name, input.categoryId, input.serviceCode.toUpperCase(), input.price, input.gstPercentage || 0,
       input.durationMinutes || 30, input.sampleRequired || 'None', input.normalRange || '', input.machineRequired || '',
-      input.homeCollectionAvailable || false, input.emergencyAvailable || false, input.isActive !== false, serviceId
+      input.homeCollectionAvailable || false, input.emergencyAvailable || false, input.isActive !== false, input.reportType || 'Structured', serviceId
     ]);
 
     if (input.parameters && Array.isArray(input.parameters)) {
@@ -170,9 +188,21 @@ export const editService = async (serviceId: string, input: any) => {
         const p = input.parameters[i];
         if (p.name && p.name.trim()) {
           await query(`
-            INSERT INTO diagnostic_parameters (service_id, name, unit, reference_range, display_order)
-            VALUES ($1, $2, $3, $4, $5)
-          `, [serviceId, p.name.trim(), p.unit || '', p.referenceRange || p.reference_range || '', i + 1]);
+            INSERT INTO diagnostic_parameters (service_id, name, unit, reference_range, display_order, input_type, dropdown_options, min_value, max_value, age_group, gender)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+          `, [
+            serviceId, 
+            p.name.trim(), 
+            p.unit || '', 
+            p.referenceRange || p.reference_range || '', 
+            i + 1,
+            p.inputType || p.input_type || 'Number',
+            p.dropdownOptions || p.dropdown_options || null,
+            p.minValue !== undefined && p.minValue !== '' ? p.minValue : (p.min_value !== undefined && p.min_value !== '' ? p.min_value : null),
+            p.maxValue !== undefined && p.maxValue !== '' ? p.maxValue : (p.max_value !== undefined && p.max_value !== '' ? p.max_value : null),
+            p.ageGroup || p.age_group || 'Universal',
+            p.gender || 'Universal'
+          ]);
         }
       }
     }
@@ -312,6 +342,7 @@ export const getOrders = async () => {
                'sample_required', ds.sample_required,
                'normal_range', ds.normal_range,
                'price', ds.price,
+               'report_type', ds.report_type,
                'status', toi.status,
                'correction_required', toi.correction_required,
                'sample', (SELECT json_build_object('sample_id', sc.sample_id, 'container_type', sc.container_type, 'barcode', sc.barcode, 'status', sc.status) FROM sample_collections sc WHERE sc.order_item_id = toi.item_id LIMIT 1),
@@ -325,7 +356,13 @@ export const getOrders = async () => {
                    'parameter_id', dp.parameter_id,
                    'name', dp.name,
                    'unit', dp.unit,
-                   'reference_range', dp.reference_range
+                   'reference_range', dp.reference_range,
+                   'input_type', dp.input_type,
+                   'dropdown_options', dp.dropdown_options,
+                   'min_value', dp.min_value,
+                   'max_value', dp.max_value,
+                   'age_group', dp.age_group,
+                   'gender', dp.gender
                  ) ORDER BY dp.display_order)
                  FROM diagnostic_parameters dp 
                  WHERE dp.service_id = toi.service_id

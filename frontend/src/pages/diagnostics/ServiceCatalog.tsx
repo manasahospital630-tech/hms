@@ -39,7 +39,24 @@ export const ServiceCatalog: React.FC = () => {
     homeCollectionAvailable: boolean;
     emergencyAvailable: boolean;
     isActive: boolean;
-    parameters: Array<{ name: string; unit: string; referenceRange: string }>;
+    reportType: 'Structured' | 'Qualitative' | 'Descriptive';
+    parameters: Array<{ 
+      name: string; 
+      unit: string; 
+      referenceRange: string;
+      inputType?: string;
+      dropdownOptions?: string;
+      minValue?: string;
+      maxValue?: string;
+      ageGroup?: string;
+      gender?: string;
+    }>;
+    qualitativeInputType: string;
+    qualitativeOptions: string;
+    qualitativeNotes: string;
+    techniqueTemplate: string;
+    findingsTemplate: string;
+    impressionTemplate: string;
   }>({
     name: '',
     categoryId: '',
@@ -53,7 +70,14 @@ export const ServiceCatalog: React.FC = () => {
     homeCollectionAvailable: false,
     emergencyAvailable: false,
     isActive: true,
-    parameters: []
+    reportType: 'Structured',
+    parameters: [],
+    qualitativeInputType: 'Dropdown',
+    qualitativeOptions: 'Positive, Negative, Equivocal',
+    qualitativeNotes: '',
+    techniqueTemplate: '',
+    findingsTemplate: '',
+    impressionTemplate: ''
   });
 
   // Package Modal States
@@ -859,7 +883,14 @@ export const ServiceCatalog: React.FC = () => {
       homeCollectionAvailable: false,
       emergencyAvailable: false,
       isActive: true,
-      parameters: []
+      reportType: 'Structured',
+      parameters: [],
+      qualitativeInputType: 'Dropdown',
+      qualitativeOptions: 'Positive, Negative, Equivocal',
+      qualitativeNotes: '',
+      techniqueTemplate: '',
+      findingsTemplate: '',
+      impressionTemplate: ''
     });
     setModalError('');
     setServiceModalOpen(true);
@@ -867,6 +898,47 @@ export const ServiceCatalog: React.FC = () => {
 
   const openEditServiceModal = (s: any) => {
     setEditingService(s);
+    const rType = s.report_type || 'Structured';
+    
+    let parsedParameters = (s.parameters || []).map((p: any) => ({
+      name: p.name || '',
+      unit: p.unit || '',
+      referenceRange: p.reference_range || p.referenceRange || '',
+      inputType: p.input_type || 'Number',
+      dropdownOptions: p.dropdown_options || '',
+      minValue: p.min_value !== null && p.min_value !== undefined ? p.min_value.toString() : '',
+      maxValue: p.max_value !== null && p.max_value !== undefined ? p.max_value.toString() : '',
+      ageGroup: p.age_group || 'Universal',
+      gender: p.gender || 'Universal'
+    }));
+
+    let qualitativeInputType = 'Dropdown';
+    let qualitativeOptions = 'Positive, Negative, Equivocal';
+    let qualitativeNotes = s.normal_range || '';
+
+    if (rType === 'Qualitative') {
+      const resultParam = s.parameters?.find((p: any) => p.name === 'Result');
+      if (resultParam) {
+        qualitativeInputType = resultParam.input_type || 'Dropdown';
+        qualitativeOptions = resultParam.dropdown_options || '';
+      }
+    }
+
+    let techniqueTemplate = '';
+    let findingsTemplate = '';
+    let impressionTemplate = '';
+
+    if (rType === 'Descriptive' && s.normal_range) {
+      try {
+        const parsed = JSON.parse(s.normal_range);
+        techniqueTemplate = parsed.technique || '';
+        findingsTemplate = parsed.findings || '';
+        impressionTemplate = parsed.impression || '';
+      } catch (e) {
+        findingsTemplate = s.normal_range;
+      }
+    }
+
     setServiceForm({
       name: s.name,
       categoryId: s.category_id || '',
@@ -880,11 +952,14 @@ export const ServiceCatalog: React.FC = () => {
       homeCollectionAvailable: !!s.home_collection_available,
       emergencyAvailable: !!s.emergency_available,
       isActive: !!s.is_active,
-      parameters: (s.parameters || []).map((p: any) => ({
-        name: p.name || '',
-        unit: p.unit || '',
-        referenceRange: p.reference_range || p.referenceRange || ''
-      }))
+      reportType: rType,
+      parameters: parsedParameters,
+      qualitativeInputType,
+      qualitativeOptions,
+      qualitativeNotes,
+      techniqueTemplate,
+      findingsTemplate,
+      impressionTemplate
     });
     setModalError('');
     setServiceModalOpen(true);
@@ -893,11 +968,21 @@ export const ServiceCatalog: React.FC = () => {
   const handleAddParameterRow = () => {
     setServiceForm(prev => ({
       ...prev,
-      parameters: [...(prev.parameters || []), { name: '', unit: '', referenceRange: '' }]
+      parameters: [...(prev.parameters || []), { 
+        name: '', 
+        unit: '', 
+        referenceRange: '', 
+        inputType: 'Number', 
+        dropdownOptions: '',
+        minValue: '',
+        maxValue: '',
+        ageGroup: 'Universal',
+        gender: 'Universal'
+      }]
     }));
   };
 
-  const handleParameterChange = (index: number, field: 'name' | 'unit' | 'referenceRange', value: string) => {
+  const handleParameterChange = (index: number, field: string, value: string) => {
     setServiceForm(prev => {
       const updated = [...(prev.parameters || [])];
       updated[index] = { ...updated[index], [field]: value };
@@ -932,11 +1017,58 @@ export const ServiceCatalog: React.FC = () => {
     setModalLoading(true);
     setModalError('');
 
+    let finalParams: any[] = [];
+    let finalNormalRange = serviceForm.normalRange;
+
+    if (serviceForm.reportType === 'Structured') {
+      finalParams = (serviceForm.parameters || []).map((p: any) => ({
+        name: p.name,
+        unit: p.unit,
+        referenceRange: p.referenceRange || p.reference_range || '',
+        inputType: p.inputType || 'Number',
+        dropdownOptions: p.dropdownOptions || '',
+        minValue: p.minValue || null,
+        maxValue: p.maxValue || null,
+        ageGroup: p.ageGroup || 'Universal',
+        gender: p.gender || 'Universal'
+      }));
+    } else if (serviceForm.reportType === 'Qualitative') {
+      finalNormalRange = serviceForm.qualitativeNotes;
+      finalParams = [{
+        name: 'Result',
+        unit: '',
+        referenceRange: 'Qualitative',
+        inputType: serviceForm.qualitativeInputType,
+        dropdownOptions: serviceForm.qualitativeInputType === 'Dropdown' ? serviceForm.qualitativeOptions : '',
+        minValue: null,
+        maxValue: null,
+        ageGroup: 'Universal',
+        gender: 'Universal'
+      }];
+    } else if (serviceForm.reportType === 'Descriptive') {
+      finalNormalRange = JSON.stringify({
+        technique: serviceForm.techniqueTemplate,
+        findings: serviceForm.findingsTemplate,
+        impression: serviceForm.impressionTemplate
+      });
+      finalParams = [];
+    }
+
     const payload = {
-      ...serviceForm,
+      name: serviceForm.name,
+      categoryId: serviceForm.categoryId,
+      serviceCode: serviceForm.serviceCode,
       price: parseFloat(serviceForm.price),
       gstPercentage: parseFloat(serviceForm.gstPercentage),
-      durationMinutes: parseInt(serviceForm.durationMinutes)
+      durationMinutes: parseInt(serviceForm.durationMinutes),
+      sampleRequired: serviceForm.sampleRequired,
+      normalRange: finalNormalRange,
+      machineRequired: serviceForm.machineRequired,
+      homeCollectionAvailable: serviceForm.homeCollectionAvailable,
+      emergencyAvailable: serviceForm.emergencyAvailable,
+      isActive: serviceForm.isActive,
+      reportType: serviceForm.reportType,
+      parameters: finalParams
     };
 
     try {
@@ -1343,87 +1475,251 @@ export const ServiceCatalog: React.FC = () => {
                   </label>
                 </div>
 
-                {/* Test Parameters Configuration Section */}
-                <div style={{ marginTop: '16px', borderTop: '1px solid var(--border-primary)', paddingTop: '16px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                    <label style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <List size={14} color="var(--accent-primary)" />
-                      Individual Test Parameters ({serviceForm.parameters?.length || 0})
-                    </label>
-                    <button
-                      type="button"
-                      onClick={handleAddParameterRow}
-                      style={{
-                        background: 'var(--bg-primary)',
-                        color: 'var(--accent-primary)',
-                        border: '1px solid var(--border-primary)',
-                        borderRadius: '6px',
-                        padding: '4px 10px',
-                        fontSize: '11px',
-                        fontWeight: 600,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '4px'
-                      }}
-                    >
-                      <Plus size={12} />
-                      Add Parameter
-                    </button>
-                  </div>
-
-                  {serviceForm.parameters && serviceForm.parameters.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '220px', overflowY: 'auto', paddingRight: '4px' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 2fr 30px', gap: '8px', fontSize: '11px', fontWeight: 600, color: 'var(--text-muted)', paddingBottom: '2px' }}>
-                        <div>Parameter Name *</div>
-                        <div>Unit</div>
-                        <div>Reference Range</div>
-                        <div></div>
-                      </div>
-                      {serviceForm.parameters.map((p, pIdx) => (
-                        <div key={pIdx} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 2fr 30px', gap: '8px', alignItems: 'center' }}>
-                          <input
-                            type="text"
-                            className="input"
-                            value={p.name}
-                            onChange={(e) => handleParameterChange(pIdx, 'name', e.target.value)}
-                            placeholder="e.g. Blood Urea"
-                            required
-                            style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px' }}
-                          />
-                          <input
-                            type="text"
-                            className="input"
-                            value={p.unit}
-                            onChange={(e) => handleParameterChange(pIdx, 'unit', e.target.value)}
-                            placeholder="e.g. mg/dL"
-                            style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px' }}
-                          />
-                          <input
-                            type="text"
-                            className="input"
-                            value={p.referenceRange}
-                            onChange={(e) => handleParameterChange(pIdx, 'referenceRange', e.target.value)}
-                            placeholder="e.g. 15–40"
-                            style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px' }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveParameterRow(pIdx)}
-                            style={{ background: 'transparent', border: 'none', color: 'var(--accent-danger)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            title="Remove parameter"
-                          >
-                            <Trash2 size={14} />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div style={{ background: 'var(--bg-primary)', border: '1px dashed var(--border-primary)', borderRadius: '6px', padding: '12px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>
-                      No specific parameters configured yet. Click <strong>+ Add Parameter</strong> to specify test parameters (e.g. Hemoglobin, Bilirubin, Creatinine).
-                    </div>
-                  )}
+                {/* Report Format Selector */}
+                <div style={{ borderTop: '1px solid var(--border-primary)', paddingTop: '12px', marginTop: '4px' }}>
+                  <label style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)' }}>Select Report Format / Type *</label>
+                  <select 
+                    className="select" 
+                    value={serviceForm.reportType} 
+                    onChange={(e) => setServiceForm({ ...serviceForm, reportType: e.target.value as any })}
+                    style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', marginTop: '4px' }}
+                  >
+                    <option value="Structured">1. Structured Parameter Table (CBC, LFT, etc.)</option>
+                    <option value="Qualitative">2. Qualitative / Dropdown Value (Pregnancy, HIV, Dengue)</option>
+                    <option value="Descriptive">3. Descriptive / Text Impression (X-Ray, Scans, ECG)</option>
+                  </select>
                 </div>
+
+                {/* Option 1: Structured Multi-Parameter Configuration */}
+                {serviceForm.reportType === 'Structured' && (
+                  <div style={{ marginTop: '16px', borderTop: '1px solid var(--border-primary)', paddingTop: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                      <label style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <List size={14} color="var(--accent-primary)" />
+                        Individual Test Parameters ({serviceForm.parameters?.length || 0})
+                      </label>
+                      <button
+                        type="button"
+                        onClick={handleAddParameterRow}
+                        style={{
+                          background: 'var(--bg-primary)',
+                          color: 'var(--accent-primary)',
+                          border: '1px solid var(--border-primary)',
+                          borderRadius: '6px',
+                          padding: '4px 10px',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <Plus size={12} />
+                        Add Parameter
+                      </button>
+                    </div>
+
+                    {serviceForm.parameters && serviceForm.parameters.length > 0 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', maxHeight: '280px', overflowY: 'auto', paddingRight: '4px' }}>
+                        {serviceForm.parameters.map((p, pIdx) => (
+                          <div key={pIdx} style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', borderRadius: '8px', padding: '10px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1.2fr 1.5fr 30px', gap: '8px', alignItems: 'center' }}>
+                              <input
+                                type="text"
+                                className="input"
+                                value={p.name}
+                                onChange={(e) => handleParameterChange(pIdx, 'name', e.target.value)}
+                                placeholder="Parameter Name (e.g. Hemoglobin)"
+                                required
+                                style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px' }}
+                              />
+                              <input
+                                type="text"
+                                className="input"
+                                value={p.unit}
+                                onChange={(e) => handleParameterChange(pIdx, 'unit', e.target.value)}
+                                placeholder="Unit (e.g. g/dL)"
+                                style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px' }}
+                              />
+                              <select
+                                className="select"
+                                value={p.inputType || 'Number'}
+                                onChange={(e) => handleParameterChange(pIdx, 'inputType', e.target.value)}
+                                style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px', height: '32px' }}
+                              >
+                                <option value="Number">Number</option>
+                                <option value="Dropdown">Dropdown</option>
+                                <option value="Text">Text</option>
+                              </select>
+                              <input
+                                type="text"
+                                className="input"
+                                value={p.referenceRange}
+                                onChange={(e) => handleParameterChange(pIdx, 'referenceRange', e.target.value)}
+                                placeholder="Ref Range (e.g. 13.5 - 17.5)"
+                                style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px' }}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleRemoveParameterRow(pIdx)}
+                                style={{ background: 'transparent', border: 'none', color: 'var(--accent-danger)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                title="Remove parameter"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1.2fr 1.2fr 2fr', gap: '8px', alignItems: 'center', background: 'var(--bg-card)', padding: '6px', borderRadius: '6px' }}>
+                              <input
+                                type="number"
+                                className="input"
+                                value={p.minValue || ''}
+                                onChange={(e) => handleParameterChange(pIdx, 'minValue', e.target.value)}
+                                placeholder="Min Value"
+                                style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '4px 6px', fontSize: '11px' }}
+                              />
+                              <input
+                                type="number"
+                                className="input"
+                                value={p.maxValue || ''}
+                                onChange={(e) => handleParameterChange(pIdx, 'maxValue', e.target.value)}
+                                placeholder="Max Value"
+                                style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '4px 6px', fontSize: '11px' }}
+                              />
+                              <select
+                                className="select"
+                                value={p.ageGroup || 'Universal'}
+                                onChange={(e) => handleParameterChange(pIdx, 'ageGroup', e.target.value)}
+                                style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '4px 6px', fontSize: '11px', height: '26px' }}
+                              >
+                                <option value="Universal">Universal Age</option>
+                                <option value="Adult">Adult</option>
+                                <option value="Child">Child</option>
+                                <option value="Infant">Infant</option>
+                              </select>
+                              <select
+                                className="select"
+                                value={p.gender || 'Universal'}
+                                onChange={(e) => handleParameterChange(pIdx, 'gender', e.target.value)}
+                                style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '4px 6px', fontSize: '11px', height: '26px' }}
+                              >
+                                <option value="Universal">Universal Gender</option>
+                                <option value="Male">Male</option>
+                                <option value="Female">Female</option>
+                              </select>
+                              {p.inputType === 'Dropdown' ? (
+                                <input
+                                  type="text"
+                                  className="input"
+                                  value={p.dropdownOptions || ''}
+                                  onChange={(e) => handleParameterChange(pIdx, 'dropdownOptions', e.target.value)}
+                                  placeholder="Options (comma-separated, e.g. Positive,Negative)"
+                                  required
+                                  style={{ background: 'var(--bg-primary)', color: 'var(--text-primary)', padding: '4px 6px', fontSize: '11px' }}
+                                />
+                              ) : (
+                                <span style={{ fontSize: '10px', color: 'var(--text-muted)', fontStyle: 'italic', paddingLeft: '6px' }}>
+                                  Range config auto-highlights out of range values
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div style={{ background: 'var(--bg-primary)', border: '1px dashed var(--border-primary)', borderRadius: '6px', padding: '12px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>
+                        No specific parameters configured yet. Click <strong>+ Add Parameter</strong> to specify test parameters (e.g. Hemoglobin, Bilirubin, Creatinine).
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Option 2: Qualitative Configuration */}
+                {serviceForm.reportType === 'Qualitative' && (
+                  <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', borderRadius: '8px', padding: '16px', marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: 'var(--accent-primary)' }}>Qualitative Result Configuration</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: '12px' }}>
+                      <div>
+                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Result Input Type *</label>
+                        <select 
+                          className="select" 
+                          value={serviceForm.qualitativeInputType} 
+                          onChange={(e) => setServiceForm({ ...serviceForm, qualitativeInputType: e.target.value })}
+                          style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', marginTop: '4px' }}
+                        >
+                          <option value="Dropdown">Option List / Dropdown</option>
+                          <option value="Text">Single Free-Text Field</option>
+                        </select>
+                      </div>
+                      {serviceForm.qualitativeInputType === 'Dropdown' && (
+                        <div>
+                          <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Configure Options *</label>
+                          <input 
+                            type="text" 
+                            className="input" 
+                            value={serviceForm.qualitativeOptions} 
+                            onChange={(e) => setServiceForm({ ...serviceForm, qualitativeOptions: e.target.value })}
+                            placeholder="e.g. Positive, Negative, Equivocal" 
+                            required 
+                            style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', marginTop: '4px' }}
+                          />
+                        </div>
+                      )}
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Interpretation / Standard Lab Disclaimers</label>
+                      <textarea 
+                        className="input" 
+                        rows={3} 
+                        value={serviceForm.qualitativeNotes} 
+                        onChange={(e) => setServiceForm({ ...serviceForm, qualitativeNotes: e.target.value })}
+                        placeholder="Add standard lab comments/disclaimers here..." 
+                        style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', marginTop: '4px' }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Option 3: Descriptive Template Config */}
+                {serviceForm.reportType === 'Descriptive' && (
+                  <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', borderRadius: '8px', padding: '16px', marginTop: '12px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    <h4 style={{ margin: 0, fontSize: '13px', fontWeight: 700, color: 'var(--accent-primary)' }}>Boilerplate Report Template Builder</h4>
+                    <div>
+                      <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Boilerplate Technique</label>
+                      <input 
+                        type="text" 
+                        className="input" 
+                        value={serviceForm.techniqueTemplate} 
+                        onChange={(e) => setServiceForm({ ...serviceForm, techniqueTemplate: e.target.value })}
+                        placeholder="e.g. Ultrasonography of the abdomen was performed using..." 
+                        style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', marginTop: '4px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Boilerplate Findings Template</label>
+                      <textarea 
+                        className="input" 
+                        rows={4} 
+                        value={serviceForm.findingsTemplate} 
+                        onChange={(e) => setServiceForm({ ...serviceForm, findingsTemplate: e.target.value })}
+                        placeholder="Boilerplate text for Clinical Findings..." 
+                        style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', marginTop: '4px' }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Boilerplate Impression Template</label>
+                      <textarea 
+                        className="input" 
+                        rows={2} 
+                        value={serviceForm.impressionTemplate} 
+                        onChange={(e) => setServiceForm({ ...serviceForm, impressionTemplate: e.target.value })}
+                        placeholder="Default clinical impression verdict..." 
+                        style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', marginTop: '4px' }}
+                      />
+                    </div>
+                  </div>
+                )}
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', borderTop: '1px solid var(--border-primary)', paddingTop: '16px' }}>
                   <Button variant="secondary" type="button" onClick={() => setServiceModalOpen(false)}>Cancel</Button>
