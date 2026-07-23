@@ -82,7 +82,7 @@ export const ecgReportSchema = z.object({
 
 export const reportVerificationSchema = z.object({
   itemId: z.string().uuid(),
-  status: z.enum(['Approved', 'Rejected', 'PendingRetest']),
+  status: z.enum(['Approved', 'Rejected', 'PendingRetest', 'Correction']),
   notes: z.string().optional(),
   digitalSignatureUsed: z.string().optional()
 });

@@ -76,7 +76,7 @@ exports.ecgReportSchema = zod_1.z.object({
 });
 exports.reportVerificationSchema = zod_1.z.object({
     itemId: zod_1.z.string().uuid(),
-    status: zod_1.z.enum(['Approved', 'Rejected', 'PendingRetest']),
+    status: zod_1.z.enum(['Approved', 'Rejected', 'PendingRetest', 'Correction']),
     notes: zod_1.z.string().optional(),
     digitalSignatureUsed: zod_1.z.string().optional()
 });

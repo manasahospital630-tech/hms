@@ -201,16 +201,16 @@ export declare const ecgReportSchema: z.ZodObject<{
 }>;
 export declare const reportVerificationSchema: z.ZodObject<{
     itemId: z.ZodString;
-    status: z.ZodEnum<["Approved", "Rejected", "PendingRetest"]>;
+    status: z.ZodEnum<["Approved", "Rejected", "PendingRetest", "Correction"]>;
     notes: z.ZodOptional<z.ZodString>;
     digitalSignatureUsed: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
-    status: "Approved" | "Rejected" | "PendingRetest";
+    status: "Approved" | "Correction" | "Rejected" | "PendingRetest";
     itemId: string;
     notes?: string | undefined;
     digitalSignatureUsed?: string | undefined;
 }, {
-    status: "Approved" | "Rejected" | "PendingRetest";
+    status: "Approved" | "Correction" | "Rejected" | "PendingRetest";
     itemId: string;
     notes?: string | undefined;
     digitalSignatureUsed?: string | undefined;
