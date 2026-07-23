@@ -37,7 +37,7 @@ const navByRole: Record<string, NavItem[]> = {
         { label: 'Dashboard', path: '/diagnostics/dashboard' },
         { label: 'Workspaces', path: '/diagnostics/workspaces' },
         { label: 'Service Catalog', path: '/diagnostics/catalog' },
-        { label: 'Billing & Referrals', path: '/diagnostics/billing' },
+        { label: 'Referrals', path: '/diagnostics/billing' },
         { label: 'Equipment & QC', path: '/diagnostics/equipment' }
       ]
     },
@@ -68,7 +68,7 @@ const navByRole: Record<string, NavItem[]> = {
         { label: 'Dashboard', path: '/diagnostics/dashboard' },
         { label: 'Workspaces', path: '/diagnostics/workspaces' },
         { label: 'Service Catalog', path: '/diagnostics/catalog' },
-        { label: 'Billing & Referrals', path: '/diagnostics/billing' },
+        { label: 'Referrals', path: '/diagnostics/billing' },
         { label: 'Equipment & QC', path: '/diagnostics/equipment' }
       ]
     },
@@ -147,7 +147,7 @@ const navByRole: Record<string, NavItem[]> = {
         { label: 'Dashboard', path: '/diagnostics/dashboard' },
         { label: 'Workspaces', path: '/diagnostics/workspaces' },
         { label: 'Service Catalog', path: '/diagnostics/catalog' },
-        { label: 'Billing & Referrals', path: '/diagnostics/billing' },
+        { label: 'Referrals', path: '/diagnostics/billing' },
         { label: 'Equipment & QC', path: '/diagnostics/equipment' }
       ]
     },
