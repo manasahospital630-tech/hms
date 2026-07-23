@@ -15,6 +15,7 @@ import VitalsCapture from '../pages/nurse/VitalsCapture';
 import DoctorDashboard from '../pages/doctor/DoctorDashboard';
 import ConsultationWorkspace from '../pages/doctor/ConsultationWorkspace';
 import PatientHistory from '../pages/doctor/PatientHistory';
+import EmergencyDashboard from '../pages/doctor/EmergencyDashboard';
 import DispenseWorkstation from '../pages/pharmacy/DispenseWorkstation';
 import InventoryManagement from '../pages/pharmacy/InventoryManagement';
 import MedicineSales from '../pages/pharmacy/MedicineSales';
@@ -89,6 +90,7 @@ const AppRouter: React.FC = () => (
           <Route path="doctor/dashboard" element={<DoctorDashboard />} />
           <Route path="doctor/consultation/:appointmentId" element={<ConsultationWorkspace />} />
           <Route path="doctor/emergency/:encounterId" element={<EmergencyConsultation />} />
+          <Route path="doctor/emergency" element={<EmergencyDashboard />} />
           <Route path="doctor/history" element={<PatientHistory />} />
         </Route>
 

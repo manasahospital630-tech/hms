@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
-import { Home, Users, Calendar, UserPlus, Stethoscope, Pill, DollarSign, Settings, Activity, Heart, ClipboardList, FileText, Package, BarChart3, TrendingUp, Menu, X, ShoppingCart, Beaker } from 'lucide-react';
+import { Home, Users, Calendar, UserPlus, Stethoscope, Pill, DollarSign, Settings, Activity, Heart, ClipboardList, FileText, Package, BarChart3, TrendingUp, Menu, X, ShoppingCart, Beaker, ShieldAlert } from 'lucide-react';
 
 interface NavItem {
   icon: any;
@@ -28,6 +28,7 @@ const navByRole: Record<string, NavItem[]> = {
         { label: 'Rooms & Wards', path: '/inpatient/beds' }
       ]
     },
+    { icon: ShieldAlert, label: 'Emergency Care', path: '/doctor/emergency' },
     { icon: Stethoscope, label: 'EMR', path: '/doctor/dashboard' },
     { icon: Stethoscope, label: 'Doctor Consultations', path: '/admin/consultations' },
     {
@@ -59,6 +60,7 @@ const navByRole: Record<string, NavItem[]> = {
         { label: 'Rooms & Wards', path: '/inpatient/beds' }
       ]
     },
+    { icon: ShieldAlert, label: 'Emergency Care', path: '/doctor/emergency' },
     { icon: Stethoscope, label: 'Consultations', path: '/doctor/dashboard' },
     { icon: ClipboardList, label: 'Patient History', path: '/doctor/history' },
     {
@@ -85,6 +87,7 @@ const navByRole: Record<string, NavItem[]> = {
         { label: 'Rooms & Wards', path: '/inpatient/beds' }
       ]
     },
+    { icon: ShieldAlert, label: 'Emergency Care', path: '/doctor/emergency' },
     { icon: Users, label: 'Patients', path: '/reception/patients' },
   ],
   Receptionist: [
@@ -139,6 +142,7 @@ const navByRole: Record<string, NavItem[]> = {
         { label: 'Rooms & Wards', path: '/inpatient/beds' }
       ]
     },
+    { icon: ShieldAlert, label: 'Emergency Care', path: '/doctor/emergency' },
     { icon: Stethoscope, label: 'EMR', path: '/doctor/dashboard' },
     {
       icon: Beaker,
