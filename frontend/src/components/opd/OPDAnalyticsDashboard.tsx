@@ -369,26 +369,27 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
       </Card>
 
       {/* B. Dynamic Metric KPI Cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 'var(--space-md)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 'var(--space-md)', width: '100%' }}>
         {/* Today Card */}
         <div style={{ 
           background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)', 
           color: 'white', 
-          padding: '18px 20px', 
+          padding: '16px 16px', 
           borderRadius: '12px',
           boxShadow: '0 4px 15px rgba(37,99,235,0.25)',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          minWidth: 0
         }}>
-          <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.9, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.9, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>📅 Today's OPD</span>
-            <Users size={18} />
+            <Users size={16} />
           </div>
-          <div style={{ marginTop: '12px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            <span style={{ fontSize: '28px', fontWeight: 800 }}>{kpiSummary?.today?.totalBookings || 0}</span>
-            <span style={{ fontSize: '12px', opacity: 0.8 }}>Patient Check-ins</span>
+          <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+            <span style={{ fontSize: '26px', fontWeight: 800 }}>{kpiSummary?.today?.totalBookings || 0}</span>
+            <span style={{ fontSize: '11px', opacity: 0.8 }}>Patient Check-ins</span>
           </div>
-          <div style={{ marginTop: '6px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.2)', fontSize: '14px', fontWeight: 700, display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ marginTop: '6px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.2)', fontSize: '13px', fontWeight: 700, display: 'flex', justifyContent: 'space-between' }}>
             <span>Revenue:</span>
             <span>{formatCurrency(kpiSummary?.today?.totalRevenue || 0)}</span>
           </div>
@@ -398,21 +399,22 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
         <div style={{ 
           background: 'linear-gradient(135deg, #065f46 0%, #10b981 100%)', 
           color: 'white', 
-          padding: '18px 20px', 
+          padding: '16px 16px', 
           borderRadius: '12px',
           boxShadow: '0 4px 15px rgba(16,185,129,0.25)',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          minWidth: 0
         }}>
-          <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.9, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.9, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>📅 This Week's OPD</span>
-            <Activity size={18} />
+            <Activity size={16} />
           </div>
-          <div style={{ marginTop: '12px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            <span style={{ fontSize: '28px', fontWeight: 800 }}>{kpiSummary?.week?.totalBookings || 0}</span>
-            <span style={{ fontSize: '12px', opacity: 0.8 }}>Patient Check-ins</span>
+          <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+            <span style={{ fontSize: '26px', fontWeight: 800 }}>{kpiSummary?.week?.totalBookings || 0}</span>
+            <span style={{ fontSize: '11px', opacity: 0.8 }}>Patient Check-ins</span>
           </div>
-          <div style={{ marginTop: '6px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.2)', fontSize: '14px', fontWeight: 700, display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ marginTop: '6px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.2)', fontSize: '13px', fontWeight: 700, display: 'flex', justifyContent: 'space-between' }}>
             <span>Revenue:</span>
             <span>{formatCurrency(kpiSummary?.week?.totalRevenue || 0)}</span>
           </div>
@@ -422,21 +424,22 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
         <div style={{ 
           background: 'linear-gradient(135deg, #6b21a8 0%, #9333ea 100%)', 
           color: 'white', 
-          padding: '18px 20px', 
+          padding: '16px 16px', 
           borderRadius: '12px',
           boxShadow: '0 4px 15px rgba(147,51,234,0.25)',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          minWidth: 0
         }}>
-          <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.9, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.9, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>🗓️ This Month's OPD</span>
-            <Calendar size={18} />
+            <Calendar size={16} />
           </div>
-          <div style={{ marginTop: '12px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            <span style={{ fontSize: '28px', fontWeight: 800 }}>{kpiSummary?.month?.totalBookings || 0}</span>
-            <span style={{ fontSize: '12px', opacity: 0.8 }}>Patient Check-ins</span>
+          <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+            <span style={{ fontSize: '26px', fontWeight: 800 }}>{kpiSummary?.month?.totalBookings || 0}</span>
+            <span style={{ fontSize: '11px', opacity: 0.8 }}>Patient Check-ins</span>
           </div>
-          <div style={{ marginTop: '6px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.2)', fontSize: '14px', fontWeight: 700, display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ marginTop: '6px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.2)', fontSize: '13px', fontWeight: 700, display: 'flex', justifyContent: 'space-between' }}>
             <span>Revenue:</span>
             <span>{formatCurrency(kpiSummary?.month?.totalRevenue || 0)}</span>
           </div>
@@ -446,21 +449,22 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
         <div style={{ 
           background: 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)', 
           color: 'white', 
-          padding: '18px 20px', 
+          padding: '16px 16px', 
           borderRadius: '12px',
           boxShadow: '0 4px 15px rgba(220,38,38,0.25)',
           position: 'relative',
-          overflow: 'hidden'
+          overflow: 'hidden',
+          minWidth: 0
         }}>
-          <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.9, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.9, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>📊 This Year's OPD</span>
-            <BarChart2 size={18} />
+            <BarChart2 size={16} />
           </div>
-          <div style={{ marginTop: '12px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            <span style={{ fontSize: '28px', fontWeight: 800 }}>{kpiSummary?.year?.totalBookings || 0}</span>
-            <span style={{ fontSize: '12px', opacity: 0.8 }}>Cumulative OPD</span>
+          <div style={{ marginTop: '10px', display: 'flex', alignItems: 'baseline', gap: '6px' }}>
+            <span style={{ fontSize: '26px', fontWeight: 800 }}>{kpiSummary?.year?.totalBookings || 0}</span>
+            <span style={{ fontSize: '11px', opacity: 0.8 }}>Cumulative OPD</span>
           </div>
-          <div style={{ marginTop: '6px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.2)', fontSize: '14px', fontWeight: 700, display: 'flex', justifyContent: 'space-between' }}>
+          <div style={{ marginTop: '6px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.2)', fontSize: '13px', fontWeight: 700, display: 'flex', justifyContent: 'space-between' }}>
             <span>Revenue:</span>
             <span>{formatCurrency(kpiSummary?.year?.totalRevenue || 0)}</span>
           </div>
@@ -468,7 +472,7 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
       </div>
 
       {/* C. Charts & Growth Section */}
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 'var(--space-md)' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--space-md)', width: '100%' }}>
         {/* Chart 1: Equalizer Growth Trend Chart */}
         <Card title="📊 Volume & Revenue Growth Trend (Equalizer Bar Chart)">
           <div style={{ marginBottom: '12px', fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
