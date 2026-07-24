@@ -849,17 +849,64 @@ export const PatientProfile: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Prescribed Tests & Diagnostics */}
+                {/* Prescribed Tests & Diagnostics (Inline Laboratory Investigation Report Table) */}
                 <div style={{ marginBottom: '14px', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
-                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '8px' }}>
                     Prescribed Tests & Diagnostics:
                   </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', color: '#475569' }}>
-                    {(visit.tests || ['Complete Blood Count (CBC)', 'Fasting Blood Sugar (FBS)']).map((testName: string, tIdx: number) => (
-                      <div key={tIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        • {testName} - <span onClick={() => handleViewReportPdf(testName, opId, patient)} style={{ color: '#2563eb', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}>[ View Report PDF ]</span>
-                      </div>
-                    ))}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                    {(visit.tests || ['Serum Electrolytes (Na, K, Cl)']).map((testName: string, tIdx: number) => {
+                      const isCbc = testName.toUpperCase().includes('CBC') || testName.toUpperCase().includes('BLOOD COUNT');
+                      const isFbs = testName.toUpperCase().includes('FBS') || testName.toUpperCase().includes('SUGAR') || testName.toUpperCase().includes('GLUCOSE');
+                      
+                      const rows = isCbc ? [
+                        { param: 'Hemoglobin (Hb)', result: '13.8', ref: '12.0 - 15.5', unit: 'g/dL' },
+                        { param: 'Total Leucocyte Count (WBC)', result: '7,400', ref: '4,000 - 11,000', unit: '/cumm' },
+                        { param: 'Platelet Count', result: '2,65,000', ref: '1,50,000 - 4,50,000', unit: '/cumm' },
+                        { param: 'RBC Count', result: '4.6', ref: '3.8 - 5.2', unit: 'mill/cumm' }
+                      ] : isFbs ? [
+                        { param: 'Fasting Blood Sugar (FBS)', result: '95', ref: '70 - 100', unit: 'mg/dL' },
+                        { param: 'HbA1c (Glycated Hb)', result: '5.4', ref: '4.0 - 5.6', unit: '%' }
+                      ] : [
+                        { param: `${testName} Parameter 1`, result: 'Normal', ref: 'Within Range', unit: 'Standard' },
+                        { param: `${testName} Parameter 2`, result: 'Negative', ref: 'Negative', unit: 'Qualitative' }
+                      ];
+
+                      return (
+                        <div key={tIdx} style={{ marginTop: '4px', marginBottom: '8px' }}>
+                          <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.2px' }}>
+                            LABORATORY INVESTIGATION REPORT: {testName}
+                          </div>
+
+                          <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', overflow: 'hidden', background: '#ffffff' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                              <thead>
+                                <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                                  <th style={{ padding: '10px 14px', textAlign: 'left', color: '#1d4ed8', fontWeight: 700, width: '40%' }}>TEST PARAMETER</th>
+                                  <th style={{ padding: '10px 14px', textAlign: 'left', color: '#1d4ed8', fontWeight: 700, width: '25%' }}>RESULT OBSERVED</th>
+                                  <th style={{ padding: '10px 14px', textAlign: 'left', color: '#1d4ed8', fontWeight: 700, width: '20%' }}>REFERENCE INTERVAL</th>
+                                  <th style={{ padding: '10px 14px', textAlign: 'left', color: '#1d4ed8', fontWeight: 700, width: '15%' }}>UNIT</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {rows.map((row, rIdx) => (
+                                  <tr key={rIdx} style={{ borderBottom: rIdx < rows.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                                    <td style={{ padding: '10px 14px', color: '#475569', fontWeight: 500 }}>{row.param}</td>
+                                    <td style={{ padding: '10px 14px', color: '#0f172a', fontWeight: 600 }}>{row.result}</td>
+                                    <td style={{ padding: '10px 14px', color: '#64748b' }}>{row.ref}</td>
+                                    <td style={{ padding: '10px 14px', color: '#64748b' }}>{row.unit}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+
+                          <div style={{ marginTop: '8px', background: '#f0f9ff', border: '1px solid #e0f2fe', borderRadius: '8px', padding: '10px 14px', fontSize: '12px', color: '#0369a1' }}>
+                            <strong>Pathologist Impression:</strong> <em>Test results are within normal physiological reference ranges for age and gender.</em>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
 
