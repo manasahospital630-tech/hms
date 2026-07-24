@@ -41,15 +41,6 @@ export const PatientProfile: React.FC = () => {
     fetchTimelineData();
   }, [patientId]);
 
-  if (loading) {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '500px', flexDirection: 'column', gap: '16px' }}>
-        <RefreshCw className="animate-spin" size={36} color="#3b82f6" />
-        <p style={{ color: '#64748b', fontWeight: 600 }}>Loading Patient Chart & Medical History...</p>
-      </div>
-    );
-  }
-
   const patient = data?.patient || {
     first_name: 'Arthur',
     last_name: 'Tailor',
@@ -88,80 +79,58 @@ export const PatientProfile: React.FC = () => {
   const isHrAbnormal = hr < 60 || hr > 100;
   const isSpo2Low = spo2 < 95;
 
-  // Dynamic Health Metrics Timeline Data Extractor
+  // Dynamic Chart Data Points from vitals history or default fallback series
   const chartPoints = useMemo(() => {
-    const historyList = (vHist && vHist.length > 0) ? vHist : (vitalsSeries && vitalsSeries.length > 0 ? vitalsSeries : []);
-
-    if (historyList.length === 0) {
-      return [
-        { dateStr: '2022', fullDate: 'Aug 2022', hr: 72, systolic: 115, diastolic: 75, glucose: 90, spo2: 98 },
-        { dateStr: '2023', fullDate: 'Jan 2023', hr: 76, systolic: 118, diastolic: 78, glucose: 95, spo2: 97 },
-        { dateStr: '2024', fullDate: 'May 2024', hr: 80, systolic: 120, diastolic: 80, glucose: 100, spo2: 96 },
-        { dateStr: '2025', fullDate: 'Feb 2025', hr: 85, systolic: 122, diastolic: 82, glucose: 105, spo2: 95 },
-        { dateStr: '2026', fullDate: 'Jul 2026', hr: hr || 140, systolic: latestVitals.bloodPressure?.systolic || 120, diastolic: latestVitals.bloodPressure?.diastolic || 80, glucose: latestVitals.glucoseLevel || 110, spo2: spo2 || 94 }
-      ];
-    }
-
-    const sorted = [...historyList].sort((a, b) => {
-      const dA = new Date(a.recordedAt || a.visitDate || a.encounter_timestamp || 0).getTime();
-      const dB = new Date(b.recordedAt || b.visitDate || b.encounter_timestamp || 0).getTime();
-      return dA - dB;
-    });
-
-    const pts: Array<{ dateStr: string; fullDate: string; hr: number; systolic: number; diastolic: number; glucose: number; spo2: number }> = [];
-
-    if (sorted.length === 1) {
-      pts.push({
-        dateStr: '2025',
-        fullDate: 'Baseline 2025',
-        hr: 75,
-        systolic: 118,
-        diastolic: 78,
-        glucose: 95,
-        spo2: 98
+    const vHist = data?.vitalsHistory || [];
+    const vSeries = data?.vitalsSeries || [];
+    if (vHist.length > 0) {
+      return vHist.map((v: any, idx: number) => {
+        const d = v.recordedAt || v.visitDate ? new Date(v.recordedAt || v.visitDate) : new Date();
+        const dateStr = `${d.getDate()}/${d.getMonth() + 1}`;
+        const fullDate = d.toLocaleDateString('en-GB');
+        const sys = v.bloodPressure?.systolic || v.systolicBp || 120;
+        const dia = v.bloodPressure?.diastolic || v.diastolicBp || 80;
+        const hrVal = v.heartRate || 140;
+        const glucVal = v.glucoseLevel || 110;
+        const spo2Val = v.oxygenSaturation || v.spo2 || 94;
+        return { sys, dia, hr: hrVal, glucose: glucVal, spo2: spo2Val, dateStr, fullDate };
       });
     }
-
-    sorted.forEach((item) => {
-      const d = new Date(item.recordedAt || item.visitDate || item.encounter_timestamp || Date.now());
-      const dateStr = `${d.getDate()}/${d.getMonth() + 1}`;
-      const fullDate = d.toLocaleDateString('en-GB');
-
-      const itemHr = Number(item.heartRate || item.pulse_rate || 75);
-      const itemSys = Number(item.bloodPressure?.systolic || item.systolicBp || item.systolic_bp || 120);
-      const itemDia = Number(item.bloodPressure?.diastolic || item.diastolicBp || item.diastolic_bp || 80);
-      const itemGluc = Number(item.glucoseLevel || 110);
-      const itemSpo2 = Number(item.oxygenSaturation || item.spo2 || 95);
-
-      pts.push({
-        dateStr,
-        fullDate,
-        hr: itemHr,
-        systolic: itemSys,
-        diastolic: itemDia,
-        glucose: itemGluc,
-        spo2: itemSpo2
+    if (vSeries.length > 0) {
+      return vSeries.map((v: any) => {
+        const d = v.encounter_timestamp ? new Date(v.encounter_timestamp) : new Date();
+        return {
+          sys: v.systolic_bp || 120,
+          dia: v.diastolic_bp || 80,
+          hr: v.pulse_rate || 140,
+          glucose: 110,
+          spo2: v.spo2 || 94,
+          dateStr: `${d.getDate()}/${d.getMonth() + 1}`,
+          fullDate: d.toLocaleDateString('en-GB')
+        };
       });
-    });
-
-    return pts;
-  }, [vHist, vitalsSeries, latestVitals, hr, spo2]);
+    }
+    return [
+      { sys: 120, dia: 80, hr: 78, glucose: 95, spo2: 98, dateStr: '24/07', fullDate: '24/07/2026' },
+      { sys: 125, dia: 82, hr: 84, glucose: 105, spo2: 96, dateStr: '25/07', fullDate: '25/07/2026' },
+      { sys: 120, dia: 80, hr: 140, glucose: 110, spo2: 94, dateStr: '26/07', fullDate: '26/07/2026' }
+    ];
+  }, [data]);
 
   const chartSvgData = useMemo(() => {
     const svgWidth = 700;
     const svgHeight = 140;
-    const paddingX = 50;
-    const paddingTop = 25;
-    const paddingBottom = 35;
+    const paddingX = 40;
+    const paddingBottom = 25;
+    const paddingTop = 20;
     const usableWidth = svgWidth - paddingX * 2;
     const usableHeight = svgHeight - paddingTop - paddingBottom;
+    const count = chartPoints.length;
+    const xStep = count > 1 ? usableWidth / (count - 1) : 0;
 
-    const n = chartPoints.length;
-    const xStep = n > 1 ? usableWidth / (n - 1) : usableWidth;
-
-    let minVal = 0;
-    let maxVal = 100;
-    let lineColor = '#10b981';
+    let lineColor = '#3b82f6';
+    let minVal = 50;
+    let maxVal = 180;
 
     if (metricTab === 'hr') {
       lineColor = '#ef4444';
@@ -181,10 +150,10 @@ export const PatientProfile: React.FC = () => {
       maxVal = 100;
     }
 
-    const primaryPoints = chartPoints.map((pt, i) => {
+    const primaryPoints = chartPoints.map((pt: any, i: number) => {
       const x = paddingX + i * xStep;
       let val = pt.hr;
-      if (metricTab === 'bp') val = pt.systolic;
+      if (metricTab === 'bp') val = pt.sys;
       else if (metricTab === 'glucose') val = pt.glucose;
       else if (metricTab === 'spo2') val = pt.spo2;
 
@@ -196,9 +165,9 @@ export const PatientProfile: React.FC = () => {
 
     let secondaryPoints: Array<{ x: number; y: number; val: number }> = [];
     if (metricTab === 'bp') {
-      secondaryPoints = chartPoints.map((pt, i) => {
+      secondaryPoints = chartPoints.map((pt: any, i: number) => {
         const x = paddingX + i * xStep;
-        const val = pt.diastolic;
+        const val = pt.dia;
         const clamped = Math.max(minVal, Math.min(maxVal, val));
         const ratio = (clamped - minVal) / (maxVal - minVal);
         const y = svgHeight - paddingBottom - ratio * usableHeight;
@@ -230,6 +199,15 @@ export const PatientProfile: React.FC = () => {
       secondaryPath: buildCurve(secondaryPoints)
     };
   }, [chartPoints, metricTab]);
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '500px', flexDirection: 'column', gap: '16px' }}>
+        <RefreshCw className="animate-spin" size={36} color="#3b82f6" />
+        <p style={{ color: '#64748b', fontWeight: 600 }}>Loading Patient Chart & Medical History...</p>
+      </div>
+    );
+  }
 
   return (
     <div style={{ maxWidth: '1280px', margin: '0 auto', paddingBottom: '60px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', background: '#f8fafc', minHeight: '100vh', padding: '24px' }}>
@@ -563,7 +541,7 @@ export const PatientProfile: React.FC = () => {
                 )}
 
                 {/* Primary Data Points & Labels */}
-                {chartSvgData.primaryPoints.map((pt, i) => (
+                {chartSvgData.primaryPoints.map((pt: any, i: number) => (
                   <g key={`p-${i}`}>
                     <circle cx={pt.x} cy={pt.y} r="5" fill={chartSvgData.lineColor} stroke="#ffffff" strokeWidth="2" />
                     <text x={pt.x} y={pt.y - 8} fontSize="11" fontWeight="800" fill={chartSvgData.lineColor} textAnchor="middle">
@@ -576,7 +554,7 @@ export const PatientProfile: React.FC = () => {
                 ))}
 
                 {/* Secondary Data Points (Diastolic BP) */}
-                {metricTab === 'bp' && chartSvgData.secondaryPoints.map((pt, i) => (
+                {metricTab === 'bp' && chartSvgData.secondaryPoints.map((pt: any, i: number) => (
                   <g key={`s-${i}`}>
                     <circle cx={pt.x} cy={pt.y} r="4" fill="#10b981" stroke="#ffffff" strokeWidth="2" />
                     <text x={pt.x} y={pt.y + 14} fontSize="10" fontWeight="700" fill="#10b981" textAnchor="middle">
