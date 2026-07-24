@@ -291,22 +291,28 @@ export const ServiceCatalog: React.FC = () => {
     if (printWindow) {
 
       const headerHtml = printMode === 'letterhead'
-        ? `<div style="height: 2.2in; display: flex; justify-content: flex-end; align-items: flex-start; width: 100%; box-sizing: border-box; padding-top: 10px; padding-right: 10px;">
-             ${qrCodeHeaderHtml}
-           </div>`
-        : `<div class="header-container" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-            <div class="logo-col">${logoHtml}</div>
-            <div class="hospital-details" style="flex: 1; padding-left: 20px;">
-              <h1 class="hospital-name" style="font-size: 24px; font-weight: 800; color: #0f172a; margin: 0 0 6px 0;">${hospitalName}</h1>
-              <p class="hospital-sub" style="font-size: 12px; color: #475569; margin: 2px 0;">${hospitalAddress}</p>
-              <p class="hospital-sub" style="font-size: 12px; color: #475569; margin: 2px 0;">Phone: ${phoneNumber} | Web: ${website} | Email: ${email}</p>
-              <p class="hospital-sub" style="font-size: 12px; color: #475569; margin: 2px 0;"><strong>GSTIN: ${gstin}</strong></p>
-            </div>
-            <div class="stamp-col" style="display: flex; align-items: center; justify-content: flex-end;">
-              ${qrCodeHeaderHtml}
-            </div>
-          </div>
-          <div class="divider-thick" style="border-bottom: 2.5px solid #0f172a; margin: 12px 0 20px 0;"></div>`;
+        ? `<table style="width: 100%; border-collapse: collapse; margin-bottom: 8px;">
+             <tr>
+               <td style="height: 2.0in; vertical-align: top; text-align: right; padding-top: 10px; padding-right: 10px;">
+                 ${qrCodeHeaderHtml}
+               </td>
+             </tr>
+           </table>`
+        : `<table style="width: 100%; border-collapse: collapse; margin-bottom: 8px;">
+             <tr>
+               <td style="width: 75px; vertical-align: middle; padding: 0;">${logoHtml}</td>
+               <td style="vertical-align: middle; padding-left: 15px; padding-right: 15px;">
+                 <h1 class="hospital-name" style="font-size: 22px; font-weight: 800; color: #0f172a; margin: 0 0 4px 0; line-height: 1.1;">${hospitalName}</h1>
+                 <p class="hospital-sub" style="font-size: 11px; color: #475569; margin: 1px 0;">${hospitalAddress}</p>
+                 <p class="hospital-sub" style="font-size: 11px; color: #475569; margin: 1px 0;">Phone: ${phoneNumber} | Web: ${website} | Email: ${email}</p>
+                 <p class="hospital-sub" style="font-size: 11px; color: #475569; margin: 1px 0;"><strong>GSTIN: ${gstin}</strong></p>
+               </td>
+               <td style="width: 85px; vertical-align: middle; text-align: right; padding: 0;">
+                 ${qrCodeHeaderHtml}
+               </td>
+             </tr>
+           </table>
+           <div class="divider-thick" style="border-bottom: 2.5px solid #0f172a; margin: 8px 0 14px 0;"></div>`;
 
       const getAgeStr = (birthDateStr?: string, ageVal?: any): string => {
         if (ageVal !== undefined && ageVal !== null && ageVal !== '' && ageVal !== 0) {

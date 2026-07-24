@@ -384,25 +384,29 @@ export const PublicReportView: React.FC = () => {
             <tr>
               <td style={{ padding: 0, border: 'none' }}>
                 {/* Hospital details */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <div className="logo-col">
-                    <ManasaLogoSvg size={70} />
-                  </div>
-                  <div style={{ flex: 1, paddingLeft: '20px' }}>
-                    <h1 style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a', margin: '0 0 6px 0' }}>{hospitalName}</h1>
-                    <p style={{ fontSize: '12px', color: '#475569', margin: '2px 0' }}>{hospitalAddress}</p>
-                    <p style={{ fontSize: '12px', color: '#475569', margin: '2px 0' }}>Phone: {phoneNumber} | Web: {website} | Email: {email}</p>
-                    <p style={{ fontSize: '12px', color: '#475569', margin: '2px 0' }}><strong>GSTIN: {gstin}</strong></p>
-                  </div>
-                  <div className="stamp-col" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '80px', height: '80px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '4px', background: '#fff', textAlign: 'center', boxSizing: 'border-box' }}>
-                      <div dangerouslySetInnerHTML={{ __html: getQrSvgSync(window.location.href, 58) }} />
-                      <span style={{ fontSize: '6px', fontWeight: 'bold', color: '#64748b', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.2px' }}>VERIFY REPORT</span>
-                    </div>
-                  </div>
-                </div>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '8px' }}>
+                  <tbody>
+                    <tr>
+                      <td style={{ width: '75px', verticalAlign: 'middle', padding: 0 }}>
+                        <ManasaLogoSvg size={70} />
+                      </td>
+                      <td style={{ verticalAlign: 'middle', paddingLeft: '15px', paddingRight: '15px' }}>
+                        <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0', lineHeight: 1.1 }}>{hospitalName}</h1>
+                        <p style={{ fontSize: '11px', color: '#475569', margin: '1px 0' }}>{hospitalAddress}</p>
+                        <p style={{ fontSize: '11px', color: '#475569', margin: '1px 0' }}>Phone: {phoneNumber} | Web: {website} | Email: {email}</p>
+                        <p style={{ fontSize: '11px', color: '#475569', margin: '1px 0' }}><strong>GSTIN: {gstin}</strong></p>
+                      </td>
+                      <td style={{ width: '85px', verticalAlign: 'middle', textTransform: 'uppercase', padding: 0 }}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', width: '80px', height: '80px', border: '1px solid #cbd5e1', borderRadius: '8px', padding: '4px', background: '#fff', textAlign: 'center', boxSizing: 'border-box' }}>
+                          <div dangerouslySetInnerHTML={{ __html: getQrSvgSync(window.location.href, 58) }} />
+                          <span style={{ fontSize: '6px', fontWeight: 'bold', color: '#64748b', marginTop: '2px', textTransform: 'uppercase', letterSpacing: '0.2px' }}>VERIFY REPORT</span>
+                        </div>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
 
-                <div style={{ borderBottom: '2.5px solid #0f172a', margin: '12px 0 20px 0' }} />
+                <div style={{ borderBottom: '2.5px solid #0f172a', margin: '8px 0 14px 0' }} />
 
                 {/* Metadata Patient Card Table */}
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px', fontSize: '12px', borderBottom: '2.5px solid #0f172a', paddingBottom: '12px' }}>
