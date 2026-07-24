@@ -635,7 +635,7 @@ const OPCheckIn: React.FC = () => {
   const chargedFee = reviewStatus?.isFreeReview ? 0.00 : (selectedDoctor ? selectedDoctor.consultationFee : 0.00);
 
   return (
-    <div>
+    <div className="w-full max-w-[1600px] mx-auto overflow-x-hidden">
       <div className="page-header">
         <h1>
           <UserCheck size={28} style={{ verticalAlign: 'middle', marginRight: 8, color: 'var(--accent-primary)' }} />

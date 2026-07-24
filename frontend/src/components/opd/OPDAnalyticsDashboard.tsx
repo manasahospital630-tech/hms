@@ -275,13 +275,13 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
   }, [growthData]);
 
   return (
-    <div style={{ display: 'grid', gap: 'var(--space-lg)' }}>
-      {/* A. Global Filter Bar */}
+    <div className="w-full max-w-[1600px] mx-auto overflow-x-hidden p-3 sm:p-4 md:p-6 space-y-4 md:space-y-6">
+      {/* A. Global Filter Bar (Adaptive Layout) */}
       <Card>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-md)', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-md)', flex: 1, minWidth: 300 }}>
+        <div className="flex flex-wrap gap-4 items-end justify-between w-full">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 md:gap-4 flex-1 w-full">
             {/* Doctor Mapping Selector */}
-            <div style={{ flex: 1, minWidth: 220 }}>
+            <div>
               <Select
                 label="👨‍⚕️ Doctor Mapping Selector"
                 value={selectedDoctorId}
@@ -297,7 +297,7 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
             </div>
 
             {/* Date Range Selector */}
-            <div style={{ flex: 1, minWidth: 170 }}>
+            <div>
               <Select
                 label="📅 Date Range Filter"
                 value={selectedDateRange}
@@ -314,30 +314,8 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
               />
             </div>
 
-            {/* Custom Date Pickers */}
-            {selectedDateRange === 'Custom' && (
-              <>
-                <div style={{ width: 140 }}>
-                  <Input
-                    type="date"
-                    label="From Date"
-                    value={customStartDate}
-                    onChange={e => setCustomStartDate(e.target.value)}
-                  />
-                </div>
-                <div style={{ width: 140 }}>
-                  <Input
-                    type="date"
-                    label="To Date"
-                    value={customEndDate}
-                    onChange={e => setCustomEndDate(e.target.value)}
-                  />
-                </div>
-              </>
-            )}
-
             {/* Payment Method Filter */}
-            <div style={{ flex: 1, minWidth: 160 }}>
+            <div className="sm:col-span-2 lg:col-span-1">
               <Select
                 label="💳 Payment / Check-In Method"
                 value={selectedPaymentMethod}
@@ -352,9 +330,27 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
                 ]}
               />
             </div>
+
+            {/* Custom Date Pickers */}
+            {selectedDateRange === 'Custom' && (
+              <div className="sm:col-span-2 lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Input
+                  type="date"
+                  label="From Date"
+                  value={customStartDate}
+                  onChange={e => setCustomStartDate(e.target.value)}
+                />
+                <Input
+                  type="date"
+                  label="To Date"
+                  value={customEndDate}
+                  onChange={e => setCustomEndDate(e.target.value)}
+                />
+              </div>
+            )}
           </div>
 
-          <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+          <div className="flex gap-2 items-center">
             <Button
               variant="secondary"
               size="sm"
@@ -368,116 +364,79 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
         </div>
       </Card>
 
-      {/* B. Dynamic Metric KPI Cards - 2x2 Grid Layout */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 'var(--space-md)', width: '100%' }}>
+      {/* B. RESPONSIVE KPI SUMMARY CARDS GRID */}
+      {/* Mobile: 1 col | Tablet: 2 cols | Desktop: 4 cols */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 w-full">
         {/* Today Card */}
-        <div style={{ 
-          background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)', 
-          color: 'white', 
-          padding: '18px 20px', 
-          borderRadius: '12px',
-          boxShadow: '0 4px 15px rgba(37,99,235,0.25)',
-          position: 'relative',
-          overflow: 'hidden',
-          minWidth: 0,
-          boxSizing: 'border-box'
-        }}>
-          <div style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.95, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>📅 Today's OPD</span>
-            <Users size={18} />
+        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-4 md:p-5 rounded-xl shadow-sm flex flex-col justify-between min-h-[120px] min-w-0">
+          <div className="flex justify-between items-start">
+            <span className="text-xs font-bold uppercase tracking-wider opacity-90">Today's OPD</span>
+            <Users className="w-5 h-5 opacity-90" />
           </div>
-          <div style={{ marginTop: '12px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            <span style={{ fontSize: '28px', fontWeight: 800 }}>{kpiSummary?.today?.totalBookings || 0}</span>
-            <span style={{ fontSize: '12px', opacity: 0.85 }}>Patient Check-ins</span>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-2xl sm:text-3xl font-extrabold">{kpiSummary?.today?.totalBookings || 0}</span>
+            <span className="text-xs opacity-80">Check-ins</span>
           </div>
-          <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.2)', fontSize: '14px', fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="mt-3 pt-2 border-t border-blue-400/30 flex justify-between items-center text-xs font-semibold">
             <span>Revenue:</span>
-            <span style={{ fontSize: '16px' }}>{formatCurrency(kpiSummary?.today?.totalRevenue || 0)}</span>
+            <span className="text-sm font-bold">{formatCurrency(kpiSummary?.today?.totalRevenue || 0)}</span>
           </div>
         </div>
 
         {/* This Week Card */}
-        <div style={{ 
-          background: 'linear-gradient(135deg, #065f46 0%, #10b981 100%)', 
-          color: 'white', 
-          padding: '18px 20px', 
-          borderRadius: '12px',
-          boxShadow: '0 4px 15px rgba(16,185,129,0.25)',
-          position: 'relative',
-          overflow: 'hidden',
-          minWidth: 0,
-          boxSizing: 'border-box'
-        }}>
-          <div style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.95, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>📅 This Week's OPD</span>
-            <Activity size={18} />
+        <div className="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white p-4 md:p-5 rounded-xl shadow-sm flex flex-col justify-between min-h-[120px] min-w-0">
+          <div className="flex justify-between items-start">
+            <span className="text-xs font-bold uppercase tracking-wider opacity-90">This Week's OPD</span>
+            <Activity className="w-5 h-5 opacity-90" />
           </div>
-          <div style={{ marginTop: '12px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            <span style={{ fontSize: '28px', fontWeight: 800 }}>{kpiSummary?.week?.totalBookings || 0}</span>
-            <span style={{ fontSize: '12px', opacity: 0.85 }}>Patient Check-ins</span>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-2xl sm:text-3xl font-extrabold">{kpiSummary?.week?.totalBookings || 0}</span>
+            <span className="text-xs opacity-80">Check-ins</span>
           </div>
-          <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.2)', fontSize: '14px', fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="mt-3 pt-2 border-t border-emerald-400/30 flex justify-between items-center text-xs font-semibold">
             <span>Revenue:</span>
-            <span style={{ fontSize: '16px' }}>{formatCurrency(kpiSummary?.week?.totalRevenue || 0)}</span>
+            <span className="text-sm font-bold">{formatCurrency(kpiSummary?.week?.totalRevenue || 0)}</span>
           </div>
         </div>
 
         {/* This Month Card */}
-        <div style={{ 
-          background: 'linear-gradient(135deg, #6b21a8 0%, #9333ea 100%)', 
-          color: 'white', 
-          padding: '18px 20px', 
-          borderRadius: '12px',
-          boxShadow: '0 4px 15px rgba(147,51,234,0.25)',
-          position: 'relative',
-          overflow: 'hidden',
-          minWidth: 0,
-          boxSizing: 'border-box'
-        }}>
-          <div style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.95, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>🗓️ This Month's OPD</span>
-            <Calendar size={18} />
+        <div className="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-4 md:p-5 rounded-xl shadow-sm flex flex-col justify-between min-h-[120px] min-w-0">
+          <div className="flex justify-between items-start">
+            <span className="text-xs font-bold uppercase tracking-wider opacity-90">This Month's OPD</span>
+            <Calendar className="w-5 h-5 opacity-90" />
           </div>
-          <div style={{ marginTop: '12px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            <span style={{ fontSize: '28px', fontWeight: 800 }}>{kpiSummary?.month?.totalBookings || 0}</span>
-            <span style={{ fontSize: '12px', opacity: 0.85 }}>Patient Check-ins</span>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-2xl sm:text-3xl font-extrabold">{kpiSummary?.month?.totalBookings || 0}</span>
+            <span className="text-xs opacity-80">Check-ins</span>
           </div>
-          <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.2)', fontSize: '14px', fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="mt-3 pt-2 border-t border-purple-400/30 flex justify-between items-center text-xs font-semibold">
             <span>Revenue:</span>
-            <span style={{ fontSize: '16px' }}>{formatCurrency(kpiSummary?.month?.totalRevenue || 0)}</span>
+            <span className="text-sm font-bold">{formatCurrency(kpiSummary?.month?.totalRevenue || 0)}</span>
           </div>
         </div>
 
         {/* This Year Card */}
-        <div style={{ 
-          background: 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)', 
-          color: 'white', 
-          padding: '18px 20px', 
-          borderRadius: '12px',
-          boxShadow: '0 4px 15px rgba(220,38,38,0.25)',
-          position: 'relative',
-          overflow: 'hidden',
-          minWidth: 0,
-          boxSizing: 'border-box'
-        }}>
-          <div style={{ fontSize: '13px', textTransform: 'uppercase', letterSpacing: '0.5px', opacity: 0.95, fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>📊 This Year's OPD</span>
-            <BarChart2 size={18} />
+        <div className="bg-gradient-to-r from-red-600 to-red-700 text-white p-4 md:p-5 rounded-xl shadow-sm flex flex-col justify-between min-h-[120px] min-w-0">
+          <div className="flex justify-between items-start">
+            <span className="text-xs font-bold uppercase tracking-wider opacity-90">This Year's OPD</span>
+            <BarChart2 className="w-5 h-5 opacity-90" />
           </div>
-          <div style={{ marginTop: '12px', display: 'flex', alignItems: 'baseline', gap: '8px' }}>
-            <span style={{ fontSize: '28px', fontWeight: 800 }}>{kpiSummary?.year?.totalBookings || 0}</span>
-            <span style={{ fontSize: '12px', opacity: 0.85 }}>Cumulative OPD</span>
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-2xl sm:text-3xl font-extrabold">{kpiSummary?.year?.totalBookings || 0}</span>
+            <span className="text-xs opacity-80">Cumulative</span>
           </div>
-          <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px solid rgba(255,255,255,0.2)', fontSize: '14px', fontWeight: 700, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="mt-3 pt-2 border-t border-red-400/30 flex justify-between items-center text-xs font-semibold">
             <span>Revenue:</span>
-            <span style={{ fontSize: '16px' }}>{formatCurrency(kpiSummary?.year?.totalRevenue || 0)}</span>
+            <span className="text-sm font-bold">{formatCurrency(kpiSummary?.year?.totalRevenue || 0)}</span>
           </div>
         </div>
       </div>
 
-      {/* C. Charts & Growth Section */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--space-md)', width: '100%' }}>
-        {/* Chart 1: Equalizer Growth Trend Chart */}
+      {/* C. RESPONSIVE CHARTS SECTION */}
+      {/* Mobile/Tablet: Stacked (1 col) | Desktop: 3-column split (2:1 ratio) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 w-full">
+        {/* Chart 1: Equalizer Growth Trend Chart (66% width on desktop) */}
+        <div className="lg:col-span-2">
         <Card title="📊 Volume & Revenue Growth Trend (Equalizer Bar Chart)">
           <div style={{ marginBottom: '12px', fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span>Granularity: <strong>{selectedDateRange} Breakdown</strong></span>
@@ -544,6 +503,7 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
             </div>
           )}
         </Card>
+      </div>
 
         {/* Chart 2: Comparative Performance Stack */}
         <Card title="📈 Comparative Growth Stack">
