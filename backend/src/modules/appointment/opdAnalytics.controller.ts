@@ -334,8 +334,8 @@ export const getFilteredOpdRecords = async (req: Request, res: Response) => {
     const countSql = `
       SELECT COUNT(*) as total
       FROM appointments a
-      JOIN patients p ON a.patient_id = p.patient_id
-      JOIN users u ON a.doctor_id = u.user_id
+      LEFT JOIN patients p ON a.patient_id = p.patient_id
+      LEFT JOIN users u ON a.doctor_id = u.user_id
       LEFT JOIN invoices i ON i.patient_id = a.patient_id AND DATE(i.created_at) = DATE(a.appointment_date)
       ${whereClause}
     `;
@@ -345,23 +345,23 @@ export const getFilteredOpdRecords = async (req: Request, res: Response) => {
     const dataParams = [...params, limitNum, offsetNum];
     const dataSql = `
       SELECT a.*,
-             p.first_name || ' ' || p.last_name as patient_name,
-             p.medical_record_number,
+             COALESCE(p.first_name || ' ' || p.last_name, 'Unknown Patient') as patient_name,
+             COALESCE(p.medical_record_number, '—') as medical_record_number,
              p.phone as patient_phone,
              p.date_of_birth,
              p.gender,
              p.age,
-             u.first_name || ' ' || u.last_name as doctor_name,
-             dp.department as doctor_department,
+             COALESCE(u.first_name || ' ' || u.last_name, 'Doctor') as doctor_name,
+             COALESCE(dp.department, 'General') as doctor_department,
              COALESCE(dp.consultation_fee, 500.00) as doctor_fee,
              CASE WHEN a.notes ILIKE '%Free%' THEN 0.00 ELSE COALESCE(dp.consultation_fee, 500.00) END as amount,
              COALESCE(i.payment_method, CASE WHEN a.notes ILIKE '%Free%' THEN 'Free Review' ELSE 'Cash' END) as payment_method,
-             COALESCE(a.bill_no, i.invoice_id) as bill_no,
+             COALESCE(CAST(a.bill_no AS TEXT), CAST(i.invoice_id AS TEXT)) as bill_no,
              COALESCE(a.op_booked_by, 'Reception Desk') as op_booked_by,
              COALESCE(a.op_check_in_by, 'Reception Desk') as op_check_in_by
       FROM appointments a
-      JOIN patients p ON a.patient_id = p.patient_id
-      JOIN users u ON a.doctor_id = u.user_id
+      LEFT JOIN patients p ON a.patient_id = p.patient_id
+      LEFT JOIN users u ON a.doctor_id = u.user_id
       LEFT JOIN doctor_profiles dp ON a.doctor_id = dp.doctor_id
       LEFT JOIN invoices i ON i.patient_id = a.patient_id AND DATE(i.created_at) = DATE(a.appointment_date)
       ${whereClause}
