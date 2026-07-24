@@ -405,6 +405,8 @@ export const getPatientFullTimeline = async (patientId: string) => {
     activeMedications,
     labOrders,
     vitalsSeries,
+    vitalsHistory: patient.vitals_history || [],
+    currentVitals: patient.current_vitals || {},
     upcomingAppointments
   };
 };

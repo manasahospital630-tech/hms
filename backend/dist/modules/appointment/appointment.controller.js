@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkReviewStatus = exports.createOPCheckIn = exports.updateStatus = exports.getById = exports.getAll = exports.create = void 0;
+exports.recordTriageVitals = exports.checkReviewStatus = exports.createOPCheckIn = exports.updateStatus = exports.getById = exports.getAll = exports.create = void 0;
 const responseHelper_1 = require("../../utils/responseHelper");
 const appointmentService = __importStar(require("./appointment.service"));
 const create = async (req, res, next) => {
@@ -107,4 +107,18 @@ const checkReviewStatus = async (req, res, next) => {
     }
 };
 exports.checkReviewStatus = checkReviewStatus;
+const recordTriageVitals = async (req, res, next) => {
+    try {
+        const appointmentId = req.params.id || req.body.appointmentId || req.body.bookingId;
+        const result = await appointmentService.recordTriageVitals({
+            ...req.body,
+            appointmentId
+        });
+        (0, responseHelper_1.successResponse)(res, result, 'Vitals recorded successfully and synced to Patient Timeline.', 200);
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.recordTriageVitals = recordTriageVitals;
 //# sourceMappingURL=appointment.controller.js.map

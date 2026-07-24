@@ -26,6 +26,8 @@ export declare const getPatientFullTimeline: (patientId: string) => Promise<{
     activeMedications: any[];
     labOrders: any[];
     vitalsSeries: any[];
+    vitalsHistory: any;
+    currentVitals: any;
     upcomingAppointments: any[];
 }>;
 //# sourceMappingURL=patient.service.d.ts.map

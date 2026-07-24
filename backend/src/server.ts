@@ -62,6 +62,8 @@ import opdAnalyticsRoutes from './modules/appointment/opdAnalytics.routes';
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/appointments', appointmentRoutes);
+app.use('/api/v1/queue', appointmentRoutes);
+app.use('/api/queue', appointmentRoutes);
 app.use('/api/v1/opd/dashboard', opdAnalyticsRoutes);
 app.use('/api/opd/dashboard', opdAnalyticsRoutes);
 app.use('/api/emr', emrRoutes);

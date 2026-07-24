@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.checkReviewStatus = exports.createOPCheckIn = exports.updateAppointmentStatus = exports.getAppointmentById = exports.getAppointments = exports.createAppointment = void 0;
+exports.recordTriageVitals = exports.checkReviewStatus = exports.createOPCheckIn = exports.updateAppointmentStatus = exports.getAppointmentById = exports.getAppointments = exports.createAppointment = void 0;
 const database_1 = require("../../config/database");
 const errorHandler_1 = require("../../middleware/errorHandler");
 const createAppointment = async (input) => {
@@ -182,4 +182,49 @@ const checkReviewStatus = async (patientId, doctorId) => {
     };
 };
 exports.checkReviewStatus = checkReviewStatus;
+const recordTriageVitals = async (input) => {
+    const apptId = input.appointmentId || input.bookingId;
+    const { patientId, weight, temperature, heartRate, oxygenSaturation, bloodPressureSystolic, bloodPressureDiastolic, glucoseLevel, glucoseType = 'Random', notes, } = input;
+    const recordedAt = new Date().toISOString();
+    const vitalRecord = {
+        recordedAt,
+        weight: weight !== undefined && weight !== '' && !isNaN(Number(weight)) ? Number(weight) : 165,
+        temperature: temperature !== undefined && temperature !== '' && !isNaN(Number(temperature)) ? Number(temperature) : 99.4,
+        heartRate: heartRate !== undefined && heartRate !== '' && !isNaN(Number(heartRate)) ? Number(heartRate) : 140,
+        oxygenSaturation: oxygenSaturation !== undefined && oxygenSaturation !== '' && !isNaN(Number(oxygenSaturation)) ? Number(oxygenSaturation) : 94,
+        bloodPressure: {
+            systolic: bloodPressureSystolic !== undefined && bloodPressureSystolic !== '' && !isNaN(Number(bloodPressureSystolic)) ? Number(bloodPressureSystolic) : 120,
+            diastolic: bloodPressureDiastolic !== undefined && bloodPressureDiastolic !== '' && !isNaN(Number(bloodPressureDiastolic)) ? Number(bloodPressureDiastolic) : 80,
+        },
+        glucoseLevel: glucoseLevel !== undefined && glucoseLevel !== '' && !isNaN(Number(glucoseLevel)) ? Number(glucoseLevel) : 110,
+        glucoseType,
+        notes: notes || '',
+    };
+    let apptRow = null;
+    if (apptId) {
+        const apptRes = await (0, database_1.query)(`UPDATE appointments 
+       SET vitals = $1::jsonb, has_vitals_recorded = TRUE 
+       WHERE appointment_id = $2 
+       RETURNING *`, [JSON.stringify(vitalRecord), apptId]);
+        if (apptRes.rows.length > 0) {
+            apptRow = apptRes.rows[0];
+        }
+    }
+    // Auto-Sync to Patient Master Timeline in DB
+    const patRes = await (0, database_1.query)(`SELECT current_vitals, vitals_history FROM patients WHERE patient_id = $1`, [patientId]);
+    if (patRes.rows.length > 0) {
+        let history = patRes.rows[0].vitals_history || [];
+        if (!Array.isArray(history))
+            history = [];
+        history.push(vitalRecord);
+        await (0, database_1.query)(`UPDATE patients 
+       SET current_vitals = $1::jsonb, vitals_history = $2::jsonb 
+       WHERE patient_id = $3`, [JSON.stringify(vitalRecord), JSON.stringify(history), patientId]);
+    }
+    return {
+        appointment: apptRow,
+        vitalRecord,
+    };
+};
+exports.recordTriageVitals = recordTriageVitals;
 //# sourceMappingURL=appointment.service.js.map

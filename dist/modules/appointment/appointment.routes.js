@@ -45,7 +45,10 @@ router.post('/', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(
 router.get('/', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Receptionist', 'Doctor', 'Nurse', 'Admin']), ctrl.getAll);
 router.get('/check-review', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Receptionist', 'Admin', 'Biller']), ctrl.checkReviewStatus);
 router.post('/op-checkin', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Receptionist', 'Admin', 'Biller']), (0, validator_1.validate)(appointment_schema_1.createOPCheckInSchema), (0, auditLogger_1.auditLogger)('CREATE', 'OPCheckIn'), ctrl.createOPCheckIn);
+router.post('/record-vitals', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Receptionist', 'Doctor', 'Nurse', 'Admin']), ctrl.recordTriageVitals);
+router.post('/:id/vitals', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Receptionist', 'Doctor', 'Nurse', 'Admin']), ctrl.recordTriageVitals);
 router.get('/:id', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Receptionist', 'Doctor', 'Nurse', 'Admin']), ctrl.getById);
 router.patch('/:id/status', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Receptionist', 'Doctor', 'Nurse', 'Admin']), (0, validator_1.validate)(appointment_schema_1.updateAppointmentStatusSchema), (0, auditLogger_1.auditLogger)('STATUS_UPDATE', 'Appointment'), ctrl.updateStatus);
+router.put('/update-status', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Receptionist', 'Doctor', 'Nurse', 'Admin']), ctrl.updateStatus);
 exports.default = router;
 //# sourceMappingURL=appointment.routes.js.map

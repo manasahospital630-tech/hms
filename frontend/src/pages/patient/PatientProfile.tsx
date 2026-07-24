@@ -72,12 +72,16 @@ export const PatientProfile: React.FC = () => {
     ? patient.allergies.split(',').map((a: string) => a.trim()).filter(Boolean) 
     : ['Nuts', 'Eggs', 'Lactose'];
 
-  const latestVitals = vitalsSeries.length > 0 ? vitalsSeries[vitalsSeries.length - 1] : {};
+  const currentV = data?.currentVitals || {};
+  const vHist = data?.vitalsHistory || [];
+  const latestVitals = vHist.length > 0 
+    ? vHist[vHist.length - 1] 
+    : (vitalsSeries.length > 0 ? vitalsSeries[vitalsSeries.length - 1] : currentV);
 
-  const weight = latestVitals.weight_kg ? `${latestVitals.weight_kg} lbs` : '165 lbs';
-  const temp = latestVitals.temperature_celsius ? `${(latestVitals.temperature_celsius * 1.8 + 32).toFixed(1)}°F` : '99.4°F';
-  const hr = latestVitals.pulse_rate || 140;
-  const spo2 = latestVitals.spo2 || 94;
+  const weight = latestVitals.weight ? `${latestVitals.weight} lbs` : (latestVitals.weight_kg ? `${latestVitals.weight_kg} lbs` : '165 lbs');
+  const temp = latestVitals.temperature ? `${latestVitals.temperature}°F` : (latestVitals.temperature_celsius ? `${(latestVitals.temperature_celsius * 1.8 + 32).toFixed(1)}°F` : '99.4°F');
+  const hr = latestVitals.heartRate || latestVitals.pulse_rate || 140;
+  const spo2 = latestVitals.oxygenSaturation || latestVitals.spo2 || 94;
 
   return (
     <div style={{ maxWidth: '1280px', margin: '0 auto', paddingBottom: '60px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', background: '#f8fafc', minHeight: '100vh', padding: '24px' }}>

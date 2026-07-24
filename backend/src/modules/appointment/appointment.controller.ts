@@ -56,4 +56,15 @@ export const checkReviewStatus = async (req: ProtectedRequest, res: Response, ne
   } catch (error) { next(error); }
 };
 
+export const recordTriageVitals = async (req: ProtectedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const appointmentId = req.params.id || req.body.appointmentId || req.body.bookingId;
+    const result = await appointmentService.recordTriageVitals({
+      ...req.body,
+      appointmentId
+    });
+    successResponse(res, result, 'Vitals recorded successfully and synced to Patient Timeline.', 200);
+  } catch (error) { next(error); }
+};
+
 

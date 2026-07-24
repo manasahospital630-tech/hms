@@ -12,7 +12,10 @@ router.post('/', authenticateJWT, enforceRBAC(['Receptionist', 'Admin', 'Patient
 router.get('/', authenticateJWT, enforceRBAC(['Receptionist', 'Doctor', 'Nurse', 'Admin']), ctrl.getAll);
 router.get('/check-review', authenticateJWT, enforceRBAC(['Receptionist', 'Admin', 'Biller']), ctrl.checkReviewStatus);
 router.post('/op-checkin', authenticateJWT, enforceRBAC(['Receptionist', 'Admin', 'Biller']), validate(createOPCheckInSchema), auditLogger('CREATE', 'OPCheckIn'), ctrl.createOPCheckIn);
+router.post('/record-vitals', authenticateJWT, enforceRBAC(['Receptionist', 'Doctor', 'Nurse', 'Admin']), ctrl.recordTriageVitals);
+router.post('/:id/vitals', authenticateJWT, enforceRBAC(['Receptionist', 'Doctor', 'Nurse', 'Admin']), ctrl.recordTriageVitals);
 router.get('/:id', authenticateJWT, enforceRBAC(['Receptionist', 'Doctor', 'Nurse', 'Admin']), ctrl.getById);
 router.patch('/:id/status', authenticateJWT, enforceRBAC(['Receptionist', 'Doctor', 'Nurse', 'Admin']), validate(updateAppointmentStatusSchema), auditLogger('STATUS_UPDATE', 'Appointment'), ctrl.updateStatus);
+router.put('/update-status', authenticateJWT, enforceRBAC(['Receptionist', 'Doctor', 'Nurse', 'Admin']), ctrl.updateStatus);
 
 export default router;

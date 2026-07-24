@@ -31,4 +31,34 @@ export declare const checkReviewStatus: (patientId: string, doctorId: string) =>
     isFreeReview: boolean;
     lastAppointmentDate: any;
 }>;
+export declare const recordTriageVitals: (input: {
+    appointmentId?: string;
+    bookingId?: string;
+    patientId: string;
+    weight?: number | string;
+    temperature?: number | string;
+    heartRate?: number | string;
+    oxygenSaturation?: number | string;
+    bloodPressureSystolic?: number | string;
+    bloodPressureDiastolic?: number | string;
+    glucoseLevel?: number | string;
+    glucoseType?: string;
+    notes?: string;
+}) => Promise<{
+    appointment: any;
+    vitalRecord: {
+        recordedAt: string;
+        weight: number;
+        temperature: number;
+        heartRate: number;
+        oxygenSaturation: number;
+        bloodPressure: {
+            systolic: number;
+            diastolic: number;
+        };
+        glucoseLevel: number;
+        glucoseType: string;
+        notes: string;
+    };
+}>;
 //# sourceMappingURL=appointment.service.d.ts.map
