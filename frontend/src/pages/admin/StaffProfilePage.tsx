@@ -148,18 +148,22 @@ export const StaffProfilePage: React.FC = () => {
             <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 2px 0', color: '#0f172a' }}>
               {isDoctor ? `Dr. ${staffUser.first_name} ${staffUser.last_name}` : `${staffUser.first_name} ${staffUser.last_name}`}
             </h2>
+
             <div style={{ fontSize: '12px', fontWeight: 600, color: '#64748b', marginBottom: '8px' }}>
-              MBBS, MS ({staffUser.department || 'General Medicine'})
+              {isDoctor 
+                ? `MBBS, MS (${staffUser.employee_specialization || staffUser.department || 'General Practice'})` 
+                : `${staffUser.role} (${staffUser.department || staffUser.employee_department || 'Hospital Operations'})`
+              }
             </div>
 
-            <div style={{ fontSize: '11px', color: '#94a3b8', background: '#f8fafc', padding: '6px 10px', borderRadius: '8px', marginBottom: '8px' }}>
-              ID: {staffUser.license_number || `HMS-DOC-${userId?.substring(0, 4)}`}
+            <div style={{ fontSize: '11px', color: '#94a3b8', background: '#f8fafc', padding: '6px 10px', borderRadius: '8px', marginBottom: '8px', fontWeight: 600 }}>
+              ID: {staffUser.license_number || (isDoctor ? `HMS-DOC-${userId?.substring(0, 4)}` : `HMS-STAFF-${userId?.substring(0, 4)}`)}
             </div>
 
             <div style={{ fontSize: '11px', color: '#475569', lineHeight: 1.5 }}>
-              <strong>Department:</strong> {staffUser.department || 'Orthopedics'}
+              <strong>Department:</strong> {staffUser.department || staffUser.employee_department || 'General Staff'}
               <br />
-              <strong>Specialization:</strong> {staffUser.employee_specialization || 'Joint Replacement & Arthroscopy'}
+              <strong>Specialization:</strong> {staffUser.employee_specialization || (isDoctor ? 'General Practice' : `${staffUser.role} Operations`)}
             </div>
 
             <div style={{ marginTop: '12px' }}>

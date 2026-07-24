@@ -169,7 +169,7 @@ export const getStaffProfile = async (userId: string) => {
   const userRes = await query(
     `SELECT u.user_id, u.email, u.first_name, u.last_name, u.phone, u.role, u.is_active, 
             u.employee_department, u.employee_specialization, u.license_number,
-            COALESCE(dp.department, u.employee_department, 'General Medicine') as department,
+            COALESCE(NULLIF(u.employee_department, ''), NULLIF(dp.department, ''), 'General Medicine') as department,
             COALESCE(dp.consultation_fee, 200.00) as consultation_fee,
             u.created_at, u.updated_at
      FROM users u
