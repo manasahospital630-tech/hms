@@ -189,53 +189,15 @@ const givePortalAccess = async (patientId) => {
 };
 exports.givePortalAccess = givePortalAccess;
 const getPatientFullTimeline = async (patientId) => {
-    // 1. Core Patient Specs (Search by patient_id OR medical_record_number)
-    let patientRes = await (0, database_1.query)(`SELECT p.*, d.first_name as doctor_first_name, d.last_name as doctor_last_name
+    // 1. Core Patient Specs
+    const patientRes = await (0, database_1.query)(`SELECT p.*, d.first_name as doctor_first_name, d.last_name as doctor_last_name
      FROM patients p
      LEFT JOIN users d ON p.assigned_doctor_id = d.user_id
-     WHERE p.patient_id = $1 OR p.medical_record_number = $1`, [patientId]);
-    let patient = patientRes.rows[0];
-    if (!patient) {
-        // If not found in DB, return fault-tolerant baseline patient record
-        patient = {
-            patient_id: patientId,
-            first_name: 'G',
-            last_name: 'Mamatha',
-            gender: 'Female',
-            date_of_birth: '1990-01-01',
-            medical_record_number: 'PL12234213',
-            doctor_first_name: 'Alex',
-            doctor_last_name: 'Nguyen',
-            insurance_provider: 'Aetna Gold Plan',
-            insurance_policy_number: 'PL12234213',
-            allergies: 'Nuts, Eggs, Lactose',
-            current_vitals: {
-                weight: 165,
-                temperature: 99.4,
-                bloodPressure: { systolic: 120, diastolic: 80 },
-                heartRate: 140,
-                oxygenSaturation: 94,
-                glucoseLevel: 110,
-                glucoseType: 'Random'
-            },
-            vitals_history: [
-                {
-                    recordedAt: '2026-07-24T03:32:00Z',
-                    opBookingId: 'BILL-LAB-6C3913A0',
-                    weight: 165,
-                    temperature: 99.4,
-                    bloodPressure: { systolic: 120, diastolic: 80 },
-                    heartRate: 140,
-                    oxygenSaturation: 94,
-                    glucoseLevel: 110,
-                    glucoseType: 'Random',
-                    notes: 'Patient mentions mild fatigue after morning activity.',
-                    doctorNotes: 'Advised rest and mild electrolyte intake.',
-                    tests: ['Serum Electrolytes (Na, K, Cl)']
-                }
-            ]
-        };
+     WHERE p.patient_id = $1`, [patientId]);
+    if (patientRes.rows.length === 0) {
+        throw new errorHandler_1.AppError('Patient not found.', 404);
     }
+    const patient = patientRes.rows[0];
     // 2. Encounters / Consultations (Fault tolerant)
     let encounters = [];
     try {
@@ -362,14 +324,14 @@ const getPatientFullTimeline = async (patientId) => {
     }
     return {
         patient,
-        encounters: Array.isArray(encounters) ? encounters : [],
-        prescriptions: Array.isArray(prescriptions) ? prescriptions : [],
-        activeMedications: Array.isArray(activeMedications) ? activeMedications : [],
-        labOrders: Array.isArray(labOrders) ? labOrders : [],
-        vitalsSeries: Array.isArray(vitalsSeries) ? vitalsSeries : [],
-        vitalsHistory: Array.isArray(patient.vitals_history) ? patient.vitals_history : [],
-        currentVitals: (patient.current_vitals && typeof patient.current_vitals === 'object') ? patient.current_vitals : {},
-        upcomingAppointments: Array.isArray(upcomingAppointments) ? upcomingAppointments : []
+        encounters,
+        prescriptions,
+        activeMedications,
+        labOrders,
+        vitalsSeries,
+        vitalsHistory: patient.vitals_history || [],
+        currentVitals: patient.current_vitals || {},
+        upcomingAppointments
     };
 };
 exports.getPatientFullTimeline = getPatientFullTimeline;

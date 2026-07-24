@@ -10,7 +10,6 @@ export const RoleProtectedRoute: React.FC<{ permittedRoles: string[] }> = ({ per
   const userRole = (user?.role || '').trim().toUpperCase();
   const allowedRoles = permittedRoles.map(r => r.trim().toUpperCase());
 
-  // Allow access if role matches case-insensitively or if user is ADMIN / SUPER_ADMIN / MANAGEMENT
   const isAllowed = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'MANAGEMENT' || allowedRoles.includes(userRole);
 
   if (!isAllowed) return <Navigate to="/unauthorized" replace />;
