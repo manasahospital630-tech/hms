@@ -3,10 +3,30 @@ import { CreateAppointmentInput } from './appointment.schema';
 import { AppError } from '../../middleware/errorHandler';
 
 export const createAppointment = async (input: CreateAppointmentInput) => {
+  const apptDateStr = input.appointmentDate 
+    ? new Date(input.appointmentDate).toISOString().split('T')[0] 
+    : new Date().toISOString().split('T')[0];
+
+  // 1. Calculate next OP No for that date
+  const opRes = await query(
+    `SELECT MAX(op_no) as max_op FROM appointments WHERE DATE(appointment_date) = $1`,
+    [apptDateStr]
+  );
+  const maxOp = opRes.rows[0]?.max_op;
+  const opNo = maxOp ? parseInt(maxOp, 10) + 1 : 1014;
+
+  // 2. Calculate next Token No for that doctor on that date (sequential: 1, 2, 3...)
+  const tokenRes = await query(
+    `SELECT MAX(token_no) as max_token FROM appointments WHERE doctor_id = $1 AND DATE(appointment_date) = $2`,
+    [input.doctorId, apptDateStr]
+  );
+  const maxToken = tokenRes.rows[0]?.max_token;
+  const tokenNo = maxToken ? parseInt(maxToken, 10) + 1 : 1;
+
   const result = await query(
-    `INSERT INTO appointments (patient_id, doctor_id, appointment_date, symptoms_brief, notes)
-     VALUES ($1, $2, $3, $4, $5) RETURNING *`,
-    [input.patientId, input.doctorId, input.appointmentDate, input.symptomsBrief || null, input.notes || null]
+    `INSERT INTO appointments (patient_id, doctor_id, appointment_date, symptoms_brief, notes, op_no, token_no)
+     VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+    [input.patientId, input.doctorId, input.appointmentDate, input.symptomsBrief || null, input.notes || null, opNo, tokenNo]
   );
   return result.rows[0];
 };
@@ -50,6 +70,9 @@ export const getAppointments = async (filters: {
             p.first_name || ' ' || p.last_name as patient_name,
             p.medical_record_number,
             p.phone as patient_phone,
+            p.date_of_birth,
+            p.gender,
+            p.age,
             u.first_name || ' ' || u.last_name as doctor_name,
             dp.department as doctor_department,
             COALESCE(dp.consultation_fee, 0.00) as doctor_fee
@@ -58,7 +81,7 @@ export const getAppointments = async (filters: {
      JOIN users u ON a.doctor_id = u.user_id
      LEFT JOIN doctor_profiles dp ON a.doctor_id = dp.doctor_id
      ${whereClause}
-     ORDER BY a.appointment_date DESC
+     ORDER BY a.appointment_date DESC, a.created_at DESC
      ${limitClause}`,
     dataParams
   );
@@ -132,25 +155,27 @@ export const createOPCheckIn = async (input: { patientId: string; doctorId: stri
   // 3. Begin Transaction
   await query('BEGIN');
   try {
-    // Count total appointments today to generate OP No
-    const opCountRes = await query(
-      `SELECT COUNT(*) as count FROM appointments WHERE DATE(appointment_date) = CURRENT_DATE`
+    // Max op_no today
+    const opRes = await query(
+      `SELECT MAX(op_no) as max_op FROM appointments WHERE DATE(appointment_date) = CURRENT_DATE`
     );
-    const opNo = parseInt(opCountRes.rows[0].count || '0', 10) + 1;
+    const maxOp = opRes.rows[0]?.max_op;
+    const opNo = maxOp ? parseInt(maxOp, 10) + 1 : 1014;
 
-    // Count doctor's appointments today to generate Token No
-    const tokenCountRes = await query(
-      `SELECT COUNT(*) as count FROM appointments 
+    // Max token_no for this doctor today (Sequential: 1, 2, 3, 4...)
+    const tokenRes = await query(
+      `SELECT MAX(token_no) as max_token FROM appointments 
        WHERE doctor_id = $1 AND DATE(appointment_date) = CURRENT_DATE`,
       [doctorId]
     );
-    const tokenNo = parseInt(tokenCountRes.rows[0].count || '0', 10) + 1;
+    const maxToken = tokenRes.rows[0]?.max_token;
+    const tokenNo = maxToken ? parseInt(maxToken, 10) + 1 : 1;
 
-    // 4. Create appointment
+    // 4. Create appointment with immutable op_no & token_no saved permanently in DB!
     const apptRes = await query(
-      `INSERT INTO appointments (patient_id, doctor_id, appointment_date, status, symptoms_brief, notes)
-       VALUES ($1, $2, NOW(), 'CheckedIn', 'OPD Consultation Check-in', $3) RETURNING *`,
-      [patientId, doctorId, isFreeReview ? 'Free 7-day review consultation' : 'Paid consultation']
+      `INSERT INTO appointments (patient_id, doctor_id, appointment_date, status, symptoms_brief, notes, op_no, token_no)
+       VALUES ($1, $2, NOW(), 'CheckedIn', 'OPD Consultation Check-in', $3, $4, $5) RETURNING *`,
+      [patientId, doctorId, isFreeReview ? 'Free 7-day review consultation' : 'Paid consultation', opNo, tokenNo]
     );
     const appointment = apptRes.rows[0];
 
@@ -173,9 +198,13 @@ export const createOPCheckIn = async (input: { patientId: string; doctorId: stri
       ]
     );
 
-    await query('COMMIT');
-
     const billNo = `OP${new Date().getFullYear().toString().substring(2)}${(new Date().getMonth() + 1).toString().padStart(2, '0')}-${invoice.invoice_id.substring(0, 4).toUpperCase()}`;
+
+    // Update appointment with bill_no
+    await query(`UPDATE appointments SET bill_no = $1 WHERE appointment_id = $2`, [billNo, appointment.appointment_id]);
+    appointment.bill_no = billNo;
+
+    await query('COMMIT');
 
     return {
       appointment,
@@ -216,5 +245,3 @@ export const checkReviewStatus = async (patientId: string, doctorId: string) => 
     lastAppointmentDate: result.rows[0].appointment_date
   };
 };
-
-

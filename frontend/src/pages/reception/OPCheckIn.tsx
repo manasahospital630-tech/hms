@@ -574,9 +574,9 @@ const OPCheckIn: React.FC = () => {
       chargedFee: isFreeReview ? 0.00 : parseFloat(row.doctor_fee || '0.00'),
       doctorName: row.doctor_name,
       department: row.doctor_department || 'General Medicine',
-      opNo: row.op_no || 1000 + bookings.indexOf(row),
-      tokenNo: row.token_no || 1 + (bookings.indexOf(row) % 8),
-      billNo: row.bill_no || `OP2627-${row.appointment_id.substring(0, 4).toUpperCase()}`
+      opNo: row.op_no || row.opNo || '—',
+      tokenNo: row.token_no || row.tokenNo || '—',
+      billNo: row.bill_no || row.billNo || `OP2627-${row.appointment_id.substring(0, 4).toUpperCase()}`
     };
     const patientInfo = {
       first_name: row.patient_name.split(' ')[0],
@@ -809,8 +809,7 @@ const OPCheckIn: React.FC = () => {
                 key: 'op_no',
                 label: 'OP No',
                 render: (_, row) => {
-                  const idx = bookings.indexOf(row);
-                  const opNo = row.op_no || (bookings.length - idx + 1000);
+                  const opNo = row.op_no || row.opNo || '—';
                   return <strong style={{ color: 'var(--text-secondary)' }}>{opNo}</strong>;
                 }
               },
@@ -818,8 +817,7 @@ const OPCheckIn: React.FC = () => {
                 key: 'token_no',
                 label: 'Token No',
                 render: (_, row) => {
-                  const idx = bookings.indexOf(row);
-                  const tokenNo = row.token_no || (1 + (idx % 8));
+                  const tokenNo = row.token_no || row.tokenNo || '—';
                   return <strong style={{ color: 'var(--accent-warning)', fontSize: 'var(--font-base)' }}>{tokenNo}</strong>;
                 }
               },
