@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   ClipboardList, HeartPulse, Stethoscope, Printer, RefreshCw, CheckCircle,
   X, Activity, ArrowRight, User, AlertCircle
@@ -13,6 +14,7 @@ import api from '../../api/client';
 import { formatDateTime } from '../../utils/formatters';
 
 export const CheckInQueue: React.FC = () => {
+  const navigate = useNavigate();
   const [appointments, setAppointments] = useState<any[]>([]);
   const [filter, setFilter] = useState('all');
   const [loading, setLoading] = useState(false);
@@ -267,7 +269,7 @@ export const CheckInQueue: React.FC = () => {
                         style={{
                           width: '100%',
                           textAlign: 'left',
-                          padding: '10px 14px',
+                          padding: '9px 12px',
                           background: 'none',
                           border: 'none',
                           fontSize: '13px',
@@ -282,8 +284,32 @@ export const CheckInQueue: React.FC = () => {
                         onMouseEnter={e => e.currentTarget.style.background = '#eff6ff'}
                         onMouseLeave={e => e.currentTarget.style.background = 'none'}
                       >
-                        <HeartPulse size={16} color="#2563eb" />
-                        🩺 Add/Edit Vitals (Triage)
+                        <HeartPulse size={15} color="#2563eb" />
+                        🩺 Add / Edit Vitals
+                      </button>
+
+                      <button
+                        onClick={() => navigate(`/patient/profile/${row.patient_id}`)}
+                        style={{
+                          width: '100%',
+                          textAlign: 'left',
+                          padding: '9px 12px',
+                          background: 'none',
+                          border: 'none',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          color: '#7c3aed',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          borderRadius: '8px'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f5f3ff'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                      >
+                        <User size={15} color="#7c3aed" />
+                        👤 View Profile
                       </button>
 
                       <button
@@ -291,7 +317,7 @@ export const CheckInQueue: React.FC = () => {
                         style={{
                           width: '100%',
                           textAlign: 'left',
-                          padding: '10px 14px',
+                          padding: '9px 12px',
                           background: 'none',
                           border: 'none',
                           fontSize: '13px',
@@ -306,8 +332,41 @@ export const CheckInQueue: React.FC = () => {
                         onMouseEnter={e => e.currentTarget.style.background = '#ecfdf5'}
                         onMouseLeave={e => e.currentTarget.style.background = 'none'}
                       >
-                        <Stethoscope size={16} color="#059669" />
-                        👨‍⚕️ Send to Doctor Consultation
+                        <Stethoscope size={15} color="#059669" />
+                        👨‍⚕️ Move to In-Consultation
+                      </button>
+
+                      <button
+                        onClick={async () => {
+                          try {
+                            await api.patch(`/appointments/${row.appointment_id}/status`, { status: 'Completed' });
+                            alert('✅ Consultation marked as Completed!');
+                            setActiveActionId(null);
+                            fetchData();
+                          } catch (err: any) {
+                            alert(err.response?.data?.error || 'Failed to update status');
+                          }
+                        }}
+                        style={{
+                          width: '100%',
+                          textAlign: 'left',
+                          padding: '9px 12px',
+                          background: 'none',
+                          border: 'none',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          color: '#16a34a',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          borderRadius: '8px'
+                        }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f0fdf4'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'none'}
+                      >
+                        <CheckCircle size={15} color="#16a34a" />
+                        ✅ Mark as Completed
                       </button>
 
                       <button
@@ -315,7 +374,7 @@ export const CheckInQueue: React.FC = () => {
                         style={{
                           width: '100%',
                           textAlign: 'left',
-                          padding: '10px 14px',
+                          padding: '9px 12px',
                           background: 'none',
                           border: 'none',
                           fontSize: '13px',
@@ -330,7 +389,7 @@ export const CheckInQueue: React.FC = () => {
                         onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
                         onMouseLeave={e => e.currentTarget.style.background = 'none'}
                       >
-                        <Printer size={16} color="#64748b" />
+                        <Printer size={15} color="#64748b" />
                         📄 Print OP Slip
                       </button>
                     </div>

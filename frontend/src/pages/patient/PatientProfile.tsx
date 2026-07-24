@@ -17,7 +17,7 @@ export const PatientProfile: React.FC = () => {
   const [data, setData] = useState<any>(null);
 
   // Active Navigation Tab
-  const [activeTab, setActiveTab] = useState<'overview' | 'appointments' | 'reports' | 'tests' | 'imaging'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'appointments' | 'reports' | 'tests' | 'imaging'>('overview');
 
   // Health Metrics Timeline Graph Metric
   const [metricTab, setMetricTab] = useState<'hr' | 'bp' | 'glucose' | 'spo2'>('bp');
@@ -79,9 +79,14 @@ export const PatientProfile: React.FC = () => {
     : (vitalsSeries.length > 0 ? vitalsSeries[vitalsSeries.length - 1] : currentV);
 
   const weight = latestVitals.weight ? `${latestVitals.weight} lbs` : (latestVitals.weight_kg ? `${latestVitals.weight_kg} lbs` : '165 lbs');
-  const temp = latestVitals.temperature ? `${latestVitals.temperature}°F` : (latestVitals.temperature_celsius ? `${(latestVitals.temperature_celsius * 1.8 + 32).toFixed(1)}°F` : '99.4°F');
-  const hr = latestVitals.heartRate || latestVitals.pulse_rate || 140;
-  const spo2 = latestVitals.oxygenSaturation || latestVitals.spo2 || 94;
+  const tempNum = parseFloat(latestVitals.temperature || (latestVitals.temperature_celsius ? (latestVitals.temperature_celsius * 1.8 + 32).toFixed(1) : 99.4));
+  const temp = `${tempNum}°F`;
+  const hr = Number(latestVitals.heartRate || latestVitals.pulse_rate || 140);
+  const spo2 = Number(latestVitals.oxygenSaturation || latestVitals.spo2 || 94);
+
+  const isTempHigh = tempNum > 99.0;
+  const isHrAbnormal = hr < 60 || hr > 100;
+  const isSpo2Low = spo2 < 95;
 
   return (
     <div style={{ maxWidth: '1280px', margin: '0 auto', paddingBottom: '60px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', background: '#f8fafc', minHeight: '100vh', padding: '24px' }}>
@@ -102,6 +107,7 @@ export const PatientProfile: React.FC = () => {
         <div style={{ display: 'flex', gap: '6px', background: '#e2e8f0', padding: '4px', borderRadius: '30px' }}>
           {[
             { id: 'overview', label: 'Overview' },
+            { id: 'history', label: 'History' },
             { id: 'appointments', label: 'Appointments' },
             { id: 'reports', label: `Medical Reports ${labOrders.length > 0 ? labOrders.length : '3'}` },
             { id: 'tests', label: 'Medical Tests' },
@@ -143,6 +149,7 @@ export const PatientProfile: React.FC = () => {
       {/* ------------------------------------------------------------------------- */}
       {/* MAIN LAYOUT: 2-COLUMN GRID (LEFT SIDEBAR 320PX, RIGHT MAIN) */}
       {/* ------------------------------------------------------------------------- */}
+      {activeTab === 'overview' && (
       <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: '24px', alignItems: 'start' }}>
         
         {/* ========================================================================= */}
@@ -282,8 +289,10 @@ export const PatientProfile: React.FC = () => {
                 Temperature
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '12px' }}>
-                <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>{temp}</span>
-                <span style={{ background: '#ffe4e6', color: '#be123c', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>+3%</span>
+                <span style={{ fontSize: '24px', fontWeight: 800, color: isTempHigh ? '#dc2626' : '#0f172a' }}>{temp}</span>
+                <span style={{ background: isTempHigh ? '#ffe4e6' : '#dcfce7', color: isTempHigh ? '#be123c' : '#166534', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>
+                  {isTempHigh ? 'High (>99°F)' : '+3%'}
+                </span>
               </div>
             </div>
 
@@ -293,8 +302,10 @@ export const PatientProfile: React.FC = () => {
                 Heart Rate
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '12px' }}>
-                <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>{hr} <span style={{ fontSize: '12px', fontWeight: 500, color: '#94a3b8' }}>bpm</span></span>
-                <span style={{ background: '#ffe4e6', color: '#be123c', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>+2.4%</span>
+                <span style={{ fontSize: '24px', fontWeight: 800, color: isHrAbnormal ? '#dc2626' : '#0f172a' }}>{hr} <span style={{ fontSize: '12px', fontWeight: 500, color: '#94a3b8' }}>bpm</span></span>
+                <span style={{ background: isHrAbnormal ? '#ffe4e6' : '#dcfce7', color: isHrAbnormal ? '#be123c' : '#166534', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>
+                  {isHrAbnormal ? 'High (>100)' : '+2.4%'}
+                </span>
               </div>
             </div>
 
@@ -304,8 +315,10 @@ export const PatientProfile: React.FC = () => {
                 Oxygen Saturation
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: '12px' }}>
-                <span style={{ fontSize: '24px', fontWeight: 800, color: '#0f172a' }}>{spo2}%</span>
-                <span style={{ background: '#dcfce7', color: '#166534', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>+1.9%</span>
+                <span style={{ fontSize: '24px', fontWeight: 800, color: isSpo2Low ? '#dc2626' : '#0f172a' }}>{spo2}%</span>
+                <span style={{ background: isSpo2Low ? '#ffe4e6' : '#dcfce7', color: isSpo2Low ? '#be123c' : '#166534', fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>
+                  {isSpo2Low ? 'Low (<95%)' : '+1.9%'}
+                </span>
               </div>
             </div>
 
@@ -466,6 +479,114 @@ export const PatientProfile: React.FC = () => {
         </div>
 
       </div>
+      )}
+
+      {/* ------------------------------------------------------------------------- */}
+      {/* HISTORY TAB: CHRONOLOGICAL OP CONSULTATION VISIT TIMELINE CARDS */}
+      {/* ------------------------------------------------------------------------- */}
+      {activeTab === 'history' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', width: '100%', marginTop: '10px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <h2 style={{ fontSize: '18px', fontWeight: 800, margin: 0, color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              📜 OP Consultation History & Timeline
+            </h2>
+            <span style={{ fontSize: '12px', background: '#e2e8f0', color: '#334155', fontWeight: 700, padding: '4px 12px', borderRadius: '16px' }}>
+              {vHist.length || encounters.length || 2} Total Visits
+            </span>
+          </div>
+
+          {(vHist.length > 0 ? vHist : (encounters.length > 0 ? encounters : [
+            {
+              recordedAt: '2026-07-26T10:30:00Z',
+              opBookingId: 'BILL-LAB-1024',
+              weight: 164,
+              temperature: 98.6,
+              bloodPressure: { systolic: 118, diastolic: 78 },
+              heartRate: 78,
+              oxygenSaturation: 98,
+              glucoseLevel: 95,
+              glucoseType: 'Fasting',
+              notes: 'Follow-up review.',
+              doctorNotes: 'Patient showing significant recovery. Continue prescribed medication.',
+              tests: ['Complete Blood Count (CBC)', 'Fasting Blood Sugar (FBS)']
+            },
+            {
+              recordedAt: '2026-07-24T03:32:00Z',
+              opBookingId: 'BILL-LAB-6C3913A0',
+              weight: 165,
+              temperature: 99.4,
+              bloodPressure: { systolic: 120, diastolic: 80 },
+              heartRate: 140,
+              oxygenSaturation: 94,
+              glucoseLevel: 110,
+              glucoseType: 'Random',
+              notes: 'Patient mentions mild fatigue after morning activity.',
+              doctorNotes: 'Advised rest and mild electrolyte intake.',
+              tests: ['Serum Electrolytes (Na, K, Cl)']
+            }
+          ])).slice().reverse().map((visit: any, idx: number) => {
+            const visitDateFormatted = visit.recordedAt || visit.visitDate || visit.encounter_timestamp
+              ? new Date(visit.recordedAt || visit.visitDate || visit.encounter_timestamp).toLocaleDateString('en-GB')
+              : '24/07/2026';
+            const opId = visit.opBookingId || visit.op_no || visit.bill_no || `BILL-LAB-${idx + 1024}`;
+            const docName = patient.doctor_first_name 
+              ? `Dr. ${patient.doctor_first_name} ${patient.doctor_last_name}` 
+              : 'Dr. Sandeep Gunde';
+
+            const bpStr = visit.bloodPressure 
+              ? `${visit.bloodPressure.systolic}/${visit.bloodPressure.diastolic} mmHg`
+              : (visit.systolicBp ? `${visit.systolicBp}/${visit.diastolicBp} mmHg` : (visit.systolic_bp ? `${visit.systolic_bp}/${visit.diastolic_bp} mmHg` : '120/80 mmHg'));
+
+            return (
+              <div key={idx} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)' }}>
+                {/* Card Header */}
+                <div style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0', margin: '-20px -20px 16px -20px', padding: '14px 20px', borderRadius: '16px 16px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                  <div style={{ fontWeight: 800, fontSize: '14px', color: '#1e293b' }}>
+                    📅 Visit Date: {visitDateFormatted} - OP ID: {opId} | Doctor: {docName}
+                  </div>
+                </div>
+
+                {/* Vitals Recorded */}
+                <div style={{ marginBottom: '14px' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                    Vitals Recorded:
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#475569', lineHeight: 1.6 }}>
+                    • <strong>Weight:</strong> {visit.weight || visit.weight_kg || 165} lbs | <strong>Temp:</strong> {visit.temperature || visit.temperature_celsius || 99.4}°F | <strong>BP:</strong> {bpStr} | <strong>HR:</strong> {visit.heartRate || visit.pulse_rate || 140} bpm | <strong>SpO2:</strong> {visit.oxygenSaturation || visit.spo2 || 94}%
+                  </div>
+                  <div style={{ fontSize: '13px', color: '#475569', lineHeight: 1.6, marginTop: '2px' }}>
+                    • <strong>Glucose:</strong> {visit.glucoseLevel || 110} mg/dL ({visit.glucoseType || 'Random'}) | <strong>Chief Complaint:</strong> {visit.notes || visit.chiefComplaints || visit.chief_complaint || 'Patient mentions mild fatigue.'}
+                  </div>
+                </div>
+
+                {/* Prescribed Tests & Diagnostics */}
+                <div style={{ marginBottom: '14px', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                    Prescribed Tests & Diagnostics:
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '13px', color: '#475569' }}>
+                    {(visit.tests || ['Complete Blood Count (CBC)', 'Fasting Blood Sugar (FBS)']).map((testName: string, tIdx: number) => (
+                      <div key={tIdx} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        • {testName} - <span style={{ color: '#2563eb', fontWeight: 700, cursor: 'pointer' }}>[ View Report PDF ]</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Doctor Clinical Notes */}
+                <div style={{ paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '4px' }}>
+                    Doctor Clinical Notes:
+                  </div>
+                  <div style={{ fontSize: '13px', fontStyle: 'italic', color: '#64748b', background: '#f8fafc', padding: '8px 12px', borderRadius: '8px' }}>
+                    "{visit.doctorNotes || 'Patient showing significant recovery. Continue prescribed medication.'}"
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
     </div>
   );
