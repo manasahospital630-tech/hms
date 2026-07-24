@@ -681,7 +681,7 @@ export const ServiceCatalog: React.FC = () => {
           }
 
           resultHtml += `
-            <div style="margin-top: 14px; margin-bottom: 8px;">
+            <div class="test-group-block" style="margin-top: 14px; margin-bottom: 8px; page-break-inside: avoid; break-inside: avoid;">
               <div style="font-size: 12px; font-weight: 700; color: #1e3a8a; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px;">
                 ${tItem.service_name} (${tItem.service_code})
               </div>
@@ -704,7 +704,7 @@ export const ServiceCatalog: React.FC = () => {
 
               if (isHeader) {
                 return `
-                  <tr style="background: #f8fafc;">
+                  <tr style="background: #f8fafc; page-break-inside: avoid; break-inside: avoid;">
                     <td colspan="4" style="padding: 6px 0; font-weight: 800; font-size: 11px; text-transform: uppercase; color: #1e3a8a; border-bottom: 1px solid #e2e8f0;">
                       ${name}
                     </td>
@@ -718,7 +718,7 @@ export const ServiceCatalog: React.FC = () => {
               const displayVal = rp.actual_value || rp.actualValue || '—';
 
               return `
-                <tr style="border-bottom: 1px solid #f1f5f9;">
+                <tr style="border-bottom: 1px solid #f1f5f9; page-break-inside: avoid; break-inside: avoid;">
                   <td style="padding: 5px 0; font-weight: 500; color: #334155;">${name}</td>
                   <td style="padding: 5px 0; text-align: center; font-size: 12px; font-weight: ${isAbnormal ? '700' : '400'}; color: ${isAbnormal ? '#ef4444' : '#0f172a'};">${displayVal}</td>
                   <td style="padding: 5px 0; text-align: center; color: #475569; font-family: monospace; font-size: 10px;">${refVal}</td>
@@ -733,7 +733,7 @@ export const ServiceCatalog: React.FC = () => {
             const displayVal = tLr.actual_result || '—';
 
             resultHtml += `
-              <tr style="border-bottom: 1px solid #f1f5f9;">
+              <tr style="border-bottom: 1px solid #f1f5f9; page-break-inside: avoid; break-inside: avoid;">
                 <td style="padding: 6px 0; font-weight: 700; color: #334155;">${tItem.service_name}</td>
                 <td style="padding: 6px 0; text-align: center; font-size: 12px; font-weight: ${isAbnormal ? '700' : '400'}; color: ${isAbnormal ? '#ef4444' : '#0f172a'};">${displayVal}</td>
                 <td style="padding: 6px 0; text-align: center; color: #475569; font-family: monospace; font-size: 10px;">${refVal}</td>
@@ -754,7 +754,7 @@ export const ServiceCatalog: React.FC = () => {
         const conclusion = item.radiology_report?.conclusion || item.ultrasound_report?.recommendations || item.ecg_report?.recommendation || '';
         
         resultHtml = `
-          <div style="text-align: center; margin-top: 10px; margin-bottom: 15px;">
+          <div class="test-group-block" style="text-align: center; margin-top: 10px; margin-bottom: 15px; page-break-inside: avoid; break-inside: avoid;">
             <h2 style="font-size: 14px; font-weight: 800; letter-spacing: 1px; margin: 0; color: #0f172a; text-transform: uppercase;">
               ${deptTitle}
             </h2>
@@ -763,7 +763,7 @@ export const ServiceCatalog: React.FC = () => {
             </h3>
           </div>
 
-          <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 15px; font-size: 13px;">
+          <div class="test-group-block" style="margin-top: 15px; display: flex; flex-direction: column; gap: 15px; font-size: 13px; page-break-inside: avoid; break-inside: avoid;">
             <div>
               <h4 style="margin: 0 0 6px 0; color: #475569; text-transform: uppercase; font-size: 12px;">Dictated Findings</h4>
               <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; white-space: pre-wrap; font-family: monospace;">${findings}</div>
@@ -796,87 +796,134 @@ export const ServiceCatalog: React.FC = () => {
           <head>
             <title>DIAGNOSTIC REPORT - ${item.patient_name}</title>
             <style>
-              @page { size: auto; margin: 10mm 15mm; }
-              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #0f172a; line-height: 1.3; font-size: 12px; padding: 0; margin: 0; }
+              @page { size: A4 portrait; margin: 10mm 15mm 12mm 15mm; }
+              body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; color: #0f172a; line-height: 1.3; font-size: 12px; padding: 0; margin: 0; background: #ffffff; }
               .header-container { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
               .hospital-details { flex: 1; padding-left: 20px; }
               .hospital-name { font-size: 22px; font-weight: 800; color: #0f172a; margin: 0 0 4px 0; }
               .hospital-sub { font-size: 11px; color: #475569; margin: 1px 0; }
               .divider-thick { border-bottom: 2px solid #0f172a; margin: 8px 0 12px 0; }
               
-              /* Force everything to fit on one page */
               @media print {
-                html, body { height: 99%; overflow: hidden; page-break-after: avoid; page-break-before: avoid; }
-                table { margin-bottom: 8px !important; page-break-inside: avoid; }
-                tr { page-break-inside: avoid; page-break-after: auto; }
-                td, th { padding: 4px 0 !important; font-size: 11px !important; }
-                .footer-signature { margin-top: 25px !important; page-break-inside: avoid; }
+                html, body {
+                  height: auto !important;
+                  min-height: 0 !important;
+                  max-height: none !important;
+                  overflow: visible !important;
+                  background: #ffffff !important;
+                  margin: 0 !important;
+                  padding: 0 !important;
+                }
+                table.report-layout-table {
+                  width: 100% !important;
+                  border-collapse: collapse !important;
+                  page-break-inside: auto !important;
+                  break-inside: auto !important;
+                }
+                table.report-layout-table > tbody > tr > td {
+                  page-break-inside: auto !important;
+                  break-inside: auto !important;
+                }
+                thead {
+                  display: table-header-group !important;
+                }
+                tfoot {
+                  display: table-footer-group !important;
+                }
+                .test-group-block {
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                  margin-top: 14px !important;
+                  margin-bottom: 10px !important;
+                }
+                tr {
+                  page-break-inside: auto !important;
+                  break-inside: auto !important;
+                }
+                .footer-signature {
+                  margin-top: 25px !important;
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                }
                 h2, h3 { margin-top: 2px !important; margin-bottom: 2px !important; }
               }
             </style>
           </head>
           <body onload="window.print(); setTimeout(function() { window.close(); }, 500);">
-            ${headerHtml}
+            <table class="report-layout-table" style="width: 100%; border-collapse: collapse; margin: 0; padding: 0;">
+              <thead>
+                <tr>
+                  <td style="padding: 0; border: none;">
+                    ${headerHtml}
 
-            <!-- Metadata Patient Card Table -->
-            <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 11px; border-bottom: 2px solid #0f172a; padding-bottom: 6px;">
+                    <!-- Metadata Patient Card Table -->
+                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 11px; border-bottom: 2px solid #0f172a; padding-bottom: 6px;">
+                      <tbody>
+                        <tr>
+                          <td style="padding: 3px 0; font-weight: 600; color: #475569; width: 15%;">Patient Name:</td>
+                          <td style="padding: 3px 0; font-weight: 700; width: 35%; text-transform: uppercase;">${item.patient_name}</td>
+                          <td style="padding: 3px 0; font-weight: 600; color: #475569; width: 15%;">Ref. Doctor:</td>
+                          <td style="padding: 3px 0; font-weight: 700; width: 35%; text-transform: uppercase;">${item.doctor_name || 'Dr S Tarundas'}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 3px 0; font-weight: 600; color: #475569;">Patient Id:</td>
+                          <td style="padding: 3px 0; font-weight: 700;">${item.patient_mrn}</td>
+                          <td style="padding: 3px 0; font-weight: 600; color: #475569;">Lab Id:</td>
+                          <td style="padding: 3px 0; font-weight: 700;">${item.item_id.substring(0, 8).toUpperCase()}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 3px 0; font-weight: 600; color: #475569;">OP Id:</td>
+                          <td style="padding: 3px 0; font-weight: 700;">${item.order_number || 'HY-SVN-1225-00080'}</td>
+                          <td style="padding: 3px 0; font-weight: 600; color: #475569;">Sample Collection Date:</td>
+                          <td style="padding: 3px 0; font-weight: 700;">${formattedDate}</td>
+                        </tr>
+                        <tr>
+                          <td style="padding: 3px 0; font-weight: 600; color: #475569;">Age/Gender:</td>
+                          <td style="padding: 3px 0; font-weight: 700;">${ageStr} / ${(item.patient_gender || item.gender || 'Male').toUpperCase()}</td>
+                          <td style="padding: 3px 0; font-weight: 600; color: #475569;">Reporting Date & time:</td>
+                          <td style="padding: 3px 0; font-weight: 700;">${verifiedDate}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </td>
+                </tr>
+              </thead>
               <tbody>
                 <tr>
-                  <td style="padding: 3px 0; font-weight: 600; color: #475569; width: 15%;">Patient Name:</td>
-                  <td style="padding: 3px 0; font-weight: 700; width: 35%; text-transform: uppercase;">${item.patient_name}</td>
-                  <td style="padding: 3px 0; font-weight: 600; color: #475569; width: 15%;">Ref. Doctor:</td>
-                  <td style="padding: 3px 0; font-weight: 700; width: 35%; text-transform: uppercase;">${item.doctor_name || 'Dr S Tarundas'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 3px 0; font-weight: 600; color: #475569;">Patient Id:</td>
-                  <td style="padding: 3px 0; font-weight: 700;">${item.patient_mrn}</td>
-                  <td style="padding: 3px 0; font-weight: 600; color: #475569;">Lab Id:</td>
-                  <td style="padding: 3px 0; font-weight: 700;">${item.item_id.substring(0, 8).toUpperCase()}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 3px 0; font-weight: 600; color: #475569;">OP Id:</td>
-                  <td style="padding: 3px 0; font-weight: 700;">${item.order_number || 'HY-SVN-1225-00080'}</td>
-                  <td style="padding: 3px 0; font-weight: 600; color: #475569;">Sample Collection Date:</td>
-                  <td style="padding: 3px 0; font-weight: 700;">${formattedDate}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 3px 0; font-weight: 600; color: #475569;">Age/Gender:</td>
-                  <td style="padding: 3px 0; font-weight: 700;">${ageStr} / ${(item.patient_gender || item.gender || 'Male').toUpperCase()}</td>
-                  <td style="padding: 3px 0; font-weight: 600; color: #475569;">Reporting Date & time:</td>
-                  <td style="padding: 3px 0; font-weight: 700;">${verifiedDate}</td>
+                  <td style="padding: 0; border: none;">
+                    <!-- Result Table Block (Occupies full page width for spacing layout optimization) -->
+                    <div style="width: 100%; margin-bottom: 15px;">
+                      ${resultHtml}
+                    </div>
+
+                    <!-- Signature block -->
+                    <div class="footer-signature" style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 35px; font-size: 11px; page-break-inside: avoid; break-inside: avoid;">
+                      <div>
+                        <p style="margin: 0; color: #475569; font-style: italic;">Please correlate clinically</p>
+                        <p style="margin: 4px 0 0 0; color: #475569;">Test Performed By : <strong style="color: #0f172a;">${item.order?.items?.[0]?.entered_by_name || 'clsowmya'}</strong></p>
+                      </div>
+                      <div style="text-align: right; width: 220px;">
+                        <div style="font-family: 'Georgia', cursive; font-style: italic; color: #1e3a8a; font-size: 16px; font-weight: 700; margin-bottom: 2px;">
+                          ${verifiedBy.includes('Priya') ? 'Dr Priya Nair' : 'Dr Vidya Kedari'}
+                        </div>
+                        <div style="border-top: 1px dashed #94a3b8; padding-top: 4px; font-weight: 700; color: #0f172a;">
+                          ${verifiedBy}
+                        </div>
+                        <div style="font-size: 10px; color: #64748b;">
+                          Consultant Pathologist
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style="text-align: center; font-size: 10px; color: #64748b; margin-top: 15px; font-weight: bold; letter-spacing: 2px; page-break-inside: avoid; break-inside: avoid;">
+                      *** END OF REPORT ***
+                    </div>
+
+                    <div style="margin-bottom: 20px;"></div>
+                  </td>
                 </tr>
               </tbody>
             </table>
-
-            <!-- Result Table Block (Occupies full page width for spacing layout optimization) -->
-            <div style="width: 100%; margin-bottom: 15px;">
-              ${resultHtml}
-            </div>
-
-            <!-- Signature block -->
-            <div class="footer-signature" style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 35px; font-size: 11px;">
-              <div>
-                <p style="margin: 0; color: #475569; font-style: italic;">Please correlate clinically</p>
-                <p style="margin: 4px 0 0 0; color: #475569;">Test Performed By : <strong style="color: #0f172a;">${item.order?.items?.[0]?.entered_by_name || 'clsowmya'}</strong></p>
-              </div>
-              <div style="text-align: right; width: 220px;">
-                <div style="font-family: 'Georgia', cursive; font-style: italic; color: #1e3a8a; font-size: 16px; font-weight: 700; margin-bottom: 2px;">
-                  ${verifiedBy.includes('Priya') ? 'Dr Priya Nair' : 'Dr Vidya Kedari'}
-                </div>
-                <div style="border-top: 1px dashed #94a3b8; padding-top: 4px; font-weight: 700; color: #0f172a;">
-                  ${verifiedBy}
-                </div>
-                <div style="font-size: 10px; color: #64748b;">
-                  Consultant Pathologist
-                </div>
-              </div>
-            </div>
-
-            <div style="text-align: center; font-size: 10px; color: #64748b; margin-top: 15px; font-weight: bold; letter-spacing: 2px;">
-              *** END OF REPORT ***
-            </div>
-
-            <div style="margin-bottom: 20px;"></div>
           </body>
         </html>
       `);
