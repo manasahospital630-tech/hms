@@ -247,8 +247,8 @@ exports.getOpdGrowthChart = getOpdGrowthChart;
  */
 const getFilteredOpdRecords = async (req, res) => {
     try {
-        const { doctorId = 'ALL', dateRange = 'Today', paymentMethod = 'ALL', status = 'ALL', search = '', startDate, endDate, limit = '50', offset = '0' } = req.query;
-        const limitNum = parseInt(limit, 10) || 50;
+        const { doctorId = 'ALL', dateRange = 'ALL', paymentMethod = 'ALL', status = 'ALL', search = '', startDate, endDate, limit = '100', offset = '0' } = req.query;
+        const limitNum = parseInt(limit, 10) || 100;
         const offsetNum = parseInt(offset, 10) || 0;
         const params = [];
         let whereClause = "WHERE 1=1";
@@ -277,7 +277,7 @@ const getFilteredOpdRecords = async (req, res) => {
         CAST(a.token_no AS TEXT) ILIKE $${pIdx}
       )`;
         }
-        // Date filtering
+        // Date filtering (If 'ALL' or 'All', no date restriction is added!)
         if (dateRange === 'Today') {
             whereClause += ` AND DATE(a.appointment_date) = CURRENT_DATE`;
         }
@@ -323,7 +323,9 @@ const getFilteredOpdRecords = async (req, res) => {
              COALESCE(dp.consultation_fee, 500.00) as doctor_fee,
              CASE WHEN a.notes ILIKE '%Free%' THEN 0.00 ELSE COALESCE(dp.consultation_fee, 500.00) END as amount,
              COALESCE(i.payment_method, CASE WHEN a.notes ILIKE '%Free%' THEN 'Free Review' ELSE 'Cash' END) as payment_method,
-             COALESCE(a.bill_no, i.invoice_id) as bill_no
+             COALESCE(a.bill_no, i.invoice_id) as bill_no,
+             COALESCE(a.op_booked_by, 'Reception Desk') as op_booked_by,
+             COALESCE(a.op_check_in_by, 'Reception Desk') as op_check_in_by
       FROM appointments a
       JOIN patients p ON a.patient_id = p.patient_id
       JOIN users u ON a.doctor_id = u.user_id

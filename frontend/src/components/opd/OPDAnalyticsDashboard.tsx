@@ -27,7 +27,7 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
 }) => {
   // Global Filters
   const [selectedDoctorId, setSelectedDoctorId] = useState('ALL');
-  const [selectedDateRange, setSelectedDateRange] = useState('This Week');
+  const [selectedDateRange, setSelectedDateRange] = useState('ALL');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('ALL');
   const [customStartDate, setCustomStartDate] = useState('');
   const [customEndDate, setCustomEndDate] = useState('');
@@ -130,16 +130,17 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
       return;
     }
 
-    const headers = ['OP No', 'Token No', 'MRN', 'Patient Name', 'Phone', 'Doctor Name', 'Department', 'Check-in Time', 'Payment Method', 'Amount (INR)', 'Status'];
+    const headers = ['OP No', 'MRN', 'Patient Name', 'Phone', 'Doctor Name', 'Department', 'OP Booked By', 'OP Check In Time', 'OP Check In By', 'Payment Method', 'Amount (INR)', 'Status'];
     const rows = records.map(r => [
       r.op_no || r.opNo || '—',
-      r.token_no || r.tokenNo || '—',
       r.medical_record_number || '—',
       `"${r.patient_name || ''}"`,
       r.patient_phone || '—',
       `"Dr. ${r.doctor_name || ''}"`,
       `"${r.doctor_department || 'General'}"`,
+      `"${r.op_booked_by || 'Reception Desk'}"`,
       `"${new Date(r.appointment_date).toLocaleString('en-IN')}"`,
+      `"${r.op_check_in_by || 'Reception Desk'}"`,
       `"${r.payment_method || 'Cash'}"`,
       r.amount || 0,
       r.status || 'CheckedIn'
@@ -164,11 +165,12 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
       <tr>
         <td style="text-align: center;">${idx + 1}</td>
         <td><strong>OP-${r.op_no || '—'}</strong></td>
-        <td style="text-align: center; color: #d97706; font-weight: 700;">#${r.token_no || '—'}</td>
         <td style="font-family: monospace;">${r.medical_record_number}</td>
         <td><strong>${r.patient_name}</strong><br/><small style="color: #64748b;">${r.patient_phone || '—'}</small></td>
         <td>Dr. ${r.doctor_name}<br/><small style="color: #64748b;">${r.doctor_department || 'General'}</small></td>
+        <td>${r.op_booked_by || 'Reception Desk'}</td>
         <td>${new Date(r.appointment_date).toLocaleString('en-IN')}</td>
+        <td>${r.op_check_in_by || 'Reception Desk'}</td>
         <td><span style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 11px;">${r.payment_method || 'Cash'}</span></td>
         <td style="text-align: right; font-weight: 700;">₹${parseFloat(r.amount || '0').toFixed(2)}</td>
         <td style="text-align: center;"><span style="color: #059669; font-weight: 600;">${r.status}</span></td>
@@ -191,8 +193,8 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
             .stat-card { text-align: center; }
             .stat-val { font-size: 18px; font-weight: 800; color: #1e3a8a; }
             .stat-lbl { font-size: 11px; color: #64748b; text-transform: uppercase; font-weight: 600; }
-            table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 12px; }
-            th { background: #0f172a; color: white; padding: 8px; text-align: left; font-size: 11px; text-transform: uppercase; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 11px; }
+            th { background: #0f172a; color: white; padding: 8px; text-align: left; font-size: 10px; text-transform: uppercase; }
             td { padding: 8px; border-bottom: 1px solid #e2e8f0; }
             @media print { .no-print { display: none; } }
           </style>
@@ -205,7 +207,7 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
             </div>
             <div style="text-align: right; font-size: 12px; color: #64748b;">
               <strong>Generated On:</strong> ${new Date().toLocaleString('en-IN')}<br/>
-              <strong>Date Range:</strong> ${selectedDateRange}<br/>
+              <strong>Date Range:</strong> ${selectedDateRange === 'ALL' ? 'All Bookings (From Beginning)' : selectedDateRange}<br/>
               <strong>Doctor Scope:</strong> ${selectedDoctorId === 'ALL' ? 'All Hospital Doctors' : 'Selected Doctor'}
             </div>
           </div>
@@ -234,11 +236,12 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
               <tr>
                 <th style="text-align: center;">#</th>
                 <th>OP No</th>
-                <th style="text-align: center;">Token</th>
                 <th>MRN</th>
                 <th>Patient Details</th>
                 <th>Consulting Doctor</th>
-                <th>Check-in Time</th>
+                <th>OP Booked By</th>
+                <th>OP Check In Time</th>
+                <th>OP Check In By</th>
                 <th>Payment</th>
                 <th style="text-align: right;">Amount</th>
                 <th style="text-align: center;">Status</th>
@@ -300,6 +303,7 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
                 value={selectedDateRange}
                 onChange={e => setSelectedDateRange(e.target.value)}
                 options={[
+                  { value: 'ALL', label: '📅 All Bookings (From Beginning)' },
                   { value: 'Today', label: '📅 Today' },
                   { value: 'Yesterday', label: '📅 Yesterday' },
                   { value: 'This Week', label: '📅 This Week' },
@@ -684,15 +688,6 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
               )
             },
             {
-              key: 'token_no',
-              label: 'TOKEN NO',
-              render: (_, row) => (
-                <strong style={{ color: 'var(--accent-warning)', fontSize: 'var(--font-base)' }}>
-                  #{row.token_no || row.tokenNo || '—'}
-                </strong>
-              )
-            },
-            {
               key: 'medical_record_number',
               label: 'MRN',
               render: (v) => (
@@ -726,9 +721,27 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
               )
             },
             {
+              key: 'op_booked_by',
+              label: 'OP BOOKED BY',
+              render: (v, row) => (
+                <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', background: 'var(--bg-primary)', padding: '2px 8px', borderRadius: '4px' }}>
+                  👤 {row.op_booked_by || v || 'Reception Desk'}
+                </span>
+              )
+            },
+            {
               key: 'appointment_date',
-              label: 'CHECK-IN TIME',
+              label: 'OP CHECK IN',
               render: (v) => formatDateTime(v)
+            },
+            {
+              key: 'op_check_in_by',
+              label: 'OP CHECK IN BY',
+              render: (v, row) => (
+                <span style={{ fontSize: '12px', fontWeight: 600, color: '#1d4ed8', background: '#eff6ff', padding: '2px 8px', borderRadius: '4px', border: '1px solid #bfdbfe' }}>
+                  🏥 {row.op_check_in_by || v || 'Reception Desk'}
+                </span>
+              )
             },
             {
               key: 'payment_method',
@@ -774,7 +787,7 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
             },
             {
               key: 'actions',
-              label: 'ACTIONS',
+              label: 'ACTION',
               render: (_, row) => (
                 <div style={{ display: 'flex', gap: '6px' }}>
                   <Button
@@ -783,7 +796,7 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
                     icon={<Printer size={13} />}
                     onClick={() => onPrintSlip(row)}
                   >
-                    Slip
+                    Print Slip
                   </Button>
                   <Button
                     variant="secondary"
