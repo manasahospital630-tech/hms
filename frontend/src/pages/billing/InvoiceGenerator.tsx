@@ -945,15 +945,20 @@ const InvoiceGenerator: React.FC = () => {
             </div>
             <PatientSearchBar 
               onSelect={setPatient} 
+              placeholder="📱 Primary Search: Enter Mobile Number, Name or MRN..."
               showRegisterOption={true} 
               onRegisterClick={() => setPatientModalOpen(true)} 
             />
             {patient && (
-              <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', padding: '12px', borderRadius: '8px', marginTop: '12px', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  {patient.first_name} {patient.last_name} ({patient.medical_record_number}) 
-                  {patient.age && <span style={{ marginLeft: '8px', color: 'var(--text-secondary)', fontSize: '13px' }}>| Age: {patient.age} yrs</span>}
-                  <span style={{ fontSize: '11px', marginLeft: '10px', padding: '2px 8px', borderRadius: '50px', background: patient.is_inpatient ? '#eff6ff' : '#ecfdf5', color: patient.is_inpatient ? '#1d4ed8' : '#047857' }}>
+              <div style={{ background: 'rgba(37,99,235,0.04)', border: '1px solid rgba(37,99,235,0.2)', padding: '12px 16px', borderRadius: '8px', marginTop: '12px', fontWeight: 600, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <span style={{ fontWeight: 700, color: '#1d4ed8', background: '#dbeafe', padding: '2px 8px', borderRadius: '4px', fontSize: '13px' }}>
+                    📱 {patient.phone || 'No Mobile'}
+                  </span>
+                  <span style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '14px' }}>{patient.first_name} {patient.last_name}</span> 
+                  <span style={{ fontFamily: 'monospace', color: '#475569', fontSize: '13px' }}>🆔 {patient.medical_record_number}</span> 
+                  {patient.age && <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>• Age: {patient.age} yrs</span>}
+                  <span style={{ fontSize: '11px', padding: '2px 8px', borderRadius: '50px', background: patient.is_inpatient ? '#eff6ff' : '#ecfdf5', color: patient.is_inpatient ? '#1d4ed8' : '#047857', fontWeight: 700 }}>
                     {patient.is_inpatient ? 'Inpatient (IP)' : 'Outpatient (OP)'}
                   </span>
                 </div>

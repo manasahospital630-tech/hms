@@ -657,20 +657,25 @@ const OPCheckIn: React.FC = () => {
 
               {/* Patient Selector */}
               <div style={{ display: 'grid', gap: 'var(--space-xs)' }}>
-                <label style={{ fontSize: 'var(--font-sm)', fontWeight: 500, color: 'var(--text-secondary)' }}>Select Patient *</label>
+                <label style={{ fontSize: 'var(--font-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                  Primary Patient Search (Mobile Number / Name / MRN) *
+                </label>
                 <PatientSearchBar 
                   onSelect={(p) => setPatient(p)} 
+                  placeholder="📱 Primary Search: Enter Mobile Number, Name or MRN..."
                   showRegisterOption={true}
                   onRegisterClick={() => setShowRegisterModal(true)}
                 />
                 {patient && (
-                  <div style={{ padding: 'var(--space-md)', background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--radius)', border: '1px solid var(--border-primary)', marginTop: 'var(--space-sm)' }}>
-                    <h4 style={{ margin: '0 0 var(--space-xs) 0', color: 'var(--accent-primary)', fontSize: '14px' }}>Patient Selection Info</h4>
+                  <div style={{ padding: 'var(--space-md)', background: 'rgba(37,99,235,0.04)', borderRadius: 'var(--radius)', border: '1px solid rgba(37,99,235,0.2)', marginTop: 'var(--space-sm)' }}>
+                    <h4 style={{ margin: '0 0 var(--space-xs) 0', color: 'var(--accent-primary)', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <UserCheck size={16} /> Selected Patient Identity
+                    </h4>
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-xs) var(--space-md)', fontSize: '13px' }}>
-                      <div><strong>Name:</strong> {patient.first_name} {patient.last_name}</div>
-                      <div><strong>MRN:</strong> {patient.medical_record_number}</div>
-                      <div><strong>Phone:</strong> {patient.phone || '—'}</div>
-                      <div><strong>Gender / DOB:</strong> {patient.gender || '—'} ({patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString('en-IN') : '—'})</div>
+                      <div><strong>📱 Mobile Number:</strong> <span style={{ fontWeight: 700, color: '#1d4ed8', background: '#dbeafe', padding: '2px 8px', borderRadius: '4px' }}>{patient.phone || 'No Mobile'}</span></div>
+                      <div><strong>👤 Patient Name:</strong> <span style={{ fontWeight: 700 }}>{patient.first_name} {patient.last_name}</span></div>
+                      <div><strong>🆔 MRN:</strong> <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{patient.medical_record_number}</span></div>
+                      <div><strong>🎂 Gender / Age:</strong> {patient.gender || '—'} ({calculateAge(patient.date_of_birth, patient.age)})</div>
                     </div>
                   </div>
                 )}

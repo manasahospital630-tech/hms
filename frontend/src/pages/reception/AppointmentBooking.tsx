@@ -40,8 +40,8 @@ const AppointmentBooking: React.FC = () => {
       {success && <div className="alert alert-success">{success}</div>}
       <div className="card" style={{ marginBottom: 'var(--space-xl)' }}>
         <div className="form-section-title">Book New Appointment</div>
-        <div style={{ marginBottom: 'var(--space-md)' }}><label style={{ fontSize: 'var(--font-sm)', color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Patient *</label><PatientSearchBar onSelect={setPatient} /></div>
-        {patient && <div className="alert alert-info">Selected: {patient.first_name} {patient.last_name} ({patient.medical_record_number})</div>}
+        <div style={{ marginBottom: 'var(--space-md)' }}><label style={{ fontSize: 'var(--font-sm)', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6, display: 'block' }}>Primary Patient Search (Mobile Number / Name / MRN) *</label><PatientSearchBar onSelect={setPatient} placeholder="📱 Primary Search: Enter Mobile Number, Name or MRN..." /></div>
+        {patient && <div className="alert alert-info" style={{ fontWeight: 600 }}>Selected: <span style={{ color: '#1d4ed8', background: '#dbeafe', padding: '2px 8px', borderRadius: '4px', marginRight: '6px' }}>📱 {patient.phone || 'No Mobile'}</span> {patient.first_name} {patient.last_name} ({patient.medical_record_number})</div>}
         <form onSubmit={handleSubmit}>
           <div className="form-row">
             <Select label="Doctor *" value={form.doctorId} onChange={(e) => setForm({ ...form, doctorId: e.target.value })} options={doctors.map(d => ({ value: d.user_id, label: `Dr. ${d.first_name} ${d.last_name}` }))} />

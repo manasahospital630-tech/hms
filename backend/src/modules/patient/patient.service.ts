@@ -59,28 +59,57 @@ export const getPatients = async (options: {
 }) => {
   const { search, limit = 25, offset = 0 } = options;
   let whereClause = '';
+  let orderByClause = 'ORDER BY p.created_at DESC';
   const params: any[] = [];
 
-  if (search) {
-    params.push(`%${search}%`);
-    whereClause = `WHERE p.first_name || ' ' || p.last_name ILIKE $1 OR p.first_name ILIKE $1 OR p.last_name ILIKE $1 OR p.medical_record_number ILIKE $1 OR p.phone ILIKE $1`;
+  if (search && search.trim()) {
+    const term = search.trim();
+    params.push(`%${term}%`); // $1
+    params.push(`${term}%`);  // $2
+    params.push(term);       // $3
+    
+    whereClause = `WHERE p.phone ILIKE $1 
+       OR REGEXP_REPLACE(COALESCE(p.phone, ''), '[^0-9]', '', 'g') ILIKE $1
+       OR p.first_name || ' ' || p.last_name ILIKE $1 
+       OR p.first_name ILIKE $1 
+       OR p.last_name ILIKE $1 
+       OR p.medical_record_number ILIKE $1`;
+
+    orderByClause = `ORDER BY 
+      CASE 
+        WHEN p.phone = $3 THEN 1
+        WHEN p.phone ILIKE $2 THEN 2
+        WHEN REGEXP_REPLACE(COALESCE(p.phone, ''), '[^0-9]', '', 'g') ILIKE $2 THEN 3
+        WHEN p.medical_record_number ILIKE $3 THEN 4
+        WHEN p.first_name || ' ' || p.last_name ILIKE $2 THEN 5
+        ELSE 6
+      END,
+      p.created_at DESC`;
   }
 
+  const countParams = params.length > 0 ? [params[0]] : [];
+  const countWhere = params.length > 0 
+    ? `WHERE p.phone ILIKE $1 OR REGEXP_REPLACE(COALESCE(p.phone, ''), '[^0-9]', '', 'g') ILIKE $1 OR p.first_name || ' ' || p.last_name ILIKE $1 OR p.first_name ILIKE $1 OR p.last_name ILIKE $1 OR p.medical_record_number ILIKE $1`
+    : '';
+
   const countResult = await query(
-    `SELECT COUNT(*) as total FROM patients p ${whereClause}`,
-    params
+    `SELECT COUNT(*) as total FROM patients p ${countWhere}`,
+    countParams
   );
 
   const total = parseInt(countResult.rows[0].total, 10);
 
   const dataParams = [...params, limit, offset];
+  const limitParamIdx = params.length + 1;
+  const offsetParamIdx = params.length + 2;
+
   const result = await query(
     `SELECT p.*, d.first_name as doctor_first_name, d.last_name as doctor_last_name
      FROM patients p
      LEFT JOIN users d ON p.assigned_doctor_id = d.user_id
      ${whereClause}
-     ORDER BY p.created_at DESC
-     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+     ${orderByClause}
+     LIMIT $${limitParamIdx} OFFSET $${offsetParamIdx}`,
     dataParams
   );
 
