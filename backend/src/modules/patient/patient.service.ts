@@ -400,13 +400,13 @@ export const getPatientFullTimeline = async (patientId: string) => {
 
   return {
     patient,
-    encounters,
-    prescriptions,
-    activeMedications,
-    labOrders,
-    vitalsSeries,
-    vitalsHistory: patient.vitals_history || [],
-    currentVitals: patient.current_vitals || {},
-    upcomingAppointments
+    encounters: Array.isArray(encounters) ? encounters : [],
+    prescriptions: Array.isArray(prescriptions) ? prescriptions : [],
+    activeMedications: Array.isArray(activeMedications) ? activeMedications : [],
+    labOrders: Array.isArray(labOrders) ? labOrders : [],
+    vitalsSeries: Array.isArray(vitalsSeries) ? vitalsSeries : [],
+    vitalsHistory: Array.isArray(patient.vitals_history) ? patient.vitals_history : [],
+    currentVitals: (patient.current_vitals && typeof patient.current_vitals === 'object') ? patient.current_vitals : {},
+    upcomingAppointments: Array.isArray(upcomingAppointments) ? upcomingAppointments : []
   };
 };
