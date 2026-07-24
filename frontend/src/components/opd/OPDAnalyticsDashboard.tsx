@@ -275,7 +275,7 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
   }, [growthData]);
 
   return (
-    <div style={{ display: 'grid', gap: 'var(--space-lg)', width: '100%', maxWidth: '1600px', margin: '0 auto', boxSizing: 'border-box' }}>
+    <div className="opd-dashboard-container">
       {/* A. Global Filter Bar (Adaptive Layout) */}
       <Card>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-md)', alignItems: 'flex-end', justifyContent: 'space-between', width: '100%' }}>
@@ -368,8 +368,8 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
         </div>
       </Card>
 
-      {/* B. Dynamic Metric KPI Summary Cards (Fully Responsive Auto-Fit Grid) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: 'var(--space-md)', width: '100%' }}>
+      {/* B. Dynamic Metric KPI Summary Cards (2x2 Grid Desktop/Tablet, 1-Col Mobile) */}
+      <div className="opd-kpi-grid">
         {/* Today Card */}
         <div style={{ 
           background: 'linear-gradient(135deg, #1e3a8a 0%, #2563eb 100%)', 
@@ -476,7 +476,7 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
       </div>
 
       {/* C. Performance & Growth Charts (Responsive Auto-Fit Grid) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 'var(--space-md)', width: '100%' }}>
+      <div className="opd-charts-grid">
         {/* Chart 1: Equalizer Growth Trend Chart */}
         <Card title="📊 Volume & Revenue Growth Trend (Equalizer Bar Chart)">
           <div style={{ marginBottom: '12px', fontSize: '12px', color: 'var(--text-secondary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>

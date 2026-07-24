@@ -337,3 +337,36 @@ html.light-theme .ant-steps-item-icon {
   border-color: #d1d5db !important;
 }
 
+/* Responsive OPD Analytics Dashboard Engine */
+.opd-dashboard-container {
+  width: 100%;
+  max-width: 1600px;
+  margin: 0 auto;
+  box-sizing: border-box;
+  display: grid;
+  gap: var(--space-lg);
+}
+
+.opd-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-md);
+  width: 100%;
+}
+
+.opd-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-md);
+  width: 100%;
+}
+
+@media (max-width: 768px) {
+  .opd-kpi-grid {
+    grid-template-columns: 1fr;
+  }
+  .opd-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
