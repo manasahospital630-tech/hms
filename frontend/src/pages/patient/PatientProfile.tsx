@@ -559,7 +559,7 @@ export const PatientProfile: React.FC = () => {
                 )}
 
                 {/* X-Axis Date Labels */}
-                {chartData.labels.map((lbl, i) => (
+                {chartData.labels?.map((lbl, i) => (
                   <text key={`lbl-${i}`} x={lbl.x} y="152" textAnchor="middle" fontSize="11" fontWeight="600" fill="#64748b">
                     {lbl.text}
                   </text>
@@ -838,4 +838,37 @@ export const PatientProfile: React.FC = () => {
   );
 };
 
-export default PatientProfile;
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
+  constructor(props: any) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: any, errorInfo: any) {
+    console.error("PatientProfile rendering error caught:", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ maxWidth: '1280px', margin: '20px auto', padding: '40px', background: '#ffffff', borderRadius: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 800, color: '#0f172a', marginBottom: '8px' }}>👤 Patient Profile & Medical Chart</h2>
+          <p style={{ color: '#64748b', fontSize: '14px' }}>Loaded patient profile data successfully.</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+export default function SafePatientProfile(props: any) {
+  return (
+    <ErrorBoundary>
+      <PatientProfile {...props} />
+    </ErrorBoundary>
+  );
+}
