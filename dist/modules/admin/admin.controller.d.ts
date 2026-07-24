@@ -1,6 +1,7 @@
 import { Response, NextFunction } from 'express';
 import { ProtectedRequest } from '../../middleware/rbacHandler';
 export declare const getUsers: (req: ProtectedRequest, res: Response, next: NextFunction) => Promise<void>;
+export declare const getStaffProfile: (req: ProtectedRequest, res: Response, next: NextFunction) => Promise<void>;
 export declare const createUser: (req: ProtectedRequest, res: Response, next: NextFunction) => Promise<void>;
 export declare const updateUser: (req: ProtectedRequest, res: Response, next: NextFunction) => Promise<void>;
 export declare const getAuditLog: (req: ProtectedRequest, res: Response, next: NextFunction) => Promise<void>;

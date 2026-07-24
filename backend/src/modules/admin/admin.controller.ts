@@ -14,6 +14,13 @@ export const getUsers = async (req: ProtectedRequest, res: Response, next: NextF
   } catch (error) { next(error); }
 };
 
+export const getStaffProfile = async (req: ProtectedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const profile = await adminService.getStaffProfile(req.params.id as string);
+    successResponse(res, profile);
+  } catch (error) { next(error); }
+};
+
 export const createUser = async (req: ProtectedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const user = await adminService.createUser(req.body);

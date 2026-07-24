@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getHospitalSettingsPublic = exports.getDashboardStats = exports.updateHospitalSettings = exports.getHospitalSettings = exports.upsertDoctorProfile = exports.getDoctorProfiles = exports.getAuditLog = exports.updateUser = exports.createUser = exports.getUsers = void 0;
+exports.getHospitalSettingsPublic = exports.getDashboardStats = exports.updateHospitalSettings = exports.getHospitalSettings = exports.upsertDoctorProfile = exports.getDoctorProfiles = exports.getAuditLog = exports.updateUser = exports.createUser = exports.getStaffProfile = exports.getUsers = void 0;
 const responseHelper_1 = require("../../utils/responseHelper");
 const adminService = __importStar(require("./admin.service"));
 const getUsers = async (req, res, next) => {
@@ -50,6 +50,16 @@ const getUsers = async (req, res, next) => {
     }
 };
 exports.getUsers = getUsers;
+const getStaffProfile = async (req, res, next) => {
+    try {
+        const profile = await adminService.getStaffProfile(req.params.id);
+        (0, responseHelper_1.successResponse)(res, profile);
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.getStaffProfile = getStaffProfile;
 const createUser = async (req, res, next) => {
     try {
         const user = await adminService.createUser(req.body);

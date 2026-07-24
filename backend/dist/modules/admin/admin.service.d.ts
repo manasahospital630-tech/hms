@@ -15,6 +15,60 @@ export declare const getAuditLog: (filters: {
     limit?: number;
     offset?: number;
 }) => Promise<any[]>;
+export declare const getStaffProfile: (userId: string) => Promise<{
+    user: any;
+    metrics: {
+        todayOP: number;
+        thisWeekOP: number;
+        thisMonthOP: number;
+        thisYearOP: number;
+        totalOP: number;
+        consultationFee: number;
+        hospitalShare: number;
+        doctorShare: number;
+        totalRevenue: number;
+    };
+    appointments: {
+        appointment_id: any;
+        op_number: string;
+        token_no: string;
+        patient_id: any;
+        patient_name: string;
+        medical_record_number: any;
+        appointment_date: any;
+        time: string;
+        status: any;
+        hospital_fee: number;
+        doctor_fee: number;
+        total_revenue: number;
+        symptoms_brief: any;
+        notes: any;
+        vitals: any;
+    }[];
+    opRecords: {
+        appointment_id: any;
+        op_number: string;
+        token_no: string;
+        patient_id: any;
+        patient_name: string;
+        medical_record_number: any;
+        appointment_date: any;
+        time: string;
+        status: any;
+        hospital_fee: number;
+        doctor_fee: number;
+        total_revenue: number;
+        symptoms_brief: any;
+        notes: any;
+        vitals: any;
+    }[];
+    activityLog: {
+        id: number;
+        action: string;
+        timestamp: string;
+        details: string;
+    }[];
+}>;
 export declare const getDoctorProfiles: () => Promise<{
     doctorId: any;
     doctorName: any;

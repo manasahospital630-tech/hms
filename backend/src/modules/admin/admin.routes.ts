@@ -9,6 +9,8 @@ import { auditLogger } from '../../middleware/auditLogger';
 const router = Router();
 
 router.get('/users', authenticateJWT, enforceRBAC(['Admin']), ctrl.getUsers);
+router.get('/users/:id/profile', authenticateJWT, ctrl.getStaffProfile);
+router.get('/staff/profile/:id', authenticateJWT, ctrl.getStaffProfile);
 router.post('/users', authenticateJWT, enforceRBAC(['Admin']), validate(createUserSchema), auditLogger('CREATE', 'User'), ctrl.createUser);
 router.patch('/users/:id', authenticateJWT, enforceRBAC(['Admin']), validate(updateUserSchema), auditLogger('UPDATE', 'User'), ctrl.updateUser);
 router.get('/audit-log', authenticateJWT, enforceRBAC(['Admin']), ctrl.getAuditLog);

@@ -42,6 +42,8 @@ const rbacHandler_1 = require("../../middleware/rbacHandler");
 const auditLogger_1 = require("../../middleware/auditLogger");
 const router = (0, express_1.Router)();
 router.get('/users', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin']), ctrl.getUsers);
+router.get('/users/:id/profile', authenticate_1.authenticateJWT, ctrl.getStaffProfile);
+router.get('/staff/profile/:id', authenticate_1.authenticateJWT, ctrl.getStaffProfile);
 router.post('/users', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin']), (0, validator_1.validate)(admin_schema_1.createUserSchema), (0, auditLogger_1.auditLogger)('CREATE', 'User'), ctrl.createUser);
 router.patch('/users/:id', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin']), (0, validator_1.validate)(admin_schema_1.updateUserSchema), (0, auditLogger_1.auditLogger)('UPDATE', 'User'), ctrl.updateUser);
 router.get('/audit-log', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin']), ctrl.getAuditLog);

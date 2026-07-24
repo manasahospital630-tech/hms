@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Plus, Edit, Search, CheckCircle, AlertCircle, Building2, Lock, ShieldCheck, Stethoscope } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Users, Plus, Edit, Search, CheckCircle, AlertCircle, Building2, Lock, ShieldCheck, Stethoscope, Eye } from 'lucide-react';
 import { Table } from '../../components/ui/Table';
 import { Button } from '../../components/ui/Button';
 import { Input } from '../../components/ui/Input';
@@ -44,6 +45,7 @@ const ROLE_OPTIONS = [
 ];
 
 const UserManagement: React.FC = () => {
+  const navigate = useNavigate();
   const [users, setUsers] = useState<any[]>([]);
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
@@ -319,6 +321,16 @@ const UserManagement: React.FC = () => {
               label: 'Actions',
               render: (_, row) => (
                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <Button
+                    size="sm"
+                    variant="primary"
+                    icon={<Eye size={14} />}
+                    onClick={() => navigate(`/staff/profile/${row.user_id}`)}
+                    title="View role-based staff or doctor profile"
+                    style={{ background: '#0d9488', borderColor: '#0d9488' }}
+                  >
+                    View Profile
+                  </Button>
                   <Button
                     size="sm"
                     variant="secondary"

@@ -22,6 +22,7 @@ import MedicineSales from '../pages/pharmacy/MedicineSales';
 import InvoiceGenerator from '../pages/billing/InvoiceGenerator';
 import PaymentProcessing from '../pages/billing/PaymentProcessing';
 import UserManagement from '../pages/admin/UserManagement';
+import StaffProfilePage from '../pages/admin/StaffProfilePage';
 import SystemSettings from '../pages/admin/SystemSettings';
 import HealthSummary from '../pages/patient-portal/HealthSummary';
 import MyAppointments from '../pages/patient-portal/MyAppointments';
@@ -129,6 +130,8 @@ const AppRouter: React.FC = () => (
 
         <Route element={<RoleProtectedRoute permittedRoles={['Receptionist','Doctor','Nurse','Admin','Biller','Pharmacist','Patient','Incharge']} />}>
           <Route path="patient/profile/:patientId" element={<PatientProfile />} />
+          <Route path="staff/profile/:userId" element={<StaffProfilePage />} />
+          <Route path="doctor/profile/:userId" element={<StaffProfilePage />} />
         </Route>
 
         <Route element={<RoleProtectedRoute permittedRoles={['Patient','Admin']} />}>
