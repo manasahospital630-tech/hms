@@ -56,10 +56,14 @@ app.get('/api/health', (_req, res) => {
   });
 });
 
+import opdAnalyticsRoutes from './modules/appointment/opdAnalytics.routes';
+
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/patients', patientRoutes);
 app.use('/api/appointments', appointmentRoutes);
+app.use('/api/v1/opd/dashboard', opdAnalyticsRoutes);
+app.use('/api/opd/dashboard', opdAnalyticsRoutes);
 app.use('/api/emr', emrRoutes);
 app.use('/api/pharmacy', pharmacyRoutes);
 app.use('/api/billing', billingRoutes);

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UserCheck, Search, Printer, CheckCircle, Stethoscope, RefreshCw, IndianRupee, Layers, UserPlus, Calendar } from 'lucide-react';
+import { UserCheck, Search, Printer, CheckCircle, Stethoscope, RefreshCw, IndianRupee, Layers, UserPlus, Calendar, BarChart2 } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Table } from '../../components/ui/Table';
 import { Button } from '../../components/ui/Button';
@@ -9,6 +9,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import { PatientSearchBar } from '../../components/shared/PatientSearchBar';
 import { StatusBadge } from '../../components/shared/StatusBadge';
+import { OPDAnalyticsDashboard } from '../../components/opd/OPDAnalyticsDashboard';
 import { useAuth } from '../../hooks/useAuth';
 import api from '../../api/client';
 import { formatCurrency, formatDateTime, formatDisplayAge } from '../../utils/formatters';
@@ -71,6 +72,7 @@ const numberToWords = (num: number) => {
 
 const OPCheckIn: React.FC = () => {
   const { user: currentUser } = useAuth();
+  const [activeSubTab, setActiveSubTab] = useState<'analytics' | 'queue'>('analytics');
   const [patient, setPatient] = useState<any>(null);
   const [doctors, setDoctors] = useState<any[]>([]);
   const [selectedDoctorId, setSelectedDoctorId] = useState('');
@@ -644,244 +646,304 @@ const OPCheckIn: React.FC = () => {
         </Button>
       </div>
 
-      <div style={{ display: 'grid', gap: 'var(--space-lg)' }}>
-        {/* OP Booking Card */}
-        <Card title="Book OP Consultation & OPD Check-in">
-          <form onSubmit={handleCheckIn}>
-            <div style={{ display: 'grid', gap: 'var(--space-md)' }}>
-              {errorMsg && (
-                <div style={{ color: 'var(--accent-danger)', fontSize: 'var(--font-sm)', padding: 'var(--space-sm)', background: 'rgba(239,68,68,0.08)', borderRadius: 'var(--radius-sm)' }}>
-                  ⚠️ {errorMsg}
-                </div>
-              )}
+      {/* Subtabs Navigation Bar */}
+      <div style={{ display: 'flex', borderBottom: '1px solid var(--border-primary)', gap: '12px', marginBottom: 'var(--space-lg)' }}>
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('analytics')}
+          style={{
+            padding: '10px 24px',
+            background: activeSubTab === 'analytics' ? 'var(--bg-card)' : 'transparent',
+            color: activeSubTab === 'analytics' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+            border: activeSubTab === 'analytics' ? '1px solid var(--border-primary)' : '1px solid transparent',
+            borderBottom: activeSubTab === 'analytics' ? '2px solid var(--accent-primary)' : '2px solid transparent',
+            borderRadius: '8px 8px 0 0',
+            fontWeight: 700,
+            fontSize: '14px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.2s ease',
+            marginBottom: '-1px'
+          }}
+        >
+          <BarChart2 size={18} />
+          Tab 1: OPD Analytics Dashboard
+        </button>
 
-              {/* Patient Selector */}
-              <div style={{ display: 'grid', gap: 'var(--space-xs)' }}>
-                <label style={{ fontSize: 'var(--font-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>
-                  Primary Patient Search (Mobile Number / Name / MRN) *
-                </label>
-                <PatientSearchBar 
-                  onSelect={(p) => setPatient(p)} 
-                  placeholder="📱 Primary Search: Enter Mobile Number, Name or MRN..."
-                  showRegisterOption={true}
-                  onRegisterClick={() => setShowRegisterModal(true)}
-                />
-                {patient && (
-                  <div style={{ padding: 'var(--space-md)', background: 'rgba(37,99,235,0.04)', borderRadius: 'var(--radius)', border: '1px solid rgba(37,99,235,0.2)', marginTop: 'var(--space-sm)' }}>
-                    <h4 style={{ margin: '0 0 var(--space-xs) 0', color: 'var(--accent-primary)', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <UserCheck size={16} /> Selected Patient Identity
-                    </h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-xs) var(--space-md)', fontSize: '13px' }}>
-                      <div><strong>📱 Mobile Number:</strong> <span style={{ fontWeight: 700, color: '#1d4ed8', background: '#dbeafe', padding: '2px 8px', borderRadius: '4px' }}>{patient.phone || 'No Mobile'}</span></div>
-                      <div><strong>👤 Patient Name:</strong> <span style={{ fontWeight: 700 }}>{patient.first_name} {patient.last_name}</span></div>
-                      <div><strong>🆔 MRN:</strong> <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{patient.medical_record_number}</span></div>
-                      <div><strong>🎂 Gender / Age:</strong> {patient.gender || '—'} ({calculateAge(patient.date_of_birth, patient.age)})</div>
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('queue')}
+          style={{
+            padding: '10px 24px',
+            background: activeSubTab === 'queue' ? 'var(--bg-card)' : 'transparent',
+            color: activeSubTab === 'queue' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+            border: activeSubTab === 'queue' ? '1px solid var(--border-primary)' : '1px solid transparent',
+            borderBottom: activeSubTab === 'queue' ? '2px solid var(--accent-primary)' : '2px solid transparent',
+            borderRadius: '8px 8px 0 0',
+            fontWeight: 700,
+            fontSize: '14px',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            transition: 'all 0.2s ease',
+            marginBottom: '-1px'
+          }}
+        >
+          <UserCheck size={18} />
+          Tab 2: Book OP & Queue Management
+        </button>
+      </div>
+
+      {activeSubTab === 'analytics' ? (
+        <OPDAnalyticsDashboard
+          doctors={doctors}
+          onPrintSlip={handlePrintSlipFromTable}
+          hospitalDetails={hospitalDetails}
+        />
+      ) : (
+        <div style={{ display: 'grid', gap: 'var(--space-lg)' }}>
+          {/* OP Booking Card */}
+          <Card title="Book OP Consultation & OPD Check-in">
+            <form onSubmit={handleCheckIn}>
+              <div style={{ display: 'grid', gap: 'var(--space-md)' }}>
+                {errorMsg && (
+                  <div style={{ color: 'var(--accent-danger)', fontSize: 'var(--font-sm)', padding: 'var(--space-sm)', background: 'rgba(239,68,68,0.08)', borderRadius: 'var(--radius-sm)' }}>
+                    ⚠️ {errorMsg}
+                  </div>
+                )}
+
+                {/* Patient Selector */}
+                <div style={{ display: 'grid', gap: 'var(--space-xs)' }}>
+                  <label style={{ fontSize: 'var(--font-sm)', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    Primary Patient Search (Mobile Number / Name / MRN) *
+                  </label>
+                  <PatientSearchBar 
+                    onSelect={(p) => setPatient(p)} 
+                    placeholder="📱 Primary Search: Enter Mobile Number, Name or MRN..."
+                    showRegisterOption={true}
+                    onRegisterClick={() => setShowRegisterModal(true)}
+                  />
+                  {patient && (
+                    <div style={{ padding: 'var(--space-md)', background: 'rgba(37,99,235,0.04)', borderRadius: 'var(--radius)', border: '1px solid rgba(37,99,235,0.2)', marginTop: 'var(--space-sm)' }}>
+                      <h4 style={{ margin: '0 0 var(--space-xs) 0', color: 'var(--accent-primary)', fontSize: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <UserCheck size={16} /> Selected Patient Identity
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 'var(--space-xs) var(--space-md)', fontSize: '13px' }}>
+                        <div><strong>📱 Mobile Number:</strong> <span style={{ fontWeight: 700, color: '#1d4ed8', background: '#dbeafe', padding: '2px 8px', borderRadius: '4px' }}>{patient.phone || 'No Mobile'}</span></div>
+                        <div><strong>👤 Patient Name:</strong> <span style={{ fontWeight: 700 }}>{patient.first_name} {patient.last_name}</span></div>
+                        <div><strong>🆔 MRN:</strong> <span style={{ fontFamily: 'monospace', fontWeight: 600 }}>{patient.medical_record_number}</span></div>
+                        <div><strong>🎂 Gender / Age:</strong> {patient.gender || '—'} ({calculateAge(patient.date_of_birth, patient.age)})</div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Doctor Selector */}
+                <div className="form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-md)' }}>
+                  <Select
+                    label="Select Consulting Doctor *"
+                    value={selectedDoctorId}
+                    onChange={(e) => {
+                      setSelectedDoctorId(e.target.value);
+                      setReviewStatus(null);
+                    }}
+                    options={[
+                      { value: '', label: '-- Select Doctor --' },
+                      ...doctors.map(d => ({
+                        value: d.doctorId,
+                        label: `Dr. ${d.doctorName} (${d.department || 'General'})`
+                      }))
+                    ]}
+                    required
+                  />
+
+                  <Select
+                    label="Payment Method *"
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    options={[
+                      { value: 'Cash', label: '💵 Cash' },
+                      { value: 'UPI / Online', label: '📱 UPI / Online' },
+                      { value: 'Card', label: '💳 Card' },
+                      { value: 'Insurance', label: '🛡️ Insurance' }
+                    ]}
+                    required
+                  />
+                </div>
+
+                {/* Consultation Fee Status Panel */}
+                {selectedDoctor && (
+                  <div style={{
+                    border: '1px solid var(--border-primary)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: 'var(--space-md)',
+                    background: reviewStatus?.isFreeReview ? 'rgba(34,197,94,0.06)' : 'rgba(255,255,255,0.01)',
+                    marginTop: 'var(--space-xs)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', marginBottom: 'var(--space-sm)' }}>
+                      <Stethoscope size={18} style={{ color: 'var(--accent-primary)' }} />
+                      <strong style={{ fontSize: 'var(--font-sm)' }}>Consultation Fee Calculation</strong>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)', fontSize: '14px' }}>
+                      <div>
+                        <span style={{ color: 'var(--text-secondary)' }}>Doctor Rate:</span>{' '}
+                        <strong>{formatCurrency(selectedDoctor.consultationFee)}</strong>
+                      </div>
+                      {reviewStatus && (
+                        <div>
+                          {reviewStatus.isFreeReview ? (
+                            <span style={{ color: 'var(--accent-success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                              ✅ Free 7-Day Review Active (Last visit:{' '}
+                              {reviewStatus.lastAppointmentDate ? new Date(reviewStatus.lastAppointmentDate).toLocaleDateString('en-IN') : 'N/A'})
+                            </span>
+                          ) : (
+                            <span style={{ color: 'var(--text-tertiary)' }}>No recent consultations (charged at normal rate)</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div style={{ borderTop: '1px solid var(--border-primary)', paddingTop: 'var(--space-sm)', marginTop: 'var(--space-sm)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '15px', fontWeight: 600 }}>Total Billed Amount:</span>
+                      <strong style={{ fontSize: '20px', color: reviewStatus?.isFreeReview ? 'var(--accent-success)' : 'var(--accent-primary)' }}>
+                        {formatCurrency(chargedFee)}
+                      </strong>
                     </div>
                   </div>
                 )}
-              </div>
 
-              {/* Doctor Selector */}
-              <div className="form-row" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 'var(--space-md)' }}>
-                <Select
-                  label="Select Consulting Doctor *"
-                  value={selectedDoctorId}
-                  onChange={(e) => {
-                    setSelectedDoctorId(e.target.value);
-                    setReviewStatus(null);
-                  }}
-                  options={[
-                    { value: '', label: '-- Select Doctor --' },
-                    ...doctors.map(d => ({
-                      value: d.doctorId,
-                      label: `Dr. ${d.doctorName} (${d.department || 'General'})`
-                    }))
-                  ]}
-                  required
-                />
-
-                <Select
-                  label="Payment Method *"
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  options={[
-                    { value: 'Cash', label: '💵 Cash' },
-                    { value: 'Card', label: '💳 Card' },
-                    { value: 'UPI', label: '📱 UPI' }
-                  ]}
-                  required
-                />
-              </div>
-
-              {/* Consultation Fee Status Panel */}
-              {selectedDoctor && (
-                <div style={{
-                  border: '1px solid var(--border-primary)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: 'var(--space-md)',
-                  background: reviewStatus?.isFreeReview ? 'rgba(34,197,94,0.06)' : 'rgba(255,255,255,0.01)',
-                  marginTop: 'var(--space-xs)'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-sm)', marginBottom: 'var(--space-sm)' }}>
-                    <Stethoscope size={18} style={{ color: 'var(--accent-primary)' }} />
-                    <strong style={{ fontSize: 'var(--font-sm)' }}>Consultation Fee Calculation</strong>
-                  </div>
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 'var(--space-md)', fontSize: '14px' }}>
-                    <div>
-                      <span style={{ color: 'var(--text-secondary)' }}>Doctor Rate:</span>{' '}
-                      <strong>{formatCurrency(selectedDoctor.consultationFee)}</strong>
-                    </div>
-                    {reviewStatus && (
-                      <div>
-                        {reviewStatus.isFreeReview ? (
-                          <span style={{ color: 'var(--accent-success)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
-                            ✅ Free 7-Day Review Active (Last visit:{' '}
-                            {reviewStatus.lastAppointmentDate ? new Date(reviewStatus.lastAppointmentDate).toLocaleDateString('en-IN') : 'N/A'})
-                          </span>
-                        ) : (
-                          <span style={{ color: 'var(--text-tertiary)' }}>No recent consultations (charged at normal rate)</span>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <div style={{ borderTop: '1px solid var(--border-primary)', paddingTop: 'var(--space-sm)', marginTop: 'var(--space-sm)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <span style={{ fontSize: '15px', fontWeight: 600 }}>Total Billed Amount:</span>
-                    <strong style={{ fontSize: '20px', color: reviewStatus?.isFreeReview ? 'var(--accent-success)' : 'var(--accent-primary)' }}>
-                      {formatCurrency(chargedFee)}
-                    </strong>
-                  </div>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--space-sm)' }}>
-                <Button variant="primary" type="submit" loading={saveLoading} disabled={!patient || !selectedDoctorId}>
-                  Book OP Consultation & Print Slip
-                </Button>
-              </div>
-            </div>
-          </form>
-        </Card>
-
-        {/* OP Consultation Bookings History Table */}
-        <Card title="OP Consultation Bookings Queue">
-          {/* Filters Section */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-md)', marginBottom: 'var(--space-md)', alignItems: 'flex-end' }}>
-            <div style={{ flex: 2, minWidth: 240 }}>
-              <Input
-                placeholder="Search patient name, MRN, doctor..."
-                value={filterSearch}
-                onChange={e => setFilterSearch(e.target.value)}
-              />
-            </div>
-            <div style={{ flex: 1, minWidth: 150 }}>
-              <Select
-                label="Date Range"
-                value={filterDate}
-                onChange={e => setFilterDate(e.target.value)}
-                options={[
-                  { value: 'Today', label: '📅 Today' },
-                  { value: 'Yesterday', label: '📅 Yesterday' },
-                  { value: '7Days', label: '📅 Last 7 Days' },
-                  { value: 'All', label: '📅 All Bookings' }
-                ]}
-              />
-            </div>
-            <div style={{ flex: 1, minWidth: 150 }}>
-              <Select
-                label="Check-in Type"
-                value={filterType}
-                onChange={e => setFilterType(e.target.value)}
-                options={[
-                  { value: 'All', label: '🏷️ All Types' },
-                  { value: 'Paid', label: '💵 Paid OPD' },
-                  { value: 'Free', label: '🎁 Free Reviews' }
-                ]}
-              />
-            </div>
-          </div>
-
-          <Table
-            columns={[
-              {
-                key: 'op_no',
-                label: 'OP No',
-                render: (_, row) => {
-                  const opNo = row.op_no || row.opNo || '—';
-                  return <strong style={{ color: 'var(--text-secondary)' }}>{opNo}</strong>;
-                }
-              },
-              {
-                key: 'token_no',
-                label: 'Token No',
-                render: (_, row) => {
-                  const tokenNo = row.token_no || row.tokenNo || '—';
-                  return <strong style={{ color: 'var(--accent-warning)', fontSize: 'var(--font-base)' }}>{tokenNo}</strong>;
-                }
-              },
-              {
-                key: 'medical_record_number',
-                label: 'MRN',
-                render: (v) => <span style={{ color: 'var(--accent-primary)', fontFamily: 'monospace' }}>{v}</span>
-              },
-              {
-                key: 'patient_name',
-                label: 'Patient Details',
-                render: (v, row) => (
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{v}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>📞 {row.patient_phone || '—'}</div>
-                  </div>
-                )
-              },
-              {
-                key: 'doctor_name',
-                label: 'Consulting Doctor',
-                render: (v, row) => (
-                  <div>
-                    <div style={{ fontWeight: 500 }}>Dr. {v}</div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>{row.doctor_department || 'General'}</div>
-                  </div>
-                )
-              },
-              {
-                key: 'appointment_date',
-                label: 'Check-in Time',
-                render: (v) => formatDateTime(v)
-              },
-              {
-                key: 'status',
-                label: 'Status',
-                render: (v) => <StatusBadge status={v} />
-              },
-              {
-                key: 'amount',
-                label: 'Amount',
-                render: (_, row) => {
-                  const isFree = row.notes === 'Free 7-day review consultation';
-                  return isFree ? (
-                    <Badge variant="success" style={{ fontSize: '11px' }}>FREE REVIEW</Badge>
-                  ) : (
-                    <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(parseFloat(row.doctor_fee || '0.00'))}</strong>
-                  );
-                }
-              },
-              {
-                key: 'actions',
-                label: 'Actions',
-                render: (_, row) => (
-                  <Button variant="ghost" size="sm" icon={<Printer size={13} />} onClick={() => handlePrintSlipFromTable(row)}>
-                    Print Slip
+                {/* Action Buttons */}
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 'var(--space-sm)' }}>
+                  <Button variant="primary" type="submit" loading={saveLoading} disabled={!patient || !selectedDoctorId}>
+                    Book OP Consultation & Print Slip
                   </Button>
-                )
-              }
-            ]}
-            data={filteredBookings}
-          />
-        </Card>
-      </div>
+                </div>
+              </div>
+            </form>
+          </Card>
+
+          {/* OP Consultation Bookings History Table */}
+          <Card title="OP Consultation Bookings Queue">
+            {/* Filters Section */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-md)', marginBottom: 'var(--space-md)', alignItems: 'flex-end' }}>
+              <div style={{ flex: 2, minWidth: 240 }}>
+                <Input
+                  placeholder="Search patient name, MRN, doctor..."
+                  value={filterSearch}
+                  onChange={e => setFilterSearch(e.target.value)}
+                />
+              </div>
+              <div style={{ flex: 1, minWidth: 150 }}>
+                <Select
+                  label="Date Range"
+                  value={filterDate}
+                  onChange={e => setFilterDate(e.target.value)}
+                  options={[
+                    { value: 'Today', label: '📅 Today' },
+                    { value: 'Yesterday', label: '📅 Yesterday' },
+                    { value: '7Days', label: '📅 Last 7 Days' },
+                    { value: 'All', label: '📅 All Bookings' }
+                  ]}
+                />
+              </div>
+              <div style={{ flex: 1, minWidth: 150 }}>
+                <Select
+                  label="Check-in Type"
+                  value={filterType}
+                  onChange={e => setFilterType(e.target.value)}
+                  options={[
+                    { value: 'All', label: '🏷️ All Types' },
+                    { value: 'Paid', label: '💵 Paid OPD' },
+                    { value: 'Free', label: '🎁 Free Reviews' }
+                  ]}
+                />
+              </div>
+            </div>
+
+            <Table
+              columns={[
+                {
+                  key: 'op_no',
+                  label: 'OP No',
+                  render: (_, row) => {
+                    const opNo = row.op_no || row.opNo || '—';
+                    return <strong style={{ color: 'var(--text-secondary)' }}>{opNo}</strong>;
+                  }
+                },
+                {
+                  key: 'token_no',
+                  label: 'Token No',
+                  render: (_, row) => {
+                    const tokenNo = row.token_no || row.tokenNo || '—';
+                    return <strong style={{ color: 'var(--accent-warning)', fontSize: 'var(--font-base)' }}>{tokenNo}</strong>;
+                  }
+                },
+                {
+                  key: 'medical_record_number',
+                  label: 'MRN',
+                  render: (v) => <span style={{ color: 'var(--accent-primary)', fontFamily: 'monospace' }}>{v}</span>
+                },
+                {
+                  key: 'patient_name',
+                  label: 'Patient Details',
+                  render: (v, row) => (
+                    <div>
+                      <div style={{ fontWeight: 600 }}>{v}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>📞 {row.patient_phone || '—'}</div>
+                    </div>
+                  )
+                },
+                {
+                  key: 'doctor_name',
+                  label: 'Consulting Doctor',
+                  render: (v, row) => (
+                    <div>
+                      <div style={{ fontWeight: 500 }}>Dr. {v}</div>
+                      <div style={{ fontSize: '11px', color: 'var(--text-tertiary)' }}>{row.doctor_department || 'General'}</div>
+                    </div>
+                  )
+                },
+                {
+                  key: 'appointment_date',
+                  label: 'Check-in Time',
+                  render: (v) => formatDateTime(v)
+                },
+                {
+                  key: 'status',
+                  label: 'Status',
+                  render: (v) => <StatusBadge status={v} />
+                },
+                {
+                  key: 'amount',
+                  label: 'Amount',
+                  render: (_, row) => {
+                    const isFree = row.notes === 'Free 7-day review consultation';
+                    return isFree ? (
+                      <Badge variant="success" style={{ fontSize: '11px' }}>FREE REVIEW</Badge>
+                    ) : (
+                      <strong style={{ color: 'var(--text-primary)' }}>{formatCurrency(parseFloat(row.doctor_fee || '0.00'))}</strong>
+                    );
+                  }
+                },
+                {
+                  key: 'actions',
+                  label: 'Actions',
+                  render: (_, row) => (
+                    <Button variant="ghost" size="sm" icon={<Printer size={13} />} onClick={() => handlePrintSlipFromTable(row)}>
+                      Print Slip
+                    </Button>
+                  )
+                }
+              ]}
+              data={filteredBookings}
+            />
+          </Card>
+        </div>
+      )}
 
       {/* Slip Modal Popup */}
       <Modal isOpen={showSlipModal} onClose={() => setShowSlipModal(false)} title="OPD Check-in Successful!" size="sm">
