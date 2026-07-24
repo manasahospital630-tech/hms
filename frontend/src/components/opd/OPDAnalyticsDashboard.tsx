@@ -278,10 +278,10 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
     <div className="opd-dashboard-container">
       {/* A. Global Filter Bar (Adaptive Layout) */}
       <Card>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-md)', alignItems: 'flex-end', justifyContent: 'space-between', width: '100%' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-md)', flex: 1, minWidth: 280 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-md)', width: '100%' }}>
+          <div className="opd-filter-grid">
             {/* Doctor Mapping Selector */}
-            <div style={{ flex: 1, minWidth: 220 }}>
+            <div>
               <Select
                 label="👨‍⚕️ Doctor Mapping Selector"
                 value={selectedDoctorId}
@@ -297,7 +297,7 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
             </div>
 
             {/* Date Range Selector */}
-            <div style={{ flex: 1, minWidth: 200 }}>
+            <div>
               <Select
                 label="📅 Date Range Filter"
                 value={selectedDateRange}
@@ -315,7 +315,7 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
             </div>
 
             {/* Payment Method Filter */}
-            <div style={{ flex: 1, minWidth: 180 }}>
+            <div>
               <Select
                 label="💳 Payment / Check-In Method"
                 value={selectedPaymentMethod}
@@ -334,7 +334,7 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
             {/* Custom Date Pickers */}
             {selectedDateRange === 'Custom' && (
               <>
-                <div style={{ width: 140 }}>
+                <div>
                   <Input
                     type="date"
                     label="From Date"
@@ -342,7 +342,7 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
                     onChange={e => setCustomStartDate(e.target.value)}
                   />
                 </div>
-                <div style={{ width: 140 }}>
+                <div>
                   <Input
                     type="date"
                     label="To Date"
@@ -354,7 +354,7 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: 'var(--space-sm)' }}>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '8px', borderTop: '1px solid var(--border-primary)' }}>
             <Button
               variant="secondary"
               size="sm"

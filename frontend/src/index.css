@@ -340,11 +340,25 @@ html.light-theme .ant-steps-item-icon {
 /* Responsive OPD Analytics Dashboard Engine */
 .opd-dashboard-container {
   width: 100%;
-  max-width: 1600px;
-  margin: 0 auto;
+  max-width: 100%;
   box-sizing: border-box;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: var(--space-lg);
+  overflow-x: hidden;
+}
+
+.opd-filter-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-md);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.opd-filter-grid > div {
+  min-width: 0;
+  width: 100%;
 }
 
 .opd-kpi-grid {
@@ -352,16 +366,31 @@ html.light-theme .ant-steps-item-icon {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: var(--space-md);
   width: 100%;
+  box-sizing: border-box;
+}
+
+.opd-kpi-grid > div {
+  min-width: 0;
+  width: 100%;
 }
 
 .opd-charts-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: var(--space-md);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.opd-charts-grid > div {
+  min-width: 0;
   width: 100%;
 }
 
 @media (max-width: 768px) {
+  .opd-filter-grid {
+    grid-template-columns: 1fr;
+  }
   .opd-kpi-grid {
     grid-template-columns: 1fr;
   }
