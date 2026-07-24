@@ -1,10 +1,10 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   User, ShieldAlert, HeartPulse, Activity, Calendar, FileText, Pill, Stethoscope,
   Plus, Printer, ArrowLeft, Search, Filter, Mic, Volume2, ExternalLink, CheckCircle,
   AlertTriangle, Clock, Phone, MapPin, Mail, Eye, RefreshCw, Zap, Info, ChevronRight,
-  TrendingUp, CreditCard, Shield, ArrowUpRight, Download, Bell, Sparkles, AlertCircle
+  TrendingUp, CreditCard, Shield, ArrowUpRight, Download, Bell, Sparkles, AlertCircle, Camera
 } from 'lucide-react';
 import api from '../../api/client';
 import { formatDateTime } from '../../utils/formatters';
@@ -13,8 +13,36 @@ export const PatientProfile: React.FC = () => {
   const { patientId } = useParams<{ patientId: string }>();
   const navigate = useNavigate();
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [patientPhoto, setPatientPhoto] = useState<string | null>(null);
+
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<any>(null);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPatientPhoto(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const getPatientAge = (dobStr?: string, ageVal?: number) => {
+    if (ageVal) return `${ageVal} Yrs`;
+    if (!dobStr) return '34 Yrs';
+    const birth = new Date(dobStr);
+    if (isNaN(birth.getTime())) return '34 Yrs';
+    const today = new Date();
+    let age = today.getFullYear() - birth.getFullYear();
+    const m = today.getMonth() - birth.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+      age--;
+    }
+    return `${age} Yrs`;
+  };
 
   // Active Navigation Tab
   const [activeTab, setActiveTab] = useState<'overview' | 'history' | 'appointments' | 'reports' | 'tests' | 'imaging'>('overview');
@@ -281,12 +309,26 @@ export const PatientProfile: React.FC = () => {
           {/* Patient Bio Card */}
           <div style={{ background: '#ffffff', border: '1px solid #f1f5f9', borderRadius: '20px', padding: '24px', boxShadow: '0 2px 12px rgba(0,0,0,0.03)' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '20px' }}>
-              <div style={{ position: 'relative' }}>
+              <input 
+                type="file" 
+                ref={fileInputRef} 
+                accept="image/*" 
+                onChange={handlePhotoUpload} 
+                style={{ display: 'none' }} 
+              />
+              <div 
+                onClick={() => fileInputRef.current?.click()} 
+                title="Click to upload patient photo"
+                style={{ position: 'relative', cursor: 'pointer' }}
+              >
                 <img 
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150" 
-                  alt="Patient" 
-                  style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover' }}
+                  src={patientPhoto || patient.photo_url || "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=150"} 
+                  alt="Patient Avatar" 
+                  style={{ width: '64px', height: '64px', borderRadius: '50%', objectFit: 'cover', border: '2px solid #e2e8f0' }}
                 />
+                <div style={{ position: 'absolute', inset: 0, borderRadius: '50%', background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'opacity 0.2s' }}>
+                  <Camera size={18} color="#ffffff" />
+                </div>
                 <span style={{ position: 'absolute', bottom: '0', right: '0', width: '14px', height: '14px', borderRadius: '50%', background: '#22c55e', border: '2px solid #fff' }} />
               </div>
 
@@ -294,8 +336,8 @@ export const PatientProfile: React.FC = () => {
                 <h2 style={{ fontSize: '18px', fontWeight: 800, margin: '0 0 4px 0', color: '#0f172a' }}>
                   {patient.first_name} {patient.last_name}
                 </h2>
-                <div style={{ fontSize: '12px', color: '#64748b' }}>
-                  {patient.gender || 'Male'}, {patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString('en-GB') : '06.04.1993'}
+                <div style={{ fontSize: '12px', color: '#64748b', fontWeight: 600 }}>
+                  {patient.gender || 'Female'}, {getPatientAge(patient.date_of_birth, patient.age)}
                 </div>
                 <span style={{ display: 'inline-block', marginTop: '6px', background: '#fef3c7', color: '#b45309', fontSize: '10px', fontWeight: 700, padding: '2px 8px', borderRadius: '12px' }}>
                   Post-Surgery
@@ -303,18 +345,14 @@ export const PatientProfile: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', borderTop: '1px solid #f1f5f9', paddingTop: '16px', fontSize: '11px', color: '#64748b' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', borderTop: '1px solid #f1f5f9', paddingTop: '16px', fontSize: '12px', color: '#64748b' }}>
               <div>
-                <div style={{ color: '#94a3b8' }}>Primary Physician</div>
-                <strong style={{ color: '#1e293b' }}>Dr. {patient.doctor_first_name || 'Alex'} {patient.doctor_last_name || 'Nguyen'}</strong>
+                <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '2px' }}>Primary Physician</div>
+                <strong style={{ color: '#1e293b', fontSize: '13px' }}>Dr. {patient.doctor_first_name || 'Alex'} {patient.doctor_last_name || 'Nguyen'}</strong>
               </div>
               <div>
-                <div style={{ color: '#94a3b8' }}>Insurance</div>
-                <strong style={{ color: '#1e293b' }}>{patient.insurance_provider || 'Aetna Gold Plan'}</strong>
-              </div>
-              <div>
-                <div style={{ color: '#94a3b8' }}>Insurance №</div>
-                <strong style={{ color: '#1e293b', fontFamily: 'monospace' }}>#{patient.insurance_policy_number || 'PL12234213'}</strong>
+                <div style={{ color: '#94a3b8', fontSize: '11px', marginBottom: '2px' }}>Patient MRN</div>
+                <strong style={{ color: '#1e293b', fontFamily: 'monospace', fontSize: '13px' }}>#{patient.medical_record_number || 'PL12234213'}</strong>
               </div>
             </div>
           </div>
