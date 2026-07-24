@@ -27,7 +27,7 @@ export const CheckInQueue: React.FC = () => {
   const [selectedAppt, setSelectedAppt] = useState<any>(null);
   const [savingVitals, setSavingVitals] = useState(false);
 
-  // Vitals Form State
+  // Vitals & Clinical Notes Form State
   const [vitalsForm, setVitalsForm] = useState({
     weight: '165',
     temperature: '99.4',
@@ -37,7 +37,8 @@ export const CheckInQueue: React.FC = () => {
     spo2: '94',
     glucoseLevel: '110',
     glucoseType: 'Random',
-    notes: 'Patient mentions mild fatigue after morning activity.'
+    notes: 'Patient mentions mild fatigue after morning activity.',
+    doctorNotes: 'Advised rest and mild electrolyte intake.'
   });
 
   const fetchData = async () => {
@@ -71,7 +72,8 @@ export const CheckInQueue: React.FC = () => {
       spo2: existingVitals.oxygenSaturation?.toString() || '94',
       glucoseLevel: existingVitals.glucoseLevel?.toString() || '110',
       glucoseType: existingVitals.glucoseType || 'Random',
-      notes: existingVitals.notes || 'Patient mentions mild fatigue.'
+      notes: existingVitals.notes || appt.symptoms_brief || 'Patient mentions mild fatigue after morning activity.',
+      doctorNotes: existingVitals.doctorNotes || appt.doctor_notes || 'Advised rest and mild electrolyte intake.'
     });
     setIsVitalsModalOpen(true);
     setActiveActionId(null);
@@ -94,15 +96,17 @@ export const CheckInQueue: React.FC = () => {
         bloodPressureDiastolic: vitalsForm.diastolicBp,
         glucoseLevel: vitalsForm.glucoseLevel,
         glucoseType: vitalsForm.glucoseType,
-        notes: vitalsForm.notes
+        notes: vitalsForm.notes,
+        doctorNotes: vitalsForm.doctorNotes,
+        clinicalNotes: vitalsForm.doctorNotes
       };
 
       await api.post('/v1/queue/record-vitals', payload);
-      alert('✅ Vitals recorded successfully and auto-synced to Patient Health Metrics Timeline!');
+      alert('✅ Clinical notes & vitals recorded successfully and auto-synced to Patient OP Consultation History!');
       setIsVitalsModalOpen(false);
       fetchData();
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to save vitals');
+      alert(err.response?.data?.error || 'Failed to save clinical notes');
     } finally {
       setSavingVitals(false);
     }
@@ -487,7 +491,7 @@ export const CheckInQueue: React.FC = () => {
               />
             </div>
 
-            {/* Notes Textarea */}
+            {/* Chief Complaints / Triage Notes Textarea */}
             <div>
               <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
                 Chief Complaints / Triage Notes
@@ -495,7 +499,7 @@ export const CheckInQueue: React.FC = () => {
               <textarea
                 value={vitalsForm.notes}
                 onChange={e => setVitalsForm({ ...vitalsForm, notes: e.target.value })}
-                rows={3}
+                rows={2}
                 style={{
                   width: '100%',
                   padding: '10px',
@@ -504,6 +508,29 @@ export const CheckInQueue: React.FC = () => {
                   fontSize: '13px',
                   fontFamily: 'inherit',
                   boxSizing: 'border-box'
+                }}
+              />
+            </div>
+
+            {/* Doctor Clinical Notes Textarea */}
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 800, color: '#6b21a8', marginBottom: '6px' }}>
+                👨‍⚕️ Doctor Clinical Notes
+              </label>
+              <textarea
+                value={vitalsForm.doctorNotes}
+                onChange={e => setVitalsForm({ ...vitalsForm, doctorNotes: e.target.value })}
+                placeholder="Enter clinical observations, diagnosis, and prescription notes for this OP ID..."
+                rows={3}
+                style={{
+                  width: '100%',
+                  padding: '10px',
+                  borderRadius: '8px',
+                  border: '1.5px solid #c084fc',
+                  fontSize: '13px',
+                  fontFamily: 'inherit',
+                  boxSizing: 'border-box',
+                  background: '#faf5ff'
                 }}
               />
             </div>

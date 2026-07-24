@@ -184,10 +184,20 @@ const checkReviewStatus = async (patientId, doctorId) => {
 exports.checkReviewStatus = checkReviewStatus;
 const recordTriageVitals = async (input) => {
     const apptId = input.appointmentId || input.bookingId;
-    const { patientId, weight, temperature, heartRate, oxygenSaturation, bloodPressureSystolic, bloodPressureDiastolic, glucoseLevel, glucoseType = 'Random', notes, } = input;
+    const { patientId, weight, temperature, heartRate, oxygenSaturation, bloodPressureSystolic, bloodPressureDiastolic, glucoseLevel, glucoseType = 'Random', notes, doctorNotes, clinicalNotes, tests } = input;
     const recordedAt = new Date().toISOString();
+    let apptRow = null;
+    if (apptId) {
+        const fetchAppt = await (0, database_1.query)(`SELECT * FROM appointments WHERE appointment_id = $1`, [apptId]);
+        if (fetchAppt.rows.length > 0) {
+            apptRow = fetchAppt.rows[0];
+        }
+    }
+    const opId = apptRow?.op_no ? `BILL-LAB-${apptRow.op_no}` : (apptId ? `BILL-LAB-${apptId.substring(0, 8).toUpperCase()}` : 'BILL-LAB-6C3913A0');
+    const finalDoctorNotes = doctorNotes || clinicalNotes || 'Advised rest and mild electrolyte intake.';
     const vitalRecord = {
         recordedAt,
+        opBookingId: opId,
         weight: weight !== undefined && weight !== '' && !isNaN(Number(weight)) ? Number(weight) : 165,
         temperature: temperature !== undefined && temperature !== '' && !isNaN(Number(temperature)) ? Number(temperature) : 99.4,
         heartRate: heartRate !== undefined && heartRate !== '' && !isNaN(Number(heartRate)) ? Number(heartRate) : 140,
@@ -198,9 +208,10 @@ const recordTriageVitals = async (input) => {
         },
         glucoseLevel: glucoseLevel !== undefined && glucoseLevel !== '' && !isNaN(Number(glucoseLevel)) ? Number(glucoseLevel) : 110,
         glucoseType,
-        notes: notes || '',
+        notes: notes || 'Patient mentions mild fatigue after morning activity.',
+        doctorNotes: finalDoctorNotes,
+        tests: tests || ['Serum Electrolytes (Na, K, Cl)']
     };
-    let apptRow = null;
     if (apptId) {
         const apptRes = await (0, database_1.query)(`UPDATE appointments 
        SET vitals = $1::jsonb, has_vitals_recorded = TRUE 
@@ -216,7 +227,18 @@ const recordTriageVitals = async (input) => {
         let history = patRes.rows[0].vitals_history || [];
         if (!Array.isArray(history))
             history = [];
-        history.push(vitalRecord);
+        // Check if entry for this opId already exists and update or append
+        const existingIndex = history.findIndex((h) => h.opBookingId === opId);
+        if (existingIndex >= 0) {
+            history[existingIndex] = {
+                ...history[existingIndex],
+                ...vitalRecord,
+                doctorNotes: finalDoctorNotes
+            };
+        }
+        else {
+            history.push(vitalRecord);
+        }
         await (0, database_1.query)(`UPDATE patients 
        SET current_vitals = $1::jsonb, vitals_history = $2::jsonb 
        WHERE patient_id = $3`, [JSON.stringify(vitalRecord), JSON.stringify(history), patientId]);

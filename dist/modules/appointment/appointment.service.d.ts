@@ -44,10 +44,14 @@ export declare const recordTriageVitals: (input: {
     glucoseLevel?: number | string;
     glucoseType?: string;
     notes?: string;
+    doctorNotes?: string;
+    clinicalNotes?: string;
+    tests?: string[];
 }) => Promise<{
     appointment: any;
     vitalRecord: {
         recordedAt: string;
+        opBookingId: string;
         weight: number;
         temperature: number;
         heartRate: number;
@@ -59,6 +63,8 @@ export declare const recordTriageVitals: (input: {
         glucoseLevel: number;
         glucoseType: string;
         notes: string;
+        doctorNotes: string;
+        tests: string[];
     };
 }>;
 //# sourceMappingURL=appointment.service.d.ts.map

@@ -72,17 +72,17 @@ export declare const orderSchema: z.ZodObject<{
     doctorId: string;
     services: string[];
     priority: "Emergency" | "Routine" | "Urgent";
-    referralId?: string | null | undefined;
     clinicalNotes?: string | undefined;
+    referralId?: string | null | undefined;
     diagnosis?: string | undefined;
     packages?: string[] | undefined;
 }, {
     patientId: string;
     doctorId: string;
     services: string[];
+    clinicalNotes?: string | undefined;
     referralId?: string | null | undefined;
     priority?: "Emergency" | "Routine" | "Urgent" | undefined;
-    clinicalNotes?: string | undefined;
     diagnosis?: string | undefined;
     packages?: string[] | undefined;
 }>;

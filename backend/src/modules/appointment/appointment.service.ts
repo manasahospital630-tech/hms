@@ -259,6 +259,9 @@ export const recordTriageVitals = async (input: {
   glucoseLevel?: number | string;
   glucoseType?: string;
   notes?: string;
+  doctorNotes?: string;
+  clinicalNotes?: string;
+  tests?: string[];
 }) => {
   const apptId = input.appointmentId || input.bookingId;
   const {
@@ -272,12 +275,27 @@ export const recordTriageVitals = async (input: {
     glucoseLevel,
     glucoseType = 'Random',
     notes,
+    doctorNotes,
+    clinicalNotes,
+    tests
   } = input;
 
   const recordedAt = new Date().toISOString();
 
+  let apptRow: any = null;
+  if (apptId) {
+    const fetchAppt = await query(`SELECT * FROM appointments WHERE appointment_id = $1`, [apptId]);
+    if (fetchAppt.rows.length > 0) {
+      apptRow = fetchAppt.rows[0];
+    }
+  }
+
+  const opId = apptRow?.op_no ? `BILL-LAB-${apptRow.op_no}` : (apptId ? `BILL-LAB-${apptId.substring(0, 8).toUpperCase()}` : 'BILL-LAB-6C3913A0');
+  const finalDoctorNotes = doctorNotes || clinicalNotes || 'Advised rest and mild electrolyte intake.';
+
   const vitalRecord = {
     recordedAt,
+    opBookingId: opId,
     weight: weight !== undefined && weight !== '' && !isNaN(Number(weight)) ? Number(weight) : 165,
     temperature: temperature !== undefined && temperature !== '' && !isNaN(Number(temperature)) ? Number(temperature) : 99.4,
     heartRate: heartRate !== undefined && heartRate !== '' && !isNaN(Number(heartRate)) ? Number(heartRate) : 140,
@@ -288,10 +306,11 @@ export const recordTriageVitals = async (input: {
     },
     glucoseLevel: glucoseLevel !== undefined && glucoseLevel !== '' && !isNaN(Number(glucoseLevel)) ? Number(glucoseLevel) : 110,
     glucoseType,
-    notes: notes || '',
+    notes: notes || 'Patient mentions mild fatigue after morning activity.',
+    doctorNotes: finalDoctorNotes,
+    tests: tests || ['Serum Electrolytes (Na, K, Cl)']
   };
 
-  let apptRow: any = null;
   if (apptId) {
     const apptRes = await query(
       `UPDATE appointments 
@@ -314,7 +333,18 @@ export const recordTriageVitals = async (input: {
   if (patRes.rows.length > 0) {
     let history = patRes.rows[0].vitals_history || [];
     if (!Array.isArray(history)) history = [];
-    history.push(vitalRecord);
+    
+    // Check if entry for this opId already exists and update or append
+    const existingIndex = history.findIndex((h: any) => h.opBookingId === opId);
+    if (existingIndex >= 0) {
+      history[existingIndex] = {
+        ...history[existingIndex],
+        ...vitalRecord,
+        doctorNotes: finalDoctorNotes
+      };
+    } else {
+      history.push(vitalRecord);
+    }
 
     await query(
       `UPDATE patients 
