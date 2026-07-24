@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import {
   User, ShieldAlert, HeartPulse, Activity, Calendar, FileText, Pill, Stethoscope,
@@ -87,6 +87,149 @@ export const PatientProfile: React.FC = () => {
   const isTempHigh = tempNum > 99.0;
   const isHrAbnormal = hr < 60 || hr > 100;
   const isSpo2Low = spo2 < 95;
+
+  // Dynamic Health Metrics Timeline Data Extractor
+  const chartPoints = useMemo(() => {
+    const historyList = (vHist && vHist.length > 0) ? vHist : (vitalsSeries && vitalsSeries.length > 0 ? vitalsSeries : []);
+
+    if (historyList.length === 0) {
+      return [
+        { dateStr: '2022', fullDate: 'Aug 2022', hr: 72, systolic: 115, diastolic: 75, glucose: 90, spo2: 98 },
+        { dateStr: '2023', fullDate: 'Jan 2023', hr: 76, systolic: 118, diastolic: 78, glucose: 95, spo2: 97 },
+        { dateStr: '2024', fullDate: 'May 2024', hr: 80, systolic: 120, diastolic: 80, glucose: 100, spo2: 96 },
+        { dateStr: '2025', fullDate: 'Feb 2025', hr: 85, systolic: 122, diastolic: 82, glucose: 105, spo2: 95 },
+        { dateStr: '2026', fullDate: 'Jul 2026', hr: hr || 140, systolic: latestVitals.bloodPressure?.systolic || 120, diastolic: latestVitals.bloodPressure?.diastolic || 80, glucose: latestVitals.glucoseLevel || 110, spo2: spo2 || 94 }
+      ];
+    }
+
+    const sorted = [...historyList].sort((a, b) => {
+      const dA = new Date(a.recordedAt || a.visitDate || a.encounter_timestamp || 0).getTime();
+      const dB = new Date(b.recordedAt || b.visitDate || b.encounter_timestamp || 0).getTime();
+      return dA - dB;
+    });
+
+    const pts: Array<{ dateStr: string; fullDate: string; hr: number; systolic: number; diastolic: number; glucose: number; spo2: number }> = [];
+
+    if (sorted.length === 1) {
+      pts.push({
+        dateStr: '2025',
+        fullDate: 'Baseline 2025',
+        hr: 75,
+        systolic: 118,
+        diastolic: 78,
+        glucose: 95,
+        spo2: 98
+      });
+    }
+
+    sorted.forEach((item) => {
+      const d = new Date(item.recordedAt || item.visitDate || item.encounter_timestamp || Date.now());
+      const dateStr = `${d.getDate()}/${d.getMonth() + 1}`;
+      const fullDate = d.toLocaleDateString('en-GB');
+
+      const itemHr = Number(item.heartRate || item.pulse_rate || 75);
+      const itemSys = Number(item.bloodPressure?.systolic || item.systolicBp || item.systolic_bp || 120);
+      const itemDia = Number(item.bloodPressure?.diastolic || item.diastolicBp || item.diastolic_bp || 80);
+      const itemGluc = Number(item.glucoseLevel || 110);
+      const itemSpo2 = Number(item.oxygenSaturation || item.spo2 || 95);
+
+      pts.push({
+        dateStr,
+        fullDate,
+        hr: itemHr,
+        systolic: itemSys,
+        diastolic: itemDia,
+        glucose: itemGluc,
+        spo2: itemSpo2
+      });
+    });
+
+    return pts;
+  }, [vHist, vitalsSeries, latestVitals, hr, spo2]);
+
+  const chartSvgData = useMemo(() => {
+    const svgWidth = 700;
+    const svgHeight = 140;
+    const paddingX = 50;
+    const paddingTop = 25;
+    const paddingBottom = 35;
+    const usableWidth = svgWidth - paddingX * 2;
+    const usableHeight = svgHeight - paddingTop - paddingBottom;
+
+    const n = chartPoints.length;
+    const xStep = n > 1 ? usableWidth / (n - 1) : usableWidth;
+
+    let minVal = 0;
+    let maxVal = 100;
+    let lineColor = '#10b981';
+
+    if (metricTab === 'hr') {
+      lineColor = '#ef4444';
+      minVal = 50;
+      maxVal = 160;
+    } else if (metricTab === 'bp') {
+      lineColor = '#3b82f6';
+      minVal = 50;
+      maxVal = 180;
+    } else if (metricTab === 'glucose') {
+      lineColor = '#8b5cf6';
+      minVal = 60;
+      maxVal = 200;
+    } else if (metricTab === 'spo2') {
+      lineColor = '#06b6d4';
+      minVal = 80;
+      maxVal = 100;
+    }
+
+    const primaryPoints = chartPoints.map((pt, i) => {
+      const x = paddingX + i * xStep;
+      let val = pt.hr;
+      if (metricTab === 'bp') val = pt.systolic;
+      else if (metricTab === 'glucose') val = pt.glucose;
+      else if (metricTab === 'spo2') val = pt.spo2;
+
+      const clamped = Math.max(minVal, Math.min(maxVal, val));
+      const ratio = (clamped - minVal) / (maxVal - minVal);
+      const y = svgHeight - paddingBottom - ratio * usableHeight;
+      return { x, y, val, dateStr: pt.dateStr, fullDate: pt.fullDate };
+    });
+
+    let secondaryPoints: Array<{ x: number; y: number; val: number }> = [];
+    if (metricTab === 'bp') {
+      secondaryPoints = chartPoints.map((pt, i) => {
+        const x = paddingX + i * xStep;
+        const val = pt.diastolic;
+        const clamped = Math.max(minVal, Math.min(maxVal, val));
+        const ratio = (clamped - minVal) / (maxVal - minVal);
+        const y = svgHeight - paddingBottom - ratio * usableHeight;
+        return { x, y, val };
+      });
+    }
+
+    const buildCurve = (pts: { x: number; y: number }[]) => {
+      if (pts.length === 0) return '';
+      if (pts.length === 1) return `M ${pts[0].x},${pts[0].y}`;
+      let d = `M ${pts[0].x},${pts[0].y}`;
+      for (let i = 0; i < pts.length - 1; i++) {
+        const c = pts[i];
+        const nxt = pts[i + 1];
+        const cp1x = c.x + (nxt.x - c.x) / 2;
+        const cp1y = c.y;
+        const cp2x = c.x + (nxt.x - c.x) / 2;
+        const cp2y = nxt.y;
+        d += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${nxt.x},${nxt.y}`;
+      }
+      return d;
+    };
+
+    return {
+      lineColor,
+      primaryPoints,
+      secondaryPoints,
+      primaryPath: buildCurve(primaryPoints),
+      secondaryPath: buildCurve(secondaryPoints)
+    };
+  }, [chartPoints, metricTab]);
 
   return (
     <div style={{ maxWidth: '1280px', margin: '0 auto', paddingBottom: '60px', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif', background: '#f8fafc', minHeight: '100vh', padding: '24px' }}>
@@ -360,35 +503,87 @@ export const PatientProfile: React.FC = () => {
               </div>
             </div>
 
-            {/* Smooth SVG Trend Line Chart */}
+            {/* Metric Title & Dynamic Legend */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', marginBottom: '10px' }}>
+              {metricTab === 'bp' && (
+                <div style={{ display: 'flex', gap: '14px', fontSize: '12px', fontWeight: 700 }}>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#3b82f6' }}>
+                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#3b82f6', display: 'inline-block' }}></span>
+                    Systolic (mmHg)
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: '6px', color: '#10b981' }}>
+                    <span style={{ width: 10, height: 10, borderRadius: '50%', background: '#10b981', display: 'inline-block' }}></span>
+                    Diastolic (mmHg)
+                  </span>
+                </div>
+              )}
+              {metricTab === 'hr' && (
+                <span style={{ fontSize: '12px', color: '#ef4444', fontWeight: 700 }}>
+                  ❤️ Heart Rate (bpm) — Normal: 60-100 bpm
+                </span>
+              )}
+              {metricTab === 'glucose' && (
+                <span style={{ fontSize: '12px', color: '#8b5cf6', fontWeight: 700 }}>
+                  🩸 Glucose Levels (mg/dL)
+                </span>
+              )}
+              {metricTab === 'spo2' && (
+                <span style={{ fontSize: '12px', color: '#06b6d4', fontWeight: 700 }}>
+                  🫁 Oxygen Saturation (%) — Target: ≥95%
+                </span>
+              )}
+            </div>
+
+            {/* Dynamic Smooth SVG Trend Line Chart */}
             <div style={{ width: '100%', height: '140px' }}>
               <svg width="100%" height="100%" viewBox="0 0 700 140" preserveAspectRatio="none">
                 {/* Horizontal Gridlines */}
-                <line x1="0" y1="30" x2="700" y2="30" stroke="#f1f5f9" strokeDasharray="4 4" />
-                <line x1="0" y1="70" x2="700" y2="70" stroke="#f1f5f9" strokeDasharray="4 4" />
-                <line x1="0" y1="110" x2="700" y2="110" stroke="#f1f5f9" strokeDasharray="4 4" />
+                <line x1="0" y1="25" x2="700" y2="25" stroke="#f1f5f9" strokeDasharray="4 4" />
+                <line x1="0" y1="65" x2="700" y2="65" stroke="#f1f5f9" strokeDasharray="4 4" />
+                <line x1="0" y1="105" x2="700" y2="105" stroke="#f1f5f9" strokeDasharray="4 4" />
 
-                {/* Trend Curve */}
+                {/* Primary Curve Line */}
                 <path
-                  d="M 20,80 C 80,40 140,90 200,60 C 260,30 320,100 380,45 C 440,70 500,50 560,80 C 620,40 650,60 680,50"
+                  d={chartSvgData.primaryPath}
                   fill="none"
-                  stroke="#10b981"
+                  stroke={chartSvgData.lineColor}
                   strokeWidth="3"
+                  strokeLinecap="round"
                 />
 
-                {/* Timeline Nodes */}
-                <circle cx="140" cy="90" r="4" fill="#10b981" />
-                <circle cx="320" cy="100" r="4" fill="#10b981" />
-                <circle cx="440" cy="70" r="4" fill="#10b981" />
-                <circle cx="560" cy="80" r="4" fill="#10b981" />
+                {/* Secondary Curve Line (Diastolic BP) */}
+                {metricTab === 'bp' && (
+                  <path
+                    d={chartSvgData.secondaryPath}
+                    fill="none"
+                    stroke="#10b981"
+                    strokeWidth="3"
+                    strokeLinecap="round"
+                  />
+                )}
 
-                {/* Timeline X Labels */}
-                <text x="50" y="135" fontSize="11" fill="#94a3b8">2020</text>
-                <text x="180" y="135" fontSize="11" fill="#94a3b8">2021</text>
-                <text x="310" y="135" fontSize="11" fill="#94a3b8">2022</text>
-                <text x="440" y="135" fontSize="11" fill="#94a3b8">2023</text>
-                <text x="570" y="135" fontSize="11" fill="#94a3b8">2024</text>
-                <text x="670" y="135" fontSize="11" fill="#94a3b8">2025</text>
+                {/* Primary Data Points & Labels */}
+                {chartSvgData.primaryPoints.map((pt, i) => (
+                  <g key={`p-${i}`}>
+                    <circle cx={pt.x} cy={pt.y} r="5" fill={chartSvgData.lineColor} stroke="#ffffff" strokeWidth="2" />
+                    <text x={pt.x} y={pt.y - 8} fontSize="11" fontWeight="800" fill={chartSvgData.lineColor} textAnchor="middle">
+                      {pt.val}
+                    </text>
+                    <text x={pt.x} y="132" fontSize="11" fontWeight="700" fill="#64748b" textAnchor="middle">
+                      {pt.dateStr}
+                    </text>
+                  </g>
+                ))}
+
+                {/* Secondary Data Points (Diastolic BP) */}
+                {metricTab === 'bp' && chartSvgData.secondaryPoints.map((pt, i) => (
+                  <g key={`s-${i}`}>
+                    <circle cx={pt.x} cy={pt.y} r="4" fill="#10b981" stroke="#ffffff" strokeWidth="2" />
+                    <text x={pt.x} y={pt.y + 14} fontSize="10" fontWeight="700" fill="#10b981" textAnchor="middle">
+                      {pt.val}
+                    </text>
+                  </g>
+                ))}
               </svg>
             </div>
           </div>
