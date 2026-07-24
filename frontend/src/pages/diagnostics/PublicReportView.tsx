@@ -369,17 +369,9 @@ export const PublicReportView: React.FC = () => {
         </Button>
       </div>
 
-      {/* Main Report Page Sheet */}
-      <div className="public-report-sheet" style={{ 
-        maxWidth: '800px', 
-        margin: '0 auto', 
-        background: '#fff', 
-        boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)', 
-        borderRadius: '12px', 
-        padding: '30px 40px',
-        border: '1px solid #e2e8f0'
-      }}>
-        <table className="report-layout-table" style={{ width: '100%', borderCollapse: 'collapse', margin: 0, padding: 0 }}>
+      {/* Render helper functions for Header and Signature */}
+      {(() => {
+        const renderHeaderAndPatientCard = () => (
           <thead style={{ display: 'table-header-group' }}>
             <tr>
               <td style={{ padding: 0, border: 'none' }}>
@@ -409,7 +401,7 @@ export const PublicReportView: React.FC = () => {
                 <div style={{ borderBottom: '2.5px solid #0f172a', margin: '8px 0 14px 0' }} />
 
                 {/* Metadata Patient Card Table */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '24px', fontSize: '12px', borderBottom: '2.5px solid #0f172a', paddingBottom: '12px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '18px', fontSize: '12px', borderBottom: '2.5px solid #0f172a', paddingBottom: '10px' }}>
                   <tbody>
                     <tr>
                       <td style={{ padding: '4px 0', fontWeight: 600, color: '#475569', width: '15%' }}>Patient Name:</td>
@@ -440,249 +432,294 @@ export const PublicReportView: React.FC = () => {
               </td>
             </tr>
           </thead>
-          <tbody>
-            <tr>
-              <td style={{ padding: 0, border: 'none' }}>
-                {/* Results Block */}
-                <div style={{ marginBottom: '30px' }}>
-                  {isLab ? (
-                    <>
-                      <div style={{ textAlign: 'center', marginTop: '10px', marginBottom: '15px' }}>
-                        <h2 style={{ fontSize: '14px', fontWeight: 800, letterSpacing: '1px', margin: 0, color: '#0f172a', textTransform: 'uppercase' }}>
-                          {deptTitle}
-                        </h2>
-                        <h3 style={{ fontSize: '12px', fontWeight: 700, textDecoration: 'underline', margin: '4px 0 0 0', textTransform: 'uppercase', color: '#1e3a8a', letterSpacing: '0.5px' }}>
-                          {report.package_name || report.service_name}
-                        </h3>
-                      </div>
+        );
 
-                      {report.package_id && report.package_items && report.package_items.length > 0 ? (
-                        report.package_items.map((pkgItem: any, pIdx: number) => {
-                          const pLr = pkgItem.lab_result || {};
-                          let pParams = pkgItem.result_parameters || [];
-                          if ((!pParams || pParams.length === 0) && pLr.actual_result) {
-                            const parsed = parseConcatenatedResult(pLr.actual_result);
-                            if (parsed) {
-                              pParams = parsed.map((p: any, idx: number) => ({
-                                parameter_id: `parsed-${idx}`,
-                                parameter_name: p.name,
-                                actual_value: p.value,
-                                unit: p.unit,
-                                reference_range: refRanges[p.name.toUpperCase()] || '',
-                                status: 'Normal'
-                              }));
-                            }
-                          }
+        const renderSignature = () => (
+          <>
+            <div className="footer-signature" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '40px', fontSize: '12px', color: '#475569', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+              <div>
+                <p style={{ margin: 0, fontStyle: 'italic' }}>Please correlate clinically</p>
+                <p style={{ margin: '6px 0 0 0' }}>Test Performed By : <strong style={{ color: '#0f172a' }}>{report.verification?.verified_by_name ? 'Pathology Lab Assistant' : 'clsowmya'}</strong></p>
+              </div>
+              <div style={{ textAlign: 'right', width: '220px' }}>
+                <div style={{ fontFamily: 'Georgia, cursive', fontStyle: 'italic', color: '#1e3a8a', fontSize: '18px', fontWeight: 700, marginBottom: '2px' }}>
+                  {verifiedBy.includes('Priya') ? 'Dr Priya Nair' : 'Dr Vidya Kedari'}
+                </div>
+                <div style={{ borderTop: '1px dashed #94a3b8', paddingTop: '4px', fontWeight: 700, color: '#0f172a' }}>
+                  {verifiedBy}
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b' }}>
+                  Consultant Pathologist
+                </div>
+              </div>
+            </div>
 
-                          return (
-                            <div key={pIdx} className="test-group-block" style={{ marginTop: '14px', marginBottom: '8px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                              <div style={{ fontSize: '12px', fontWeight: 700, color: '#1e3a8a', borderBottom: '1px solid #cbd5e1', paddingBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                                {pkgItem.service_name} ({pkgItem.service_code})
-                              </div>
-                              <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '4px', marginBottom: '8px', fontSize: '11px' }}>
+            <div style={{ textAlign: 'center', fontSize: '11px', color: '#64748b', marginTop: '20px', fontWeight: 'bold', letterSpacing: '2px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+              *** END OF REPORT ***
+            </div>
+          </>
+        );
+
+        if (isLab && report.package_id && report.package_items && report.package_items.length > 0) {
+          return report.package_items.map((pkgItem: any, pIdx: number) => {
+            const pLr = pkgItem.lab_result || {};
+            let pParams = pkgItem.result_parameters || [];
+            if ((!pParams || pParams.length === 0) && pLr.actual_result) {
+              const parsed = parseConcatenatedResult(pLr.actual_result);
+              if (parsed) {
+                pParams = parsed.map((p: any, idx: number) => ({
+                  parameter_id: `parsed-${idx}`,
+                  parameter_name: p.name,
+                  actual_value: p.value,
+                  unit: p.unit,
+                  reference_range: refRanges[p.name.toUpperCase()] || '',
+                  status: 'Normal'
+                }));
+              }
+            }
+
+            return (
+              <div key={pIdx} className="public-report-sheet single-report-page" style={{ 
+                maxWidth: '800px', 
+                margin: '0 auto 24px auto', 
+                background: '#fff', 
+                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)', 
+                borderRadius: '12px', 
+                padding: '30px 40px',
+                border: '1px solid #e2e8f0',
+                pageBreakAfter: pIdx < report.package_items.length - 1 ? 'always' : 'auto',
+                breakAfter: pIdx < report.package_items.length - 1 ? 'page' : 'auto'
+              }}>
+                <table className="report-layout-table" style={{ width: '100%', borderCollapse: 'collapse', margin: 0, padding: 0 }}>
+                  {renderHeaderAndPatientCard()}
+                  <tbody>
+                    <tr>
+                      <td style={{ padding: 0, border: 'none' }}>
+                        <div style={{ textAlign: 'center', marginTop: '10px', marginBottom: '15px' }}>
+                          <h2 style={{ fontSize: '14px', fontWeight: 800, letterSpacing: '1px', margin: 0, color: '#0f172a', textTransform: 'uppercase' }}>
+                            {deptTitle}
+                          </h2>
+                          <h3 style={{ fontSize: '12px', fontWeight: 700, textDecoration: 'underline', margin: '4px 0 0 0', textTransform: 'uppercase', color: '#1e3a8a', letterSpacing: '0.5px' }}>
+                            {report.package_name ? `${report.package_name} — ` : ''}{pkgItem.service_name} ({pkgItem.service_code || 'TEST'})
+                          </h3>
+                        </div>
+
+                        <div className="test-group-block" style={{ marginTop: '14px', marginBottom: '8px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                          <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: '4px', marginBottom: '8px', fontSize: '11px' }}>
+                            <thead>
+                              <tr style={{ borderTop: '1.5px solid #0f172a', borderBottom: '1.5px solid #0f172a', textAlign: 'left', fontSize: '10px', color: '#475569' }}>
+                                <th style={{ padding: '6px 0', fontWeight: 700, width: '35%', textTransform: 'uppercase' }}>Test Parameter</th>
+                                <th style={{ padding: '6px 0', fontWeight: 700, width: '20%', textAlign: 'center', textTransform: 'uppercase' }}>Observed Value</th>
+                                <th style={{ padding: '6px 0', fontWeight: 700, width: '25%', textAlign: 'center', textTransform: 'uppercase' }}>Reference Range</th>
+                                <th style={{ padding: '6px 0', fontWeight: 700, width: '20%', textAlign: 'right', textTransform: 'uppercase' }}>Flag / Unit</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {pParams && pParams.length > 0 ? (
+                                pParams.map((rp: any, idx: number) => {
+                                  const name = rp.parameter_name || rp.name || '';
+                                  const isHeader = name.toUpperCase() === 'DIFFERENTIAL LEUKOCYTE COUNT' || name.toUpperCase() === 'PHYSICAL EXAMINATION' || name.toUpperCase() === 'CHEMICAL EXAMINATION' || name.toUpperCase() === 'MICROSCOPIC EXAMINATION' || name.toUpperCase() === 'PERIPHERAL SMEAR';
+
+                                  if (isHeader) {
+                                    return (
+                                      <tr key={idx} style={{ background: '#f8fafc' }}>
+                                        <td colSpan={4} style={{ padding: '6px 0', fontWeight: 800, fontSize: '11px', textTransform: 'uppercase', color: '#1e3a8a', borderBottom: '1px solid #e2e8f0' }}>
+                                          {name}
+                                        </td>
+                                      </tr>
+                                    );
+                                  }
+
+                                  const refVal = rp.reference_range || refRanges[name.toUpperCase()] || '—';
+                                  const isAbnormal = (rp.status && rp.status !== 'Normal') || checkIsAbnormal(rp.actual_value || rp.actualValue || '', refVal);
+                                  const flagText = rp.status && rp.status !== 'Normal' ? `${rp.status} / ` : (isAbnormal ? 'Abnormal / ' : '');
+                                  const displayVal = rp.actual_value || rp.actualValue || '—';
+
+                                  return (
+                                    <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                      <td style={{ padding: '5px 0', fontWeight: 500, color: '#334155' }}>{name}</td>
+                                      <td style={{ padding: '5px 0', textAlign: 'center', fontSize: '12px', fontWeight: isAbnormal ? '700' : '400', color: isAbnormal ? '#ef4444' : '#0f172a' }}>{displayVal}</td>
+                                      <td style={{ padding: '5px 0', textAlign: 'center', color: '#475569', fontFamily: 'monospace', fontSize: '10px' }}>{refVal}</td>
+                                      <td style={{ padding: '5px 0', textAlign: 'right', color: isAbnormal ? '#ef4444' : '#64748b', fontWeight: isAbnormal ? '700' : '400' }}>{flagText}{rp.unit || '—'}</td>
+                                    </tr>
+                                  );
+                                })
+                              ) : (
+                                <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                  <td style={{ padding: '6px 0', fontWeight: 700, color: '#334155' }}>{pkgItem.service_name}</td>
+                                  <td style={{ padding: '6px 0', textAlign: 'center', fontSize: '12px', fontWeight: pLr.status !== 'Normal' ? '700' : '400', color: pLr.status !== 'Normal' ? '#ef4444' : '#0f172a' }}>{pLr.actual_result || '—'}</td>
+                                  <td style={{ padding: '6px 0', textAlign: 'center', color: '#475569', fontFamily: 'monospace', fontSize: '10px' }}>{pLr.reference_range || pkgItem.normal_range || '—'}</td>
+                                  <td style={{ padding: '6px 0', textAlign: 'right', color: pLr.status !== 'Normal' ? '#ef4444' : '#64748b', fontWeight: pLr.status !== 'Normal' ? '700' : '400' }}>{pLr.status !== 'Normal' ? `${pLr.status} / —` : '—'}</td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {renderSignature()}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            );
+          });
+        }
+
+        return (
+          <div className="public-report-sheet single-report-page" style={{ 
+            maxWidth: '800px', 
+            margin: '0 auto', 
+            background: '#fff', 
+            boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)', 
+            borderRadius: '12px', 
+            padding: '30px 40px',
+            border: '1px solid #e2e8f0'
+          }}>
+            <table className="report-layout-table" style={{ width: '100%', borderCollapse: 'collapse', margin: 0, padding: 0 }}>
+              {renderHeaderAndPatientCard()}
+              <tbody>
+                <tr>
+                  <td style={{ padding: 0, border: 'none' }}>
+                    <div style={{ marginBottom: '30px' }}>
+                      {isLab ? (
+                        <>
+                          <div style={{ textAlign: 'center', marginTop: '10px', marginBottom: '15px' }}>
+                            <h2 style={{ fontSize: '14px', fontWeight: 800, letterSpacing: '1px', margin: 0, color: '#0f172a', textTransform: 'uppercase' }}>
+                              {deptTitle}
+                            </h2>
+                            <h3 style={{ fontSize: '12px', fontWeight: 700, textDecoration: 'underline', margin: '4px 0 0 0', textTransform: 'uppercase', color: '#1e3a8a', letterSpacing: '0.5px' }}>
+                              {report.service_name}
+                            </h3>
+                          </div>
+
+                          {finalParameters.length > 0 ? (
+                            <div className="test-group-block" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px', fontSize: '12px' }}>
                                 <thead>
-                                  <tr style={{ borderBottom: '1px solid #94a3b8', textAlign: 'left', fontSize: '10px', color: '#475569' }}>
-                                    <th style={{ padding: '6px 0', fontWeight: 700, width: '35%', textTransform: 'uppercase' }}>Test Parameter</th>
-                                    <th style={{ padding: '6px 0', fontWeight: 700, width: '20%', textAlign: 'center', textTransform: 'uppercase' }}>Observed Value</th>
-                                    <th style={{ padding: '6px 0', fontWeight: 700, width: '25%', textAlign: 'center', textTransform: 'uppercase' }}>Reference Range</th>
-                                    <th style={{ padding: '6px 0', fontWeight: 700, width: '20%', textAlign: 'right', textTransform: 'uppercase' }}>Flag / Unit</th>
-                                  </tr>
+                                   <tr style={{ borderTop: '1.5px solid #0f172a', borderBottom: '1.5px solid #0f172a', textAlign: 'left', fontSize: '11px', color: '#475569' }}>
+                                     <th style={{ padding: '8px 0', fontWeight: 700, width: '35%', textTransform: 'uppercase' }}>Test Parameter</th>
+                                     <th style={{ padding: '8px 0', fontWeight: 700, width: '20%', textAlign: 'center', textTransform: 'uppercase' }}>Observed Value</th>
+                                     <th style={{ padding: '8px 0', fontWeight: 700, width: '25%', textAlign: 'center', textTransform: 'uppercase' }}>Reference Range</th>
+                                     <th style={{ padding: '8px 0', fontWeight: 700, width: '20%', textAlign: 'right', textTransform: 'uppercase' }}>Flag / Unit</th>
+                                   </tr>
                                 </thead>
                                 <tbody>
-                                  {pParams && pParams.length > 0 ? (
-                                    pParams.map((rp: any, idx: number) => {
-                                      const name = rp.parameter_name || rp.name || '';
-                                      const isHeader = name.toUpperCase() === 'DIFFERENTIAL LEUKOCYTE COUNT' || name.toUpperCase() === 'PHYSICAL EXAMINATION' || name.toUpperCase() === 'CHEMICAL EXAMINATION' || name.toUpperCase() === 'MICROSCOPIC EXAMINATION' || name.toUpperCase() === 'PERIPHERAL SMEAR';
-
-                                      if (isHeader) {
-                                        return (
-                                          <tr key={idx} style={{ background: '#f8fafc' }}>
-                                            <td colSpan={4} style={{ padding: '6px 0', fontWeight: 800, fontSize: '11px', textTransform: 'uppercase', color: '#1e3a8a', borderBottom: '1px solid #e2e8f0' }}>
+                                   {finalParameters.map((rp: any, idx: number) => {
+                                     const name = rp.parameter_name || rp.name || '';
+                                     const isHeader = name.toUpperCase() === 'DIFFERENTIAL LEUKOCYTE COUNT' || name.toUpperCase() === 'PHYSICAL EXAMINATION' || name.toUpperCase() === 'CHEMICAL EXAMINATION' || name.toUpperCase() === 'MICROSCOPIC EXAMINATION' || name.toUpperCase() === 'PERIPHERAL SMEAR';
+                                     
+                                     if (isHeader) {
+                                       return (
+                                         <tr key={idx} style={{ background: '#f8fafc' }}>
+                                           <td colSpan={4} style={{ padding: '8px 0', fontWeight: 800, fontSize: '12px', textTransform: 'uppercase', color: '#1e3a8a', borderBottom: '1px solid #cbd5e1' }}>
                                               {name}
-                                            </td>
-                                          </tr>
-                                        );
-                                      }
+                                           </td>
+                                         </tr>
+                                       );
+                                     }
 
-                                      const refVal = rp.reference_range || refRanges[name.toUpperCase()] || '—';
-                                      const isAbnormal = (rp.status && rp.status !== 'Normal') || checkIsAbnormal(rp.actual_value || rp.actualValue || '', refVal);
-                                      const flagText = rp.status && rp.status !== 'Normal' ? `${rp.status} / ` : (isAbnormal ? 'Abnormal / ' : '');
-                                      const displayVal = rp.actual_value || rp.actualValue || '—';
-
-                                      return (
-                                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                          <td style={{ padding: '5px 0', fontWeight: 500, color: '#334155' }}>{name}</td>
-                                          <td style={{ padding: '5px 0', textAlign: 'center', fontSize: '12px', fontWeight: isAbnormal ? '700' : '400', color: isAbnormal ? '#ef4444' : '#0f172a' }}>{displayVal}</td>
-                                          <td style={{ padding: '5px 0', textAlign: 'center', color: '#475569', fontFamily: 'monospace', fontSize: '10px' }}>{refVal}</td>
-                                          <td style={{ padding: '5px 0', textAlign: 'right', color: isAbnormal ? '#ef4444' : '#64748b', fontWeight: isAbnormal ? '700' : '400' }}>{flagText}{rp.unit || '—'}</td>
-                                        </tr>
-                                      );
-                                    })
-                                  ) : (
-                                    <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                      <td style={{ padding: '6px 0', fontWeight: 700, color: '#334155' }}>{pkgItem.service_name}</td>
-                                      <td style={{ padding: '6px 0', textAlign: 'center', fontSize: '12px', fontWeight: pLr.status !== 'Normal' ? '700' : '400', color: pLr.status !== 'Normal' ? '#ef4444' : '#0f172a' }}>{pLr.actual_result || '—'}</td>
-                                      <td style={{ padding: '6px 0', textAlign: 'center', color: '#475569', fontFamily: 'monospace', fontSize: '10px' }}>{pLr.reference_range || pkgItem.normal_range || '—'}</td>
-                                      <td style={{ padding: '6px 0', textAlign: 'right', color: pLr.status !== 'Normal' ? '#ef4444' : '#64748b', fontWeight: pLr.status !== 'Normal' ? '700' : '400' }}>{pLr.status !== 'Normal' ? `${pLr.status} / —` : '—'}</td>
-                                    </tr>
-                                  )}
+                                     const refVal = rp.reference_range || refRanges[name.toUpperCase()] || '—';
+                                     const isAbnormal = (rp.status && rp.status !== 'Normal') || checkIsAbnormal(rp.actual_value || rp.actualValue || '', refVal);
+                                     const flagText = rp.status && rp.status !== 'Normal' ? `${rp.status} / ` : (isAbnormal ? 'Abnormal / ' : '');
+                                     return (
+                                       <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                         <td style={{ padding: '8px 0', fontWeight: 500 }}>{name}</td>
+                                         <td style={{ padding: '8px 0', textAlign: 'center' }}>
+                                           <span style={{ fontSize: '13px', fontWeight: isAbnormal ? '700' : '400', color: isAbnormal ? '#ef4444' : '#0f172a' }}>{rp.actual_value || rp.actualValue || '—'}</span>
+                                         </td>
+                                         <td style={{ padding: '8px 0', textAlign: 'center', color: '#475569', fontFamily: 'monospace', fontSize: '11px' }}>{refVal}</td>
+                                         <td style={{ padding: '8px 0', textAlign: 'right', color: isAbnormal ? '#ef4444' : '#64748b', fontWeight: isAbnormal ? '700' : '400' }}>
+                                           {flagText}{rp.unit || '—'}
+                                         </td>
+                                      </tr>
+                                     );
+                                   })}
                                 </tbody>
                               </table>
                             </div>
-                          );
-                        })
-                      ) : finalParameters.length > 0 ? (
-                        <div className="test-group-block" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px', fontSize: '12px' }}>
-                            <thead>
-                               <tr style={{ borderTop: '1.5px solid #0f172a', borderBottom: '1.5px solid #0f172a', textAlign: 'left', fontSize: '11px', color: '#475569' }}>
-                                 <th style={{ padding: '8px 0', fontWeight: 700, width: '35%', textTransform: 'uppercase' }}>Test Parameter</th>
-                                 <th style={{ padding: '8px 0', fontWeight: 700, width: '20%', textAlign: 'center', textTransform: 'uppercase' }}>Observed Value</th>
-                                 <th style={{ padding: '8px 0', fontWeight: 700, width: '25%', textAlign: 'center', textTransform: 'uppercase' }}>Reference Range</th>
-                                 <th style={{ padding: '8px 0', fontWeight: 700, width: '20%', textAlign: 'right', textTransform: 'uppercase' }}>Flag / Unit</th>
-                               </tr>
-                            </thead>
-                            <tbody>
-                               {finalParameters.map((rp: any, idx: number) => {
-                                 const name = rp.parameter_name || rp.name || '';
-                                 const isHeader = name.toUpperCase() === 'DIFFERENTIAL LEUKOCYTE COUNT' || name.toUpperCase() === 'PHYSICAL EXAMINATION' || name.toUpperCase() === 'CHEMICAL EXAMINATION' || name.toUpperCase() === 'MICROSCOPIC EXAMINATION' || name.toUpperCase() === 'PERIPHERAL SMEAR';
-                                 
-                                 if (isHeader) {
-                                   return (
-                                     <tr key={idx} style={{ background: '#f8fafc' }}>
-                                       <td colSpan={4} style={{ padding: '8px 0', fontWeight: 800, fontSize: '12px', textTransform: 'uppercase', color: '#1e3a8a', borderBottom: '1px solid #cbd5e1' }}>
-                                          {name}
-                                       </td>
-                                     </tr>
-                                   );
-                                 }
-
-                                 const refVal = rp.reference_range || refRanges[name.toUpperCase()] || '—';
-                                 const isAbnormal = (rp.status && rp.status !== 'Normal') || checkIsAbnormal(rp.actual_value || rp.actualValue || '', refVal);
-                                 const flagText = rp.status && rp.status !== 'Normal' ? `${rp.status} / ` : (isAbnormal ? 'Abnormal / ' : '');
-                                 return (
-                                   <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                                     <td style={{ padding: '8px 0', fontWeight: 500 }}>{name}</td>
-                                     <td style={{ padding: '8px 0', textAlign: 'center' }}>
-                                       <span style={{ fontSize: '13px', fontWeight: isAbnormal ? '700' : '400', color: isAbnormal ? '#ef4444' : '#0f172a' }}>{rp.actual_value || rp.actualValue || '—'}</span>
-                                     </td>
-                                     <td style={{ padding: '8px 0', textAlign: 'center', color: '#475569', fontFamily: 'monospace', fontSize: '11px' }}>{refVal}</td>
-                                     <td style={{ padding: '8px 0', textAlign: 'right', color: isAbnormal ? '#ef4444' : '#64748b', fontWeight: isAbnormal ? '700' : '400' }}>
-                                       {flagText}{rp.unit || '—'}
-                                     </td>
+                          ) : (
+                            <div className="test-group-block" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                              <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px', fontSize: '12px' }}>
+                                <thead>
+                                  <tr style={{ borderTop: '1.5px solid #0f172a', borderBottom: '1.5px solid #0f172a', textAlign: 'left', fontSize: '11px', color: '#475569' }}>
+                                    <th style={{ padding: '8px 0', fontWeight: 700, width: '35%', textTransform: 'uppercase' }}>Test Parameter</th>
+                                    <th style={{ padding: '8px 0', fontWeight: 700, width: '20%', textAlign: 'center', textTransform: 'uppercase' }}>Observed Value</th>
+                                    <th style={{ padding: '8px 0', fontWeight: 700, width: '25%', textAlign: 'center', textTransform: 'uppercase' }}>Reference Range</th>
+                                    <th style={{ padding: '8px 0', fontWeight: 700, width: '20%', textAlign: 'right', textTransform: 'uppercase' }}>Flag / Unit</th>
                                   </tr>
-                                 );
-                               })}
-                            </tbody>
-                          </table>
-                        </div>
+                                </thead>
+                                <tbody>
+                                  <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+                                    <td style={{ padding: '10px 0', fontWeight: 700 }}>{report.service_name}</td>
+                                    <td style={{ padding: '10px 0', textAlign: 'center', fontWeight: report.lab_result?.status !== 'Normal' ? '700' : '400', color: report.lab_result?.status !== 'Normal' ? '#ef4444' : '#0f172a' }}>
+                                      {report.lab_result?.actual_result || '—'}
+                                    </td>
+                                    <td style={{ padding: '10px 0', textAlign: 'center', fontFamily: 'monospace' }}>{report.lab_result?.reference_range || report.normal_range || '—'}</td>
+                                    <td style={{ padding: '10px 0', textAlign: 'right', color: report.lab_result?.status !== 'Normal' ? '#ef4444' : '#64748b', fontWeight: report.lab_result?.status !== 'Normal' ? '700' : '400' }}>
+                                      {report.lab_result?.status !== 'Normal' ? `${report.lab_result.status} / —` : '—'}
+                                    </td>
+                                  </tr>
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                          <div className="test-group-block" style={{ marginTop: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '10px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                            <h4 style={{ margin: '0 0 6px 0', color: '#475569', textTransform: 'uppercase', fontSize: '12px', fontWeight: 700 }}>Interpretation</h4>
+                            <p style={{ margin: 0, fontSize: '12px', color: '#334155', whiteSpace: 'pre-wrap' }}>{report.lab_result?.remarks || report.lab_result?.interpretation || 'Within normal limits. Please correlate clinically.'}</p>
+                          </div>
+                        </>
                       ) : (
-                        <div className="test-group-block" style={{ pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                          <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '20px', fontSize: '12px' }}>
-                            <thead>
-                              <tr style={{ borderTop: '1.5px solid #0f172a', borderBottom: '1.5px solid #0f172a', textAlign: 'left', fontSize: '11px', color: '#475569' }}>
-                                <th style={{ padding: '8px 0', fontWeight: 700, width: '35%', textTransform: 'uppercase' }}>Test Parameter</th>
-                                <th style={{ padding: '8px 0', fontWeight: 700, width: '20%', textAlign: 'center', textTransform: 'uppercase' }}>Observed Value</th>
-                                <th style={{ padding: '8px 0', fontWeight: 700, width: '25%', textAlign: 'center', textTransform: 'uppercase' }}>Reference Range</th>
-                                <th style={{ padding: '8px 0', fontWeight: 700, width: '20%', textAlign: 'right', textTransform: 'uppercase' }}>Flag / Unit</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-                                <td style={{ padding: '10px 0', fontWeight: 700 }}>{report.service_name}</td>
-                                <td style={{ padding: '10px 0', textAlign: 'center', fontWeight: report.lab_result?.status !== 'Normal' ? '700' : '400', color: report.lab_result?.status !== 'Normal' ? '#ef4444' : '#0f172a' }}>
-                                  {report.lab_result?.actual_result || '—'}
-                                </td>
-                                <td style={{ padding: '10px 0', textAlign: 'center', fontFamily: 'monospace' }}>{report.lab_result?.reference_range || report.normal_range || '—'}</td>
-                                <td style={{ padding: '10px 0', textAlign: 'right', color: report.lab_result?.status !== 'Normal' ? '#ef4444' : '#64748b', fontWeight: report.lab_result?.status !== 'Normal' ? '700' : '400' }}>
-                                  {report.lab_result?.status !== 'Normal' ? `${report.lab_result.status} / —` : '—'}
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      )}
-                      {/* Interpretation field for Lab tests */}
-                      <div className="test-group-block" style={{ marginTop: '10px', borderTop: '1px solid #e2e8f0', paddingTop: '10px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                        <h4 style={{ margin: '0 0 6px 0', color: '#475569', textTransform: 'uppercase', fontSize: '12px', fontWeight: 700 }}>Interpretation</h4>
-                        <p style={{ margin: 0, fontSize: '12px', color: '#334155', whiteSpace: 'pre-wrap' }}>{report.lab_result?.remarks || report.lab_result?.interpretation || 'Within normal limits. Please correlate clinically.'}</p>
-                      </div>
-                      {report.lab_result?.remarks && (
-                        <div style={{ marginTop: '10px', fontSize: '12px', color: '#475569' }}>
-                          <strong>Remarks:</strong> {report.lab_result.remarks}
-                        </div>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      <div style={{ textAlign: 'center', marginTop: '10px', marginBottom: '15px' }}>
-                        <h2 style={{ fontSize: '14px', fontWeight: 800, letterSpacing: '1px', margin: 0, color: '#0f172a', textTransform: 'uppercase' }}>
-                          {deptTitle}
-                        </h2>
-                        <h3 style={{ fontSize: '12px', fontWeight: 700, textDecoration: 'underline', margin: '4px 0 0 0', textTransform: 'uppercase', color: '#1e3a8a', letterSpacing: '0.5px' }}>
-                          {report.service_name}
-                        </h3>
-                      </div>
-
-                      <div className="test-group-block" style={{ display: 'flex', flexDirection: 'column', gap: '15px', fontSize: '13px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                        <div>
-                          <h4 style={{ margin: '0 0 6px 0', color: '#475569', textTransform: 'uppercase', fontSize: '12px' }}>Dictated Findings</h4>
-                          <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '12px', borderRadius: '8px', whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
-                            {report.radiology_report?.findings || report.ultrasound_report?.findings || report.ecg_report?.findings || '—'}
+                        <>
+                          <div style={{ textAlign: 'center', marginTop: '10px', marginBottom: '15px' }}>
+                            <h2 style={{ fontSize: '14px', fontWeight: 800, letterSpacing: '1px', margin: 0, color: '#0f172a', textTransform: 'uppercase' }}>
+                              {deptTitle}
+                            </h2>
+                            <h3 style={{ fontSize: '12px', fontWeight: 700, textDecoration: 'underline', margin: '4px 0 0 0', textTransform: 'uppercase', color: '#1e3a8a', letterSpacing: '0.5px' }}>
+                              {report.service_name}
+                            </h3>
                           </div>
-                        </div>
-                        <div>
-                          <h4 style={{ margin: '0 0 4px 0', color: '#475569', textTransform: 'uppercase', fontSize: '12px' }}>Diagnostic Impression</h4>
-                          <p style={{ margin: 0, fontWeight: 700, color: '#0f172a' }}>
-                            {report.radiology_report?.impression || report.ultrasound_report?.impression || report.ecg_report?.interpretation || '—'}
-                          </p>
-                        </div>
-                        {(report.radiology_report?.conclusion || report.ultrasound_report?.recommendations || report.ecg_report?.recommendation) && (
-                          <div>
-                            <h4 style={{ margin: '0 0 4px 0', color: '#475569', textTransform: 'uppercase', fontSize: '12px' }}>Conclusion / Recommendations</h4>
-                            <p style={{ margin: 0, color: '#334155' }}>
-                              {report.radiology_report?.conclusion || report.ultrasound_report?.recommendations || report.ecg_report?.recommendation}
-                            </p>
+
+                          <div className="test-group-block" style={{ display: 'flex', flexDirection: 'column', gap: '15px', fontSize: '13px', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
+                            <div>
+                              <h4 style={{ margin: '0 0 6px 0', color: '#475569', textTransform: 'uppercase', fontSize: '12px' }}>Dictated Findings</h4>
+                              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '12px', borderRadius: '8px', whiteSpace: 'pre-wrap', fontFamily: 'monospace' }}>
+                                {report.radiology_report?.findings || report.ultrasound_report?.findings || report.ecg_report?.findings || '—'}
+                              </div>
+                            </div>
+                            <div>
+                              <h4 style={{ margin: '0 0 4px 0', color: '#475569', textTransform: 'uppercase', fontSize: '12px' }}>Diagnostic Impression</h4>
+                              <p style={{ margin: 0, fontWeight: 700, color: '#0f172a' }}>
+                                {report.radiology_report?.impression || report.ultrasound_report?.impression || report.ecg_report?.interpretation || '—'}
+                              </p>
+                            </div>
+                            {(report.radiology_report?.conclusion || report.ultrasound_report?.recommendations || report.ecg_report?.recommendation) && (
+                              <div>
+                                <h4 style={{ margin: '0 0 4px 0', color: '#475569', textTransform: 'uppercase', fontSize: '12px' }}>Conclusion / Recommendations</h4>
+                                <p style={{ margin: 0, color: '#334155' }}>
+                                  {report.radiology_report?.conclusion || report.ultrasound_report?.recommendations || report.ecg_report?.recommendation}
+                                </p>
+                              </div>
+                            )}
+                            <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
+                              <h4 style={{ margin: '0 0 6px 0', color: '#475569', textTransform: 'uppercase', fontSize: '12px', fontWeight: 700 }}>Interpretation</h4>
+                              <p style={{ margin: 0, fontSize: '12px', color: '#334155', whiteSpace: 'pre-wrap' }}>
+                                {(report.radiology_report?.impression || report.ultrasound_report?.impression || report.ecg_report?.interpretation) || 'Please correlate clinically.'}
+                              </p>
+                            </div>
                           </div>
-                        )}
-                        <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '10px' }}>
-                          <h4 style={{ margin: '0 0 6px 0', color: '#475569', textTransform: 'uppercase', fontSize: '12px', fontWeight: 700 }}>Interpretation</h4>
-                          <p style={{ margin: 0, fontSize: '12px', color: '#334155', whiteSpace: 'pre-wrap' }}>
-                            {(report.radiology_report?.impression || report.ultrasound_report?.impression || report.ecg_report?.interpretation) || 'Please correlate clinically.'}
-                          </p>
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
+                        </>
+                      )}
+                    </div>
 
-                {/* Doctor stamp signature */}
-                <div className="footer-signature" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: '60px', fontSize: '12px', color: '#475569', pageBreakInside: 'avoid', breakInside: 'avoid' }}>
-                  <div>
-                    <p style={{ margin: 0, fontStyle: 'italic' }}>Please correlate clinically</p>
-                    <p style={{ margin: '6px 0 0 0' }}>Test Performed By : <strong style={{ color: '#0f172a' }}>{report.verification?.verified_by_name ? 'Pathology Lab Assistant' : 'clsowmya'}</strong></p>
-                  </div>
-                  <div style={{ textAlign: 'right', width: '220px' }}>
-                    <div style={{ fontFamily: 'Georgia, cursive', fontStyle: 'italic', color: '#1e3a8a', fontSize: '18px', fontWeight: 700, marginBottom: '2px' }}>
-                      {verifiedBy.includes('Priya') ? 'Dr Priya Nair' : 'Dr Vidya Kedari'}
-                    </div>
-                    <div style={{ borderTop: '1px dashed #94a3b8', paddingTop: '4px', fontWeight: 700, color: '#0f172a' }}>
-                      {verifiedBy}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#64748b' }}>
-                      Consultant Pathologist
-                    </div>
-                  </div>
-                </div>
-
-                <div style={{ textAlign: 'center', fontSize: '11px', color: '#64748b', marginTop: '20px', fontWeight: 'bold', letterSpacing: '2px' }}>
-                  *** END OF REPORT ***
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
+                    {renderSignature()}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
     </div>
   );
 };

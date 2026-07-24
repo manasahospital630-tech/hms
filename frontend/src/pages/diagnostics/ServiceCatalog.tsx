@@ -652,24 +652,72 @@ export const ServiceCatalog: React.FC = () => {
       };
       const deptTitle = getDeptTitle();
 
-      let resultHtml = '';
+      const verifiedBy = item.verification?.verified_by_name || 'Dr. Priya Nair (Pathologist) M.D.';
+      const verifiedDate = item.verification?.verified_at 
+        ? new Date(item.verification.verified_at).toLocaleDateString() + ' ' + new Date(item.verification.verified_at).toLocaleTimeString()
+        : formattedDate;
+
+      const patientCardHtml = `
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 11px; border-bottom: 2px solid #0f172a; padding-bottom: 6px;">
+          <tbody>
+            <tr>
+              <td style="padding: 3px 0; font-weight: 600; color: #475569; width: 15%;">Patient Name:</td>
+              <td style="padding: 3px 0; font-weight: 700; width: 35%; text-transform: uppercase;">${item.patient_name}</td>
+              <td style="padding: 3px 0; font-weight: 600; color: #475569; width: 15%;">Ref. Doctor:</td>
+              <td style="padding: 3px 0; font-weight: 700; width: 35%; text-transform: uppercase;">${item.doctor_name || 'Dr S Tarundas'}</td>
+            </tr>
+            <tr>
+              <td style="padding: 3px 0; font-weight: 600; color: #475569;">Patient Id:</td>
+              <td style="padding: 3px 0; font-weight: 700;">${item.patient_mrn}</td>
+              <td style="padding: 3px 0; font-weight: 600; color: #475569;">Lab Id:</td>
+              <td style="padding: 3px 0; font-weight: 700;">${item.item_id.substring(0, 8).toUpperCase()}</td>
+            </tr>
+            <tr>
+              <td style="padding: 3px 0; font-weight: 600; color: #475569;">OP Id:</td>
+              <td style="padding: 3px 0; font-weight: 700;">${item.order_number || 'HY-SVN-1225-00080'}</td>
+              <td style="padding: 3px 0; font-weight: 600; color: #475569;">Sample Collection Date:</td>
+              <td style="padding: 3px 0; font-weight: 700;">${formattedDate}</td>
+            </tr>
+            <tr>
+              <td style="padding: 3px 0; font-weight: 600; color: #475569;">Age/Gender:</td>
+              <td style="padding: 3px 0; font-weight: 700;">${ageStr} / ${(item.patient_gender || item.gender || 'Male').toUpperCase()}</td>
+              <td style="padding: 3px 0; font-weight: 600; color: #475569;">Reporting Date & time:</td>
+              <td style="padding: 3px 0; font-weight: 700;">${verifiedDate}</td>
+            </tr>
+          </tbody>
+        </table>
+      `;
+
+      const signatureHtml = `
+        <div class="footer-signature" style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 25px; font-size: 11px; page-break-inside: avoid; break-inside: avoid;">
+          <div>
+            <p style="margin: 0; color: #475569; font-style: italic;">Please correlate clinically</p>
+            <p style="margin: 4px 0 0 0; color: #475569;">Test Performed By : <strong style="color: #0f172a;">${item.order?.items?.[0]?.entered_by_name || 'clsowmya'}</strong></p>
+          </div>
+          <div style="text-align: right; width: 220px;">
+            <div style="font-family: 'Georgia', cursive; font-style: italic; color: #1e3a8a; font-size: 16px; font-weight: 700; margin-bottom: 2px;">
+              ${verifiedBy.includes('Priya') ? 'Dr Priya Nair' : 'Dr Vidya Kedari'}
+            </div>
+            <div style="border-top: 1px dashed #94a3b8; padding-top: 4px; font-weight: 700; color: #0f172a;">
+              ${verifiedBy}
+            </div>
+            <div style="font-size: 10px; color: #64748b;">
+              Consultant Pathologist
+            </div>
+          </div>
+        </div>
+        <div style="text-align: center; font-size: 10px; color: #64748b; margin-top: 15px; font-weight: bold; letter-spacing: 2px; page-break-inside: avoid; break-inside: avoid;">
+          *** END OF REPORT ***
+        </div>
+      `;
+
+      let pagesContentHtml = '';
       if (isLab) {
         const targetItems = item.package_id
           ? (item.order?.items || []).filter((i: any) => i.package_id === item.package_id)
           : [item];
 
-        resultHtml = `
-          <div style="text-align: center; margin-top: 10px; margin-bottom: 15px;">
-            <h2 style="font-size: 14px; font-weight: 800; letter-spacing: 1px; margin: 0; color: #0f172a; text-transform: uppercase;">
-              ${deptTitle}
-            </h2>
-            <h3 style="font-size: 12px; font-weight: 700; text-decoration: underline; margin: 4px 0 0 0; text-transform: uppercase; color: #1e3a8a; letter-spacing: 0.5px;">
-              ${item.package_name || item.service_name}
-            </h3>
-          </div>
-        `;
-
-        targetItems.forEach((tItem: any) => {
+        pagesContentHtml = targetItems.map((tItem: any, pIdx: number) => {
           const tLr = tItem.lab_result || {};
           let tParams = tItem.result_parameters || [];
           if ((!tParams || tParams.length === 0) && tLr.actual_result) {
@@ -686,25 +734,9 @@ export const ServiceCatalog: React.FC = () => {
             }
           }
 
-          resultHtml += `
-            <div class="test-group-block" style="margin-top: 14px; margin-bottom: 8px; page-break-inside: avoid; break-inside: avoid;">
-              <div style="font-size: 12px; font-weight: 700; color: #1e3a8a; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px;">
-                ${tItem.service_name} (${tItem.service_code})
-              </div>
-              <table style="width: 100%; border-collapse: collapse; margin-top: 4px; margin-bottom: 8px; font-size: 11px;">
-                <thead>
-                  <tr style="border-bottom: 1px solid #94a3b8; text-align: left; font-size: 10px; color: #475569;">
-                    <th style="padding: 6px 0; font-weight: 700; width: 35%; text-transform: uppercase;">Test Parameter</th>
-                    <th style="padding: 6px 0; font-weight: 700; width: 20%; text-align: center; text-transform: uppercase;">Observed Value</th>
-                    <th style="padding: 6px 0; font-weight: 700; width: 25%; text-align: center; text-transform: uppercase;">Reference Range</th>
-                    <th style="padding: 6px 0; font-weight: 700; width: 20%; text-align: right; text-transform: uppercase;">Flag / Unit</th>
-                  </tr>
-                </thead>
-                <tbody>
-          `;
-
+          let paramRows = '';
           if (tParams && tParams.length > 0) {
-            resultHtml += tParams.map((rp: any) => {
+            paramRows = tParams.map((rp: any) => {
               const name = rp.parameter_name || rp.name || '';
               const isHeader = name.toUpperCase() === 'DIFFERENTIAL LEUKOCYTE COUNT' || name.toUpperCase() === 'PHYSICAL EXAMINATION' || name.toUpperCase() === 'CHEMICAL EXAMINATION' || name.toUpperCase() === 'MICROSCOPIC EXAMINATION' || name.toUpperCase() === 'PERIPHERAL SMEAR';
 
@@ -738,7 +770,7 @@ export const ServiceCatalog: React.FC = () => {
             const flagText = isAbnormal ? `${tLr.status} / ` : '';
             const displayVal = tLr.actual_result || '—';
 
-            resultHtml += `
+            paramRows = `
               <tr style="border-bottom: 1px solid #f1f5f9; page-break-inside: avoid; break-inside: avoid;">
                 <td style="padding: 6px 0; font-weight: 700; color: #334155;">${tItem.service_name}</td>
                 <td style="padding: 6px 0; text-align: center; font-size: 12px; font-weight: ${isAbnormal ? '700' : '400'}; color: ${isAbnormal ? '#ef4444' : '#0f172a'};">${displayVal}</td>
@@ -748,54 +780,112 @@ export const ServiceCatalog: React.FC = () => {
             `;
           }
 
-          resultHtml += `
+          const pageBreakStyle = pIdx < targetItems.length - 1 ? 'page-break-after: always; break-after: page;' : '';
+
+          return `
+            <div class="report-single-page" style="${pageBreakStyle} padding-bottom: 10px;">
+              <table class="report-layout-table" style="width: 100%; border-collapse: collapse; margin: 0; padding: 0;">
+                <thead>
+                  <tr>
+                    <td style="padding: 0; border: none;">
+                      ${headerHtml}
+                      ${patientCardHtml}
+                    </td>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style="padding: 0; border: none;">
+                      <div style="text-align: center; margin-top: 8px; margin-bottom: 12px;">
+                        <h2 style="font-size: 14px; font-weight: 800; letter-spacing: 1px; margin: 0; color: #0f172a; text-transform: uppercase;">
+                          ${deptTitle}
+                        </h2>
+                        <h3 style="font-size: 12px; font-weight: 700; text-decoration: underline; margin: 4px 0 0 0; text-transform: uppercase; color: #1e3a8a; letter-spacing: 0.5px;">
+                          ${item.package_name ? `${item.package_name} — ` : ''}${tItem.service_name} (${tItem.service_code || 'TEST'})
+                        </h3>
+                      </div>
+
+                      <div style="width: 100%; margin-bottom: 15px;">
+                        <table style="width: 100%; border-collapse: collapse; margin-top: 4px; margin-bottom: 8px; font-size: 11px;">
+                          <thead>
+                            <tr style="border-bottom: 1.5px solid #0f172a; border-top: 1.5px solid #0f172a; text-align: left; font-size: 10px; color: #475569;">
+                              <th style="padding: 6px 0; font-weight: 700; width: 35%; text-transform: uppercase;">Test Parameter</th>
+                              <th style="padding: 6px 0; font-weight: 700; width: 20%; text-align: center; text-transform: uppercase;">Observed Value</th>
+                              <th style="padding: 6px 0; font-weight: 700; width: 25%; text-align: center; text-transform: uppercase;">Reference Range</th>
+                              <th style="padding: 6px 0; font-weight: 700; width: 20%; text-align: right; text-transform: uppercase;">Flag / Unit</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            ${paramRows}
+                          </tbody>
+                        </table>
+                      </div>
+
+                      ${signatureHtml}
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
           `;
-        });
+        }).join('');
       } else {
         const findings = item.radiology_report?.findings || item.ultrasound_report?.findings || item.ecg_report?.findings || '—';
         const impression = item.radiology_report?.impression || item.ultrasound_report?.impression || item.ecg_report?.interpretation || '—';
         const conclusion = item.radiology_report?.conclusion || item.ultrasound_report?.recommendations || item.ecg_report?.recommendation || '';
-        
-        resultHtml = `
-          <div class="test-group-block" style="text-align: center; margin-top: 10px; margin-bottom: 15px; page-break-inside: avoid; break-inside: avoid;">
-            <h2 style="font-size: 14px; font-weight: 800; letter-spacing: 1px; margin: 0; color: #0f172a; text-transform: uppercase;">
-              ${deptTitle}
-            </h2>
-            <h3 style="font-size: 12px; font-weight: 700; text-decoration: underline; margin: 4px 0 0 0; text-transform: uppercase; color: #1e3a8a; letter-spacing: 0.5px;">
-              ${item.service_name}
-            </h3>
-          </div>
 
-          <div class="test-group-block" style="margin-top: 15px; display: flex; flex-direction: column; gap: 15px; font-size: 13px; page-break-inside: avoid; break-inside: avoid;">
-            <div>
-              <h4 style="margin: 0 0 6px 0; color: #475569; text-transform: uppercase; font-size: 12px;">Dictated Findings</h4>
-              <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; white-space: pre-wrap; font-family: monospace;">${findings}</div>
-            </div>
-            <div>
-              <h4 style="margin: 0 0 4px 0; color: #475569; text-transform: uppercase; font-size: 12px;">Diagnostic Impression</h4>
-              <p style="margin: 0; font-weight: 700; color: #0f172a;">${impression}</p>
-            </div>
-            ${conclusion ? `
-              <div>
-                <h4 style="margin: 0 0 4px 0; color: #475569; text-transform: uppercase; font-size: 12px;">Conclusion / Recommendations</h4>
-                <p style="margin: 0; color: #334155;">${conclusion}</p>
-              </div>
-            ` : ''}
-            <div style="border-top: 1px solid #e2e8f0; padding-top: 10px;">
-              <h4 style="margin: 0 0 6px 0; color: #475569; text-transform: uppercase; font-size: 12px; font-weight: 700;">Interpretation</h4>
-              <p style="margin: 0; font-size: 12px; color: #334155; white-space: pre-wrap;">${impression !== '—' ? impression : 'Please correlate clinically.'}</p>
-            </div>
+        pagesContentHtml = `
+          <div class="report-single-page" style="padding-bottom: 10px;">
+            <table class="report-layout-table" style="width: 100%; border-collapse: collapse; margin: 0; padding: 0;">
+              <thead>
+                <tr>
+                  <td style="padding: 0; border: none;">
+                    ${headerHtml}
+                    ${patientCardHtml}
+                  </td>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td style="padding: 0; border: none;">
+                    <div style="text-align: center; margin-top: 8px; margin-bottom: 12px;">
+                      <h2 style="font-size: 14px; font-weight: 800; letter-spacing: 1px; margin: 0; color: #0f172a; text-transform: uppercase;">
+                        ${deptTitle}
+                      </h2>
+                      <h3 style="font-size: 12px; font-weight: 700; text-decoration: underline; margin: 4px 0 0 0; text-transform: uppercase; color: #1e3a8a; letter-spacing: 0.5px;">
+                        ${item.service_name}
+                      </h3>
+                    </div>
+
+                    <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 15px; font-size: 13px;">
+                      <div>
+                        <h4 style="margin: 0 0 6px 0; color: #475569; text-transform: uppercase; font-size: 12px;">Dictated Findings</h4>
+                        <div style="background: #f8fafc; border: 1px solid #e2e8f0; padding: 12px; border-radius: 8px; white-space: pre-wrap; font-family: monospace;">${findings}</div>
+                      </div>
+                      <div>
+                        <h4 style="margin: 0 0 4px 0; color: #475569; text-transform: uppercase; font-size: 12px;">Diagnostic Impression</h4>
+                        <p style="margin: 0; font-weight: 700; color: #0f172a;">${impression}</p>
+                      </div>
+                      ${conclusion ? `
+                        <div>
+                          <h4 style="margin: 0 0 4px 0; color: #475569; text-transform: uppercase; font-size: 12px;">Conclusion / Recommendations</h4>
+                          <p style="margin: 0; color: #334155;">${conclusion}</p>
+                        </div>
+                      ` : ''}
+                      <div style="border-top: 1px solid #e2e8f0; padding-top: 10px;">
+                        <h4 style="margin: 0 0 6px 0; color: #475569; text-transform: uppercase; font-size: 12px; font-weight: 700;">Interpretation</h4>
+                        <p style="margin: 0; font-size: 12px; color: #334155; white-space: pre-wrap;">${impression !== '—' ? impression : 'Please correlate clinically.'}</p>
+                      </div>
+                    </div>
+
+                    ${signatureHtml}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         `;
       }
-
-      const verifiedBy = item.verification?.verified_by_name || 'Dr. Priya Nair (Pathologist) M.D.';
-      const verifiedDate = item.verification?.verified_at 
-        ? new Date(item.verification.verified_at).toLocaleDateString() + ' ' + new Date(item.verification.verified_at).toLocaleTimeString()
-        : formattedDate;
 
       printWindow.document.write(`
         <html>
@@ -820,13 +910,13 @@ export const ServiceCatalog: React.FC = () => {
                   margin: 0 !important;
                   padding: 0 !important;
                 }
+                .single-report-page {
+                  page-break-inside: avoid !important;
+                  break-inside: avoid !important;
+                }
                 table.report-layout-table {
                   width: 100% !important;
                   border-collapse: collapse !important;
-                  page-break-inside: auto !important;
-                  break-inside: auto !important;
-                }
-                table.report-layout-table > tbody > tr > td {
                   page-break-inside: auto !important;
                   break-inside: auto !important;
                 }
@@ -835,16 +925,6 @@ export const ServiceCatalog: React.FC = () => {
                 }
                 tfoot {
                   display: table-footer-group !important;
-                }
-                .test-group-block {
-                  page-break-inside: avoid !important;
-                  break-inside: avoid !important;
-                  margin-top: 14px !important;
-                  margin-bottom: 10px !important;
-                }
-                tr {
-                  page-break-inside: auto !important;
-                  break-inside: auto !important;
                 }
                 .footer-signature {
                   margin-top: 25px !important;
@@ -856,80 +936,7 @@ export const ServiceCatalog: React.FC = () => {
             </style>
           </head>
           <body onload="window.print(); setTimeout(function() { window.close(); }, 500);">
-            <table class="report-layout-table" style="width: 100%; border-collapse: collapse; margin: 0; padding: 0;">
-              <thead>
-                <tr>
-                  <td style="padding: 0; border: none;">
-                    ${headerHtml}
-
-                    <!-- Metadata Patient Card Table -->
-                    <table style="width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 11px; border-bottom: 2px solid #0f172a; padding-bottom: 6px;">
-                      <tbody>
-                        <tr>
-                          <td style="padding: 3px 0; font-weight: 600; color: #475569; width: 15%;">Patient Name:</td>
-                          <td style="padding: 3px 0; font-weight: 700; width: 35%; text-transform: uppercase;">${item.patient_name}</td>
-                          <td style="padding: 3px 0; font-weight: 600; color: #475569; width: 15%;">Ref. Doctor:</td>
-                          <td style="padding: 3px 0; font-weight: 700; width: 35%; text-transform: uppercase;">${item.doctor_name || 'Dr S Tarundas'}</td>
-                        </tr>
-                        <tr>
-                          <td style="padding: 3px 0; font-weight: 600; color: #475569;">Patient Id:</td>
-                          <td style="padding: 3px 0; font-weight: 700;">${item.patient_mrn}</td>
-                          <td style="padding: 3px 0; font-weight: 600; color: #475569;">Lab Id:</td>
-                          <td style="padding: 3px 0; font-weight: 700;">${item.item_id.substring(0, 8).toUpperCase()}</td>
-                        </tr>
-                        <tr>
-                          <td style="padding: 3px 0; font-weight: 600; color: #475569;">OP Id:</td>
-                          <td style="padding: 3px 0; font-weight: 700;">${item.order_number || 'HY-SVN-1225-00080'}</td>
-                          <td style="padding: 3px 0; font-weight: 600; color: #475569;">Sample Collection Date:</td>
-                          <td style="padding: 3px 0; font-weight: 700;">${formattedDate}</td>
-                        </tr>
-                        <tr>
-                          <td style="padding: 3px 0; font-weight: 600; color: #475569;">Age/Gender:</td>
-                          <td style="padding: 3px 0; font-weight: 700;">${ageStr} / ${(item.patient_gender || item.gender || 'Male').toUpperCase()}</td>
-                          <td style="padding: 3px 0; font-weight: 600; color: #475569;">Reporting Date & time:</td>
-                          <td style="padding: 3px 0; font-weight: 700;">${verifiedDate}</td>
-                        </tr>
-                      </tbody>
-                    </table>
-                  </td>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style="padding: 0; border: none;">
-                    <!-- Result Table Block (Occupies full page width for spacing layout optimization) -->
-                    <div style="width: 100%; margin-bottom: 15px;">
-                      ${resultHtml}
-                    </div>
-
-                    <!-- Signature block -->
-                    <div class="footer-signature" style="display: flex; justify-content: space-between; align-items: flex-end; margin-top: 35px; font-size: 11px; page-break-inside: avoid; break-inside: avoid;">
-                      <div>
-                        <p style="margin: 0; color: #475569; font-style: italic;">Please correlate clinically</p>
-                        <p style="margin: 4px 0 0 0; color: #475569;">Test Performed By : <strong style="color: #0f172a;">${item.order?.items?.[0]?.entered_by_name || 'clsowmya'}</strong></p>
-                      </div>
-                      <div style="text-align: right; width: 220px;">
-                        <div style="font-family: 'Georgia', cursive; font-style: italic; color: #1e3a8a; font-size: 16px; font-weight: 700; margin-bottom: 2px;">
-                          ${verifiedBy.includes('Priya') ? 'Dr Priya Nair' : 'Dr Vidya Kedari'}
-                        </div>
-                        <div style="border-top: 1px dashed #94a3b8; padding-top: 4px; font-weight: 700; color: #0f172a;">
-                          ${verifiedBy}
-                        </div>
-                        <div style="font-size: 10px; color: #64748b;">
-                          Consultant Pathologist
-                        </div>
-                      </div>
-                    </div>
-
-                    <div style="text-align: center; font-size: 10px; color: #64748b; margin-top: 15px; font-weight: bold; letter-spacing: 2px; page-break-inside: avoid; break-inside: avoid;">
-                      *** END OF REPORT ***
-                    </div>
-
-                    <div style="margin-bottom: 20px;"></div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            ${pagesContentHtml}
           </body>
         </html>
       `);
