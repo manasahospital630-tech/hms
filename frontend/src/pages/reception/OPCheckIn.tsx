@@ -706,7 +706,7 @@ const OPCheckIn: React.FC = () => {
       ) : (
         <div style={{ display: 'grid', gap: 'var(--space-lg)' }}>
           {/* OP Booking Card */}
-          <Card title="Book OP Consultation & OPD Check-in">
+          <Card title="Book OP Consultation & OPD Check-in" style={{ position: 'relative', zIndex: 50 }}>
             <form onSubmit={handleCheckIn}>
               <div style={{ display: 'grid', gap: 'var(--space-md)' }}>
                 {errorMsg && (

@@ -60,7 +60,7 @@ export const PatientSearchBar: React.FC<{
   }, []);
 
   return (
-    <div className="search-container" ref={ref} style={{ position: 'relative', width: '100%' }}>
+    <div className="search-container" ref={ref} style={{ position: 'relative', width: '100%', zIndex: 100 }}>
       <div className="input-icon-wrapper">
         <span className="input-icon"><Search size={16} /></span>
         <input 
@@ -77,11 +77,11 @@ export const PatientSearchBar: React.FC<{
           top: '100%', 
           left: 0, 
           right: 0, 
-          zIndex: 100, 
+          zIndex: 99999, 
           background: 'var(--bg-card, #ffffff)', 
           border: '1px solid var(--border-primary, #cbd5e1)', 
           borderRadius: '8px', 
-          boxShadow: '0 10px 25px -5px rgba(0,0,0,0.15)',
+          boxShadow: '0 12px 32px rgba(0,0,0,0.25)',
           maxHeight: '320px',
           overflowY: 'auto',
           marginTop: '4px'

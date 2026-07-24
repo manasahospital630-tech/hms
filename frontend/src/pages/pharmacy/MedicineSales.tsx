@@ -769,7 +769,7 @@ const MedicineSales: React.FC = () => {
       {activeTab === 'sales' ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-lg)' }}>
           {/* Patient Selection */}
-          <Card title="1. Select Patient">
+          <Card title="1. Select Patient" style={{ position: 'relative', zIndex: 50 }}>
             <div style={{ display: 'grid', gap: 'var(--space-md)' }}>
               <PatientSearchBar onSelect={(p) => setPatient(p)} />
               {patient && (
@@ -792,7 +792,7 @@ const MedicineSales: React.FC = () => {
           </Card>
 
           {/* Items Selector & List */}
-          <Card title="2. Add Items to Basket">
+          <Card title="2. Add Items to Basket" style={{ position: 'relative', zIndex: 20 }}>
             <div style={{ display: 'grid', gap: 'var(--space-md)', marginBottom: 'var(--space-md)' }}>
               <div className="form-row" style={{ display: 'flex', gap: 'var(--space-md)', alignItems: 'flex-end' }}>
                 <div style={{ flex: 2, position: 'relative' }} ref={itemSearchRef}>
@@ -922,7 +922,7 @@ const MedicineSales: React.FC = () => {
           </Card>
 
           {/* Payment Summary */}
-          <Card title="3. Payment & Checkout">
+          <Card title="3. Payment & Checkout" style={{ position: 'relative', zIndex: 10 }}>
             <div style={{ display: 'grid', gap: 'var(--space-md)' }}>
               <Select label="Payment Method" value={paymentMethod} onChange={e => setPaymentMethod(e.target.value)}
                 options={[

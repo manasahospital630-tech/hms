@@ -931,7 +931,7 @@ const InvoiceGenerator: React.FC = () => {
 
       {activeTab === 'generator' ? (
         <>
-          <div className="card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', padding: '20px', borderRadius: '12px', marginBottom: '24px' }}>
+          <div className="card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', padding: '20px', borderRadius: '12px', marginBottom: '24px', position: 'relative', zIndex: 50 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
               <div className="form-section-title" style={{ fontWeight: 700, margin: 0 }}>Patient Selection</div>
               <Button 
@@ -974,7 +974,7 @@ const InvoiceGenerator: React.FC = () => {
             )}
           </div>
 
-          <div className="card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', padding: '20px', borderRadius: '12px', marginBottom: '24px' }}>
+          <div className="card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', padding: '20px', borderRadius: '12px', marginBottom: '24px', position: 'relative', zIndex: 20 }}>
             <div className="form-section-title" style={{ fontWeight: 700, marginBottom: '16px' }}>Consultant Doctor & Referral Information</div>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
               
