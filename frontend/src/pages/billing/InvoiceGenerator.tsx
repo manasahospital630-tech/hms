@@ -148,11 +148,18 @@ const InvoiceGenerator: React.FC = () => {
   const [diagServices, setDiagServices] = useState<any[]>([]);
   const [diagPackages, setDiagPackages] = useState<any[]>([]);
 
-  // List States
+  // List States & Filters
   const [invoices, setInvoices] = useState<any[]>([]);
   const [listLoading, setListLoading] = useState(false);
   const [listError, setListError] = useState('');
   const [hospitalSettings, setHospitalSettings] = useState<any>(null);
+
+  // All Bills Search & Date Filter States
+  const [billSearchQuery, setBillSearchQuery] = useState('');
+  const [billDateFilter, setBillDateFilter] = useState<'all' | 'today' | 'yesterday' | 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'this_year' | 'custom'>('all');
+  const [billStatusFilter, setBillStatusFilter] = useState<string>('ALL');
+  const [listFromDate, setListFromDate] = useState<string>('');
+  const [listToDate, setListToDate] = useState<string>('');
 
   const subtotal = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
   const total = subtotal - Number(discount) + Number(tax);
@@ -220,6 +227,92 @@ const InvoiceGenerator: React.FC = () => {
     }));
     return [...serviceItems, ...packageItems];
   }, [diagServices, diagPackages]);
+
+  const filteredInvoices = useMemo(() => {
+    return invoices.filter(inv => {
+      // 1. Text Search Filter (Invoice ID, Patient Name, Phone, MRN, Doctor Name)
+      if (billSearchQuery.trim()) {
+        const q = billSearchQuery.toLowerCase().trim();
+        const invId = (inv.invoice_id || '').toLowerCase();
+        const patientName = (inv.patient_name || '').toLowerCase();
+        const phone = (inv.patient_phone || inv.phone || '').toLowerCase();
+        const mrn = (inv.patient_mrn || inv.medical_record_number || '').toLowerCase();
+        const docName = (inv.doctor_name || '').toLowerCase();
+        
+        const matchesSearch = 
+          invId.includes(q) || 
+          patientName.includes(q) || 
+          phone.includes(q) || 
+          mrn.includes(q) || 
+          docName.includes(q);
+        
+        if (!matchesSearch) return false;
+      }
+
+      // 2. Status Filter
+      if (billStatusFilter !== 'ALL' && inv.status !== billStatusFilter) {
+        return false;
+      }
+
+      // 3. Date Filter (All, Today, Yesterday, This Week, Last Week, This Month, Last Month, Year, Custom Date)
+      if (billDateFilter !== 'all' && inv.created_at) {
+        const invDate = new Date(inv.created_at);
+        const now = new Date();
+
+        const isSameDay = (d1: Date, d2: Date) =>
+          d1.getFullYear() === d2.getFullYear() &&
+          d1.getMonth() === d2.getMonth() &&
+          d1.getDate() === d2.getDate();
+
+        if (billDateFilter === 'today') {
+          if (!isSameDay(invDate, now)) return false;
+        } else if (billDateFilter === 'yesterday') {
+          const yest = new Date(now);
+          yest.setDate(now.getDate() - 1);
+          if (!isSameDay(invDate, yest)) return false;
+        } else if (billDateFilter === 'this_week') {
+          const startOfWeek = new Date(now);
+          const day = now.getDay() || 7;
+          startOfWeek.setDate(now.getDate() - day + 1);
+          startOfWeek.setHours(0, 0, 0, 0);
+          if (invDate < startOfWeek) return false;
+        } else if (billDateFilter === 'last_week') {
+          const startOfThisWeek = new Date(now);
+          const day = now.getDay() || 7;
+          startOfThisWeek.setDate(now.getDate() - day + 1);
+          startOfThisWeek.setHours(0, 0, 0, 0);
+          
+          const startOfLastWeek = new Date(startOfThisWeek);
+          startOfLastWeek.setDate(startOfThisWeek.getDate() - 7);
+          
+          if (invDate < startOfLastWeek || invDate >= startOfThisWeek) return false;
+        } else if (billDateFilter === 'this_month') {
+          const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          if (invDate < startOfMonth) return false;
+        } else if (billDateFilter === 'last_month') {
+          const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+          const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+          if (invDate < startOfLastMonth || invDate >= startOfThisMonth) return false;
+        } else if (billDateFilter === 'this_year') {
+          const startOfYear = new Date(now.getFullYear(), 0, 1);
+          if (invDate < startOfYear) return false;
+        } else if (billDateFilter === 'custom') {
+          if (listFromDate) {
+            const fromD = new Date(listFromDate);
+            fromD.setHours(0, 0, 0, 0);
+            if (invDate < fromD) return false;
+          }
+          if (listToDate) {
+            const toD = new Date(listToDate);
+            toD.setHours(23, 59, 59, 999);
+            if (invDate > toD) return false;
+          }
+        }
+      }
+
+      return true;
+    });
+  }, [invoices, billSearchQuery, billStatusFilter, billDateFilter, listFromDate, listToDate]);
 
   const loadInvoices = async () => {
     setListLoading(true);
@@ -1578,15 +1671,126 @@ const InvoiceGenerator: React.FC = () => {
           </div>
         </>
       ) : activeTab === 'list' ? (
-        <Card style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)' }}>
+        <Card style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', padding: '20px' }}>
+          
+          {/* Search & Filter Bar */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              
+              {/* Search Bar Input */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', padding: '8px 14px', borderRadius: '8px', flex: 1, minWidth: '280px' }}>
+                <Search size={16} color="var(--text-muted)" />
+                <input 
+                  type="text" 
+                  placeholder="🔍 Search bills by Invoice ID, Patient Name, Phone, MRN or Doctor..." 
+                  value={billSearchQuery} 
+                  onChange={(e) => setBillSearchQuery(e.target.value)} 
+                  style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', width: '100%', outline: 'none', fontSize: '13px' }}
+                />
+                {billSearchQuery && (
+                  <button onClick={() => setBillSearchQuery('')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+
+              {/* Date Filter Select */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '180px' }}>
+                <Calendar size={16} color="var(--accent-primary)" />
+                <select
+                  value={billDateFilter}
+                  onChange={(e: any) => setBillDateFilter(e.target.value)}
+                  className="input"
+                  style={{ padding: '8px 12px', fontSize: '13px', borderRadius: '8px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  <option value="all">📅 All Dates</option>
+                  <option value="today">Today</option>
+                  <option value="yesterday">Yesterday</option>
+                  <option value="this_week">This Week</option>
+                  <option value="last_week">Last Week</option>
+                  <option value="this_month">This Month</option>
+                  <option value="last_month">Last Month</option>
+                  <option value="this_year">This Year</option>
+                  <option value="custom">Custom Date Range...</option>
+                </select>
+              </div>
+
+              {/* Status Filter Select */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '160px' }}>
+                <Filter size={16} color="var(--text-secondary)" />
+                <select
+                  value={billStatusFilter}
+                  onChange={(e) => setBillStatusFilter(e.target.value)}
+                  className="input"
+                  style={{ padding: '8px 12px', fontSize: '13px', borderRadius: '8px', border: '1px solid var(--border-primary)', background: 'var(--bg-primary)', color: 'var(--text-primary)', cursor: 'pointer', fontWeight: 600 }}
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="Paid">Paid</option>
+                  <option value="Unpaid">Unpaid</option>
+                  <option value="PartiallyPaid">Partially Paid</option>
+                  <option value="Cancelled">Cancelled</option>
+                  <option value="Returned">Returned</option>
+                </select>
+              </div>
+
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<RefreshCw size={14} />}
+                onClick={loadInvoices}
+                loading={listLoading}
+              >
+                Refresh
+              </Button>
+            </div>
+
+            {/* Custom Date Range Picker Container */}
+            {billDateFilter === 'custom' && (
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center', background: 'rgba(37,99,235,0.04)', border: '1px solid rgba(37,99,235,0.2)', padding: '12px 16px', borderRadius: '8px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>From Date</label>
+                    <input
+                      type="date"
+                      className="input"
+                      value={listFromDate}
+                      onChange={e => setListFromDate(e.target.value)}
+                      style={{ padding: '6px 10px', fontSize: '13px' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>To Date</label>
+                    <input
+                      type="date"
+                      className="input"
+                      value={listToDate}
+                      onChange={e => setListToDate(e.target.value)}
+                      style={{ padding: '6px 10px', fontSize: '13px' }}
+                    />
+                  </div>
+                  {(listFromDate || listToDate) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => { setListFromDate(''); setListToDate(''); }}
+                      style={{ marginTop: '18px', color: 'var(--accent-danger)' }}
+                    >
+                      Clear Custom Range
+                    </Button>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
           {listError && <div style={{ color: 'var(--accent-danger)', padding: '16px' }}>{listError}</div>}
           {listLoading ? (
             <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
               <RefreshCw size={24} className="spin" style={{ animation: 'spin 1.5s linear infinite' }} />
             </div>
-          ) : invoices.length === 0 ? (
+          ) : filteredInvoices.length === 0 ? (
             <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
-              No bills registered in the system.
+              No bills found matching your search query or date filters.
             </div>
           ) : (
             <div className="table-responsive">
@@ -1595,6 +1799,7 @@ const InvoiceGenerator: React.FC = () => {
                   <tr style={{ borderBottom: '1px solid var(--border-primary)', textAlign: 'left' }}>
                     <th style={{ padding: '12px 16px' }}>Invoice ID</th>
                     <th style={{ padding: '12px 16px' }}>Patient</th>
+                    <th style={{ padding: '12px 16px' }}>Doctor</th>
                     <th style={{ padding: '12px 16px' }}>Total Amount</th>
                     <th style={{ padding: '12px 16px' }}>Amount Paid</th>
                     <th style={{ padding: '12px 16px' }}>Date</th>
@@ -1603,13 +1808,23 @@ const InvoiceGenerator: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {invoices.map((inv) => (
+                  {filteredInvoices.map((inv) => (
                     <tr key={inv.invoice_id} style={{ borderBottom: '1px solid var(--border-primary)' }}>
                       <td style={{ padding: '12px 16px', fontWeight: 600, fontSize: '13px', fontFamily: 'monospace' }}>
                         {inv.invoice_id.substring(0, 8).toUpperCase()}
                       </td>
-                      <td style={{ padding: '12px 16px', fontWeight: 600 }}>{inv.patient_name}</td>
-                      <td style={{ padding: '12px 16px' }}>{formatCurrency(parseFloat(inv.total_amount))}</td>
+                      <td style={{ padding: '12px 16px', fontWeight: 600 }}>
+                        <div>{inv.patient_name}</div>
+                        {(inv.patient_phone || inv.patient_mrn) && (
+                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                            {inv.patient_phone ? `📱 ${inv.patient_phone}` : ''} {inv.patient_mrn ? `| MRN: ${inv.patient_mrn}` : ''}
+                          </div>
+                        )}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                        {inv.doctor_name || 'Hospital Doctor'}
+                      </td>
+                      <td style={{ padding: '12px 16px', fontWeight: 700 }}>{formatCurrency(parseFloat(inv.total_amount))}</td>
                       <td style={{ padding: '12px 16px' }}>{formatCurrency(parseFloat(inv.amount_paid))}</td>
                       <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>
                         {new Date(inv.created_at).toLocaleDateString()}

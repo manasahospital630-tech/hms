@@ -214,8 +214,20 @@ const getAllInvoices = async (filters) => {
         dataParams.push(filters.offset);
         limitClause += ` OFFSET $${dataParams.length}`;
     }
-    const result = await (0, database_1.query)(`SELECT i.*, p.first_name || ' ' || p.last_name as patient_name FROM invoices i
-     JOIN patients p ON i.patient_id = p.patient_id ${whereClause} ORDER BY i.created_at DESC ${limitClause}`, dataParams);
+    const result = await (0, database_1.query)(`SELECT i.*, 
+            p.first_name || ' ' || p.last_name as patient_name,
+            p.phone as patient_phone,
+            p.medical_record_number as patient_mrn,
+            p.is_inpatient,
+            COALESCE(d.first_name || ' ' || d.last_name, ip_d.first_name || ' ' || ip_d.last_name, 'Hospital Doctor') as doctor_name
+     FROM invoices i
+     JOIN patients p ON i.patient_id = p.patient_id 
+     LEFT JOIN encounters e ON i.encounter_id = e.encounter_id
+     LEFT JOIN users d ON e.provider_id = d.user_id
+     LEFT JOIN ip_admissions ipa ON i.ip_admission_id = ipa.ip_admission_id
+     LEFT JOIN users ip_d ON ipa.admitting_doctor_id = ip_d.user_id
+     ${whereClause} 
+     ORDER BY i.created_at DESC ${limitClause}`, dataParams);
     return { invoices: result.rows, total: parseInt(countResult.rows[0].total, 10) };
 };
 exports.getAllInvoices = getAllInvoices;
