@@ -6,7 +6,29 @@ import { authenticateJWT } from '../../middleware/authenticate';
 import { enforceRBAC } from '../../middleware/rbacHandler';
 import { auditLogger } from '../../middleware/auditLogger';
 
+import * as buCtrl from './businessUnits.controller';
+
 const router = Router();
+
+// Business Units & Teams Architecture (MS CRM Architecture Alignment)
+router.get('/v1/business-units', authenticateJWT, buCtrl.getBusinessUnits);
+router.get('/business-units', authenticateJWT, buCtrl.getBusinessUnits);
+router.post('/v1/business-units', authenticateJWT, enforceRBAC(['Admin']), auditLogger('CREATE', 'BusinessUnit'), buCtrl.createBusinessUnit);
+router.post('/business-units', authenticateJWT, enforceRBAC(['Admin']), auditLogger('CREATE', 'BusinessUnit'), buCtrl.createBusinessUnit);
+router.put('/v1/business-units/:id', authenticateJWT, enforceRBAC(['Admin']), auditLogger('UPDATE', 'BusinessUnit'), buCtrl.updateBusinessUnit);
+router.put('/business-units/:id', authenticateJWT, enforceRBAC(['Admin']), auditLogger('UPDATE', 'BusinessUnit'), buCtrl.updateBusinessUnit);
+
+router.get('/v1/teams', authenticateJWT, buCtrl.getTeams);
+router.get('/teams', authenticateJWT, buCtrl.getTeams);
+router.post('/v1/teams', authenticateJWT, enforceRBAC(['Admin']), auditLogger('CREATE', 'Team'), buCtrl.createTeam);
+router.post('/teams', authenticateJWT, enforceRBAC(['Admin']), auditLogger('CREATE', 'Team'), buCtrl.createTeam);
+
+router.get('/v1/teams/:id/members', authenticateJWT, buCtrl.getTeamMembers);
+router.get('/teams/:id/members', authenticateJWT, buCtrl.getTeamMembers);
+router.post('/v1/teams/:id/members', authenticateJWT, enforceRBAC(['Admin']), auditLogger('UPDATE', 'TeamMembers'), buCtrl.updateTeamMembers);
+router.post('/teams/:id/members', authenticateJWT, enforceRBAC(['Admin']), auditLogger('UPDATE', 'TeamMembers'), buCtrl.updateTeamMembers);
+router.post('/v1/teams/:id/roles', authenticateJWT, enforceRBAC(['Admin']), auditLogger('UPDATE', 'TeamRoles'), buCtrl.updateTeamRoles);
+router.post('/teams/:id/roles', authenticateJWT, enforceRBAC(['Admin']), auditLogger('UPDATE', 'TeamRoles'), buCtrl.updateTeamRoles);
 
 router.get('/users', authenticateJWT, enforceRBAC(['Admin']), ctrl.getUsers);
 router.get('/users/:id/profile', authenticateJWT, ctrl.getStaffProfile);
