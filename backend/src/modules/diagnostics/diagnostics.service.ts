@@ -242,7 +242,9 @@ export const editService = async (serviceId: string, input: any) => {
 };
 
 export const deleteService = async (serviceId: string) => {
+  await query('DELETE FROM diagnostic_package_items WHERE service_id = $1', [serviceId]);
   await query('DELETE FROM diagnostic_parameters WHERE service_id = $1', [serviceId]);
+  await query('UPDATE test_order_items SET service_id = NULL WHERE service_id = $1', [serviceId]);
   await query('DELETE FROM diagnostic_services WHERE service_id = $1', [serviceId]);
   return { success: true };
 };

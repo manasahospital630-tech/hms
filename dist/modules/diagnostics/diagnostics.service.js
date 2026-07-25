@@ -210,7 +210,9 @@ const editService = async (serviceId, input) => {
 };
 exports.editService = editService;
 const deleteService = async (serviceId) => {
+    await (0, database_1.query)('DELETE FROM diagnostic_package_items WHERE service_id = $1', [serviceId]);
     await (0, database_1.query)('DELETE FROM diagnostic_parameters WHERE service_id = $1', [serviceId]);
+    await (0, database_1.query)('UPDATE test_order_items SET service_id = NULL WHERE service_id = $1', [serviceId]);
     await (0, database_1.query)('DELETE FROM diagnostic_services WHERE service_id = $1', [serviceId]);
     return { success: true };
 };

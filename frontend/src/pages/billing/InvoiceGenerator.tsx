@@ -14,7 +14,7 @@ import { formatCurrency, formatDisplayAge, formatDateTime } from '../../utils/fo
 import { getHospitalLogoHtml } from '../../utils/logoHelper';
 
 const InvoiceGenerator: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'generator' | 'list' | 'create-item'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'generator' | 'list'>('dashboard');
   
   // Dashboard Analytics States
   const [analyticsPeriod, setAnalyticsPeriod] = useState<'today' | 'week' | 'month' | 'year' | 'custom'>('month');
@@ -1054,28 +1054,6 @@ const InvoiceGenerator: React.FC = () => {
         >
           All Bills & Receipts
         </button>
-        <button
-          onClick={() => {
-            setActiveTab('create-item');
-            if (categories.length > 0 && !serviceForm.categoryId) {
-              setServiceForm(prev => ({ ...prev, categoryId: categories[0].category_id }));
-            }
-          }}
-          style={{
-            padding: '8px 20px',
-            background: activeTab === 'create-item' ? 'var(--bg-card)' : 'transparent',
-            color: activeTab === 'create-item' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-            border: activeTab === 'create-item' ? '1px solid var(--border-primary)' : '1px solid transparent',
-            borderBottom: activeTab === 'create-item' ? '1px solid transparent' : '1px solid transparent',
-            borderRadius: '8px 8px 0 0',
-            fontWeight: 600,
-            cursor: 'pointer',
-            transition: 'all 0.2s',
-            marginBottom: '-1px'
-          }}
-        >
-          Create New Line Item
-        </button>
       </div>
 
       {success && <div style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', color: 'var(--accent-success)', padding: '12px', borderRadius: '8px', marginBottom: '24px' }}>{success}</div>}
@@ -1365,7 +1343,7 @@ const InvoiceGenerator: React.FC = () => {
         </div>
       )}
 
-      {activeTab === 'generator' ? (
+      {activeTab === 'generator' && (
         <>
           <div className="card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', padding: '20px', borderRadius: '12px', marginBottom: '24px', position: 'relative', zIndex: 50 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
@@ -1670,7 +1648,9 @@ const InvoiceGenerator: React.FC = () => {
             <Button variant="primary" loading={loading} onClick={handleSubmit} disabled={!patient || items.length === 0}>Create & Print Invoice</Button>
           </div>
         </>
-      ) : activeTab === 'list' ? (
+      )}
+
+      {activeTab === 'list' && (
         <Card style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', padding: '20px' }}>
           
           {/* Search & Filter Bar */}
@@ -1896,224 +1876,6 @@ const InvoiceGenerator: React.FC = () => {
             </div>
           )}
         </Card>
-      ) : (
-        <Card style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', padding: '20px', borderRadius: '12px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', padding: '8px 12px', borderRadius: '8px', width: '100%', maxWidth: '380px' }}>
-              <Search size={16} color="var(--text-muted)" />
-              <input 
-                type="text" 
-                placeholder="Search by code or full test name..." 
-                value={itemSearch} 
-                onChange={(e) => setItemSearch(e.target.value)} 
-                style={{ background: 'transparent', border: 'none', color: 'var(--text-primary)', width: '100%', outline: 'none', fontSize: '13px' }}
-              />
-              {itemSearch && <button onClick={() => setItemSearch('')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={14} /></button>}
-            </div>
-
-            <Button variant="primary" icon={<Plus size={14} />} onClick={() => {
-              setEditingService(null);
-              setServiceForm({
-                name: '',
-                categoryId: categories[0]?.category_id || '',
-                serviceCode: '',
-                price: '',
-                gstPercentage: '18',
-                durationMinutes: '30',
-                sampleRequired: 'None',
-                normalRange: '',
-                machineRequired: '',
-                homeCollectionAvailable: false,
-                emergencyAvailable: false,
-                isActive: true
-              });
-              setServiceModalOpen(true);
-            }}>
-              Create New Line Item
-            </Button>
-          </div>
-
-          <div className="table-responsive">
-            <table className="table" style={{ width: '100%', borderCollapse: 'collapse' }}>
-              <thead>
-                <tr style={{ borderBottom: '1px solid var(--border-primary)', textAlign: 'left' }}>
-                  <th style={{ padding: '12px 16px', width: '150px' }}>Short Code</th>
-                  <th style={{ padding: '12px 16px' }}>Full Test Name</th>
-                  <th style={{ padding: '12px 16px', width: '150px' }}>Category</th>
-                  <th style={{ padding: '12px 16px', width: '120px', textAlign: 'right' }}>Price (₹)</th>
-                  <th style={{ padding: '12px 16px', width: '150px', textAlign: 'right' }}>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {diagServices
-                  .filter(s => 
-                    s.name.toLowerCase().includes(itemSearch.toLowerCase()) || 
-                    s.service_code.toLowerCase().includes(itemSearch.toLowerCase())
-                  )
-                  .map((s) => (
-                    <tr key={s.service_id} style={{ borderBottom: '1px solid var(--border-primary)' }}>
-                      <td style={{ padding: '12px 16px', fontWeight: 700, fontFamily: 'monospace' }}>{s.service_code}</td>
-                      <td style={{ padding: '12px 16px', fontWeight: 600 }}>{s.name}</td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span style={{ background: 'var(--bg-primary)', padding: '2px 8px', borderRadius: '50px', fontSize: '11px', color: 'var(--text-secondary)' }}>
-                          {s.category_name || 'Laboratory'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right', fontWeight: 700, color: 'var(--accent-success)' }}>
-                        Rs. {parseFloat(s.price).toFixed(2)}
-                      </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
-                          <button onClick={() => handleEditServiceClick(s)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--accent-primary)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '3px' }}><Edit size={13} /> Edit</button>
-                          <button onClick={() => handleDeleteService(s.service_id)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--accent-danger)', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '3px' }}><Trash2 size={13} /> Delete</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      )}
-
-      {/* Service creation modal */}
-      {serviceModalOpen && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '12px', width: '100%', maxWidth: '500px', padding: '24px', position: 'relative', color: 'var(--text-primary)' }}>
-            <button onClick={() => setServiceModalOpen(false)} style={{ position: 'absolute', right: '16px', top: '16px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}><X size={20} /></button>
-            <h2 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 16px 0', color: 'var(--text-primary)' }}>
-              {editingService ? 'Edit Billing Line Item' : 'Add New Billing Line Item'}
-            </h2>
-
-            <form onSubmit={handleServiceSubmit}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '10px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>Item/Test Name *</label>
-                    <input 
-                      type="text" 
-                      className="input" 
-                      required
-                      value={serviceForm.name} 
-                      onChange={e => setServiceForm({...serviceForm, name: e.target.value})} 
-                      style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>Short Code *</label>
-                    <input 
-                      type="text" 
-                      className="input" 
-                      required
-                      value={serviceForm.serviceCode} 
-                      onChange={e => setServiceForm({...serviceForm, serviceCode: e.target.value.toUpperCase()})} 
-                      style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>Category *</label>
-                    <select 
-                      className="select" 
-                      required
-                      value={serviceForm.categoryId} 
-                      onChange={e => setServiceForm({...serviceForm, categoryId: e.target.value})}
-                      style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                    >
-                      <option value="">-- Select Category --</option>
-                      {categories.map(c => (
-                        <option key={c.category_id} value={c.category_id}>{c.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>Price (₹) *</label>
-                    <input 
-                      type="number" 
-                      className="input" 
-                      required
-                      step="0.01"
-                      value={serviceForm.price} 
-                      onChange={e => setServiceForm({...serviceForm, price: e.target.value})} 
-                      style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>GST %</label>
-                    <input 
-                      type="number" 
-                      className="input" 
-                      value={serviceForm.gstPercentage} 
-                      onChange={e => setServiceForm({...serviceForm, gstPercentage: e.target.value})} 
-                      style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>Duration (Mins)</label>
-                    <input 
-                      type="number" 
-                      className="input" 
-                      value={serviceForm.durationMinutes} 
-                      onChange={e => setServiceForm({...serviceForm, durationMinutes: e.target.value})} 
-                      style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>Sample Type</label>
-                    <select 
-                      className="select" 
-                      value={serviceForm.sampleRequired} 
-                      onChange={e => setServiceForm({...serviceForm, sampleRequired: e.target.value})}
-                      style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                    >
-                      <option value="None">None (Imaging/Scans)</option>
-                      <option value="Blood">Blood</option>
-                      <option value="Urine">Urine</option>
-                      <option value="Sputum">Sputum</option>
-                      <option value="Stool">Stool</option>
-                      <option value="Swab">Swab</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 600, marginBottom: '4px' }}>Normal Range</label>
-                    <input 
-                      type="text" 
-                      className="input" 
-                      placeholder="e.g. 70 - 110 mg/dL"
-                      value={serviceForm.normalRange} 
-                      onChange={e => setServiceForm({...serviceForm, normalRange: e.target.value})} 
-                      style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '16px', marginTop: '8px' }}>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', cursor: 'pointer' }}>
-                    <input 
-                      type="checkbox" 
-                      checked={serviceForm.isActive} 
-                      onChange={e => setServiceForm({...serviceForm, isActive: e.target.checked})} 
-                    />
-                    Is Active
-                  </label>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '16px' }}>
-                  <Button variant="ghost" type="button" onClick={() => setServiceModalOpen(false)}>Cancel</Button>
-                  <Button variant="primary" type="submit">Save Line Item</Button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
       )}
 
       {/* Quick Patient Registration Modal */}
