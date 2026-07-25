@@ -23,11 +23,9 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      const url = error.config?.url || '';
-      // Do NOT trigger automatic logout redirect if error occurs during login request itself
-      if (!url.includes('/auth/login') && window.location.pathname !== '/login') {
-        localStorage.removeItem('hms_token');
-        localStorage.removeItem('hms_user');
+      localStorage.removeItem('hms_token');
+      localStorage.removeItem('hms_user');
+      if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
     }

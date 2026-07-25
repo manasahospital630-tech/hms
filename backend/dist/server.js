@@ -57,8 +57,6 @@ app.get('/api/health', (_req, res) => {
 const opdAnalytics_routes_1 = __importDefault(require("./modules/appointment/opdAnalytics.routes"));
 // API Routes
 app.use('/api/auth', auth_routes_1.default);
-app.use('/api/v1/auth', auth_routes_1.default);
-app.use('/v1/auth', auth_routes_1.default);
 app.use('/api/patients', patient_routes_1.default);
 app.use('/api/appointments', appointment_routes_1.default);
 app.use('/api/v1/queue', appointment_routes_1.default);

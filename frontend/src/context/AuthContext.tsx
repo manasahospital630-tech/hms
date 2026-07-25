@@ -15,58 +15,38 @@ interface AuthContextType {
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(() => localStorage.getItem('hms_token'));
-
-  const [user, setUser] = useState<User | null>(() => {
-    const savedUser = localStorage.getItem('hms_user');
-    if (savedUser) {
-      try {
-        return JSON.parse(savedUser);
-      } catch {
-        return null;
-      }
-    }
-    return null;
-  });
-
+  const [user, setUser] = useState<User | null>(null);
+  const [token, setToken] = useState<string | null>(localStorage.getItem('hms_token'));
   const [loading, setLoading] = useState<boolean>(true);
 
   const fetchProfile = useCallback(async () => {
-    const currentToken = localStorage.getItem('hms_token');
-    if (!currentToken) {
-      setUser(null);
-      setToken(null);
-      setLoading(false);
-      return;
-    }
-
     try {
       const response = await apiClient.get<ApiResponse<User>>('/auth/profile');
       if (response.data.success && response.data.data) {
         setUser(response.data.data);
-        localStorage.setItem('hms_user', JSON.stringify(response.data.data));
-      }
-    } catch (err: any) {
-      console.warn('Profile sync warning:', err?.response?.data || err?.message);
-      // ONLY log out if server explicitly returns 401 Unauthorized
-      if (err?.response?.status === 401) {
+      } else {
         setUser(null);
         setToken(null);
         localStorage.removeItem('hms_token');
         localStorage.removeItem('hms_user');
       }
-    } finally {
-      setLoading(false);
+    } catch {
+      setUser(null);
+      setToken(null);
+      localStorage.removeItem('hms_token');
+      localStorage.removeItem('hms_user');
     }
   }, []);
 
   useEffect(() => {
-    if (token) {
-      fetchProfile();
-    } else {
+    const init = async () => {
+      if (token) {
+        await fetchProfile();
+      }
       setLoading(false);
-    }
-  }, []); // Run once on mount
+    };
+    init();
+  }, [token, fetchProfile]);
 
   const login = async (email: string, password: string): Promise<User> => {
     const response = await apiClient.post<ApiResponse<{ token: string; user: User }>>('/auth/login', {
@@ -76,11 +56,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     if (response.data.success && response.data.data) {
       const { token: newToken, user: loggedInUser } = response.data.data;
-      localStorage.setItem('hms_token', newToken);
-      localStorage.setItem('hms_user', JSON.stringify(loggedInUser));
       setToken(newToken);
       setUser(loggedInUser);
-      setLoading(false);
+      localStorage.setItem('hms_token', newToken);
+      localStorage.setItem('hms_user', JSON.stringify(loggedInUser));
       return loggedInUser;
     } else {
       throw new Error(response.data.message || 'Login failed');

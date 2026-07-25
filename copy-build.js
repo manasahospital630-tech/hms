@@ -18,15 +18,6 @@ function copyFolderSync(from, to) {
 try {
   console.log('Copying backend/dist to root dist...');
   copyFolderSync(path.join(__dirname, 'backend/dist'), path.join(__dirname, 'dist'));
-
-  // Also copy .env to dist/.env and root .env for Hostinger / Cloud deployments
-  const backendEnv = path.join(__dirname, 'backend/.env');
-  if (fs.existsSync(backendEnv)) {
-    fs.copyFileSync(backendEnv, path.join(__dirname, 'dist/.env'));
-    fs.copyFileSync(backendEnv, path.join(__dirname, '.env'));
-    console.log('Successfully copied backend/.env to dist/.env and root .env.');
-  }
-
   console.log('Successfully copied backend build outputs to root dist/ directory.');
 } catch (err) {
   console.error('Failed to copy backend build outputs:', err.message);
