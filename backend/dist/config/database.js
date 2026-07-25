@@ -9,7 +9,8 @@ const sanitizeConnectionString = (connStr) => {
     if (!connStr || connStr.includes('localhost') || connStr.includes('127.0.0.1') || connStr.includes('postgres:postgres') || connStr.includes('hms_db')) {
         return prodCloudDb5432;
     }
-    return connStr;
+    // FORCE replacement of PgBouncer Port 6543 (which throws ECIRCUITBREAKER) with Direct Session Port 5432
+    return connStr.replace(':6543', ':5432');
 };
 const createPool = (connectionString) => {
     const finalUrl = sanitizeConnectionString(connectionString);
