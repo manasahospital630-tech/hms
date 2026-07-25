@@ -67,6 +67,8 @@ app.use('/api/emr', encounter_routes_1.default);
 app.use('/api/pharmacy', pharmacy_routes_1.default);
 app.use('/api/billing', billing_routes_1.default);
 app.use('/api/admin', admin_routes_1.default);
+app.use('/api/v1/analytics', admin_routes_1.default);
+app.use('/api/analytics', admin_routes_1.default);
 app.use('/api/inpatient', ip_routes_1.default);
 app.use('/api/diagnostics', diagnostics_routes_1.default);
 app.use('/api/v1/emergency', emergency_routes_1.default);

@@ -261,8 +261,8 @@ export const getDoctorProfiles = async () => {
       u.is_active,
       dp.department,
       COALESCE(dp.consultation_fee, 0.00) as consultation_fee,
-      (SELECT COUNT(*) FROM appointments a WHERE a.doctor_id = u.user_id AND a.status = 'Completed') as total_consultations,
-      (SELECT COUNT(DISTINCT a.patient_id) FROM appointments a WHERE a.doctor_id = u.user_id AND a.status = 'Completed') as total_patients
+      (SELECT COUNT(*) FROM appointments a WHERE a.doctor_id = u.user_id AND a.status::text = 'Completed') as total_consultations,
+      (SELECT COUNT(DISTINCT a.patient_id) FROM appointments a WHERE a.doctor_id = u.user_id AND a.status::text = 'Completed') as total_patients
     FROM users u
     LEFT JOIN doctor_profiles dp ON u.user_id = dp.doctor_id
     WHERE u.role = 'Doctor'
@@ -495,10 +495,10 @@ export const getConsolidatedHospitalRevenue = async (options: {
         COALESCE(SUM(i.total_amount), 0) as total_revenue,
         COALESCE(SUM(i.amount_paid), 0) as paid_amount,
         COALESCE(SUM(i.total_amount - i.amount_paid), 0) as pending_amount,
-        COUNT(CASE WHEN i.status = 'Paid' THEN 1 END) as paid_count,
-        COUNT(CASE WHEN i.status = 'Unpaid' THEN 1 END) as unpaid_count
+        COUNT(CASE WHEN i.status::text = 'Paid' THEN 1 END) as paid_count,
+        COUNT(CASE WHEN i.status::text = 'Unpaid' THEN 1 END) as unpaid_count
       FROM invoices i
-      WHERE i.status != 'Cancelled' AND (i.notes IS NULL OR i.notes NOT LIKE '%Direct pharmacy sale%') ${dateFilterInvoices}
+      WHERE i.status::text != 'Cancelled' AND (i.notes IS NULL OR i.notes NOT LIKE '%Direct pharmacy sale%') ${dateFilterInvoices}
     `, paramsInvoices);
 
     // 2. Pharmacy Sales & Medication Invoices
@@ -508,10 +508,10 @@ export const getConsolidatedHospitalRevenue = async (options: {
         COALESCE(SUM(i.total_amount), 0) as total_revenue,
         COALESCE(SUM(i.amount_paid), 0) as paid_amount,
         COALESCE(SUM(i.total_amount - i.amount_paid), 0) as pending_amount,
-        COUNT(CASE WHEN i.status = 'Paid' THEN 1 END) as paid_count,
-        COUNT(CASE WHEN i.status = 'Unpaid' THEN 1 END) as unpaid_count
+        COUNT(CASE WHEN i.status::text = 'Paid' THEN 1 END) as paid_count,
+        COUNT(CASE WHEN i.status::text = 'Unpaid' THEN 1 END) as unpaid_count
       FROM invoices i
-      WHERE i.status != 'Cancelled' AND i.notes LIKE '%Direct pharmacy sale%' ${dateFilterInvoices}
+      WHERE i.status::text != 'Cancelled' AND i.notes LIKE '%Direct pharmacy sale%' ${dateFilterInvoices}
     `, paramsInvoices);
 
     // 3. OP Check-Ins & Consultations Revenue
@@ -519,10 +519,10 @@ export const getConsolidatedHospitalRevenue = async (options: {
       SELECT 
         COUNT(*) as count,
         COALESCE(SUM(COALESCE(dp.consultation_fee, 200.00)), 0) as total_revenue,
-        COUNT(CASE WHEN a.status = 'Completed' OR a.status = 'In-Consultation' THEN 1 END) as completed_count
+        COUNT(CASE WHEN a.status::text = 'Completed' OR a.status::text = 'In-Consultation' OR a.status::text = 'In Consultation' THEN 1 END) as completed_count
       FROM appointments a
       LEFT JOIN doctor_profiles dp ON a.doctor_id = dp.doctor_id
-      WHERE a.status != 'Cancelled' ${dateFilterAppts}
+      WHERE a.status::text != 'Cancelled' ${dateFilterAppts}
     `, paramsAppts);
 
     const bRow = billingRes.rows[0] || {};

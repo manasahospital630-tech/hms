@@ -70,6 +70,8 @@ app.use('/api/emr', emrRoutes);
 app.use('/api/pharmacy', pharmacyRoutes);
 app.use('/api/billing', billingRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/v1/analytics', adminRoutes);
+app.use('/api/analytics', adminRoutes);
 app.use('/api/inpatient', ipRoutes);
 app.use('/api/diagnostics', diagnosticsRoutes);
 app.use('/api/v1/emergency', emergencyRoutes);
