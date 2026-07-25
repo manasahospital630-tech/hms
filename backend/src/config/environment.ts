@@ -21,6 +21,9 @@ for (const p of envPaths) {
 }
 dotenv.config();
 
+const prodCloudDb = 'postgresql://postgres.pamobniywbuloarioxiu:Nine%40248688944@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres';
+const defaultJwt = 'super-secret-jwt-key-for-manasa-hms-production-2026';
+
 // Construct database URL from environment variables if individual vars exist
 let constructedDbUrl = process.env.DATABASE_URL;
 
@@ -36,9 +39,10 @@ if (!constructedDbUrl) {
   }
 }
 
-// Fallback to Supabase Cloud PostgreSQL database string if no DATABASE_URL is supplied
-const defaultDb = 'postgresql://postgres.pamobniywbuloarioxiu:Nine%40248688944@aws-1-ap-northeast-1.pooler.supabase.com:6543/postgres';
-const defaultJwt = 'super-secret-jwt-key-for-manasa-hms-production-2026';
+// If DATABASE_URL is missing or set to generic broken localhost string, default to live cloud DB
+if (!constructedDbUrl || constructedDbUrl.includes('postgres:postgres@localhost') || constructedDbUrl.includes('postgres@localhost:5432/hms_db')) {
+  constructedDbUrl = prodCloudDb;
+}
 
 let rawPort: any = process.env.PORT || 5000;
 if (typeof rawPort === 'string' && !isNaN(parseInt(rawPort, 10)) && !rawPort.includes('/') && !rawPort.includes('\\')) {
@@ -47,7 +51,7 @@ if (typeof rawPort === 'string' && !isNaN(parseInt(rawPort, 10)) && !rawPort.inc
 
 export const env = {
   PORT: rawPort,
-  DATABASE_URL: constructedDbUrl || defaultDb,
+  DATABASE_URL: constructedDbUrl || prodCloudDb,
   JWT_SECRET: process.env.JWT_SECRET || defaultJwt,
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '24h',
   NODE_ENV: process.env.NODE_ENV || 'production',

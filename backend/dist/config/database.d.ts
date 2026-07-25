@@ -1,6 +1,6 @@
 import { Pool, QueryResult, QueryResultRow } from 'pg';
-declare const pool: Pool;
+declare let activePool: Pool;
 export declare const query: <T extends QueryResultRow = any>(text: string, params?: any[]) => Promise<QueryResult<T>>;
 export declare const getClient: () => Promise<import("pg").PoolClient>;
-export default pool;
+export default activePool;
 //# sourceMappingURL=database.d.ts.map
