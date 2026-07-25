@@ -33,12 +33,12 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateTeamRoles = exports.updateTeamMembers = exports.getTeamMembers = exports.createTeam = exports.getTeams = exports.updateBusinessUnit = exports.createBusinessUnit = exports.getBusinessUnits = void 0;
+exports.updateTeamRoles = exports.updateTeamMembers = exports.getTeamMembers = exports.deleteTeam = exports.updateTeam = exports.createTeam = exports.getTeams = exports.updateBusinessUnit = exports.createBusinessUnit = exports.getBusinessUnits = void 0;
 const responseHelper_1 = require("../../utils/responseHelper");
 const buService = __importStar(require("./businessUnits.service"));
 const getBusinessUnits = async (req, res, next) => {
     try {
-        const bus = await buService.getBusinessUnits();
+        const bus = await buService.getTeams();
         (0, responseHelper_1.successResponse)(res, bus);
     }
     catch (error) {
@@ -48,8 +48,8 @@ const getBusinessUnits = async (req, res, next) => {
 exports.getBusinessUnits = getBusinessUnits;
 const createBusinessUnit = async (req, res, next) => {
     try {
-        const bu = await buService.createBusinessUnit(req.body);
-        (0, responseHelper_1.successResponse)(res, bu, 'Business Unit created successfully.', 201);
+        const bu = await buService.createTeam(req.body);
+        (0, responseHelper_1.successResponse)(res, bu, 'Team created successfully.', 201);
     }
     catch (error) {
         next(error);
@@ -58,8 +58,8 @@ const createBusinessUnit = async (req, res, next) => {
 exports.createBusinessUnit = createBusinessUnit;
 const updateBusinessUnit = async (req, res, next) => {
     try {
-        const bu = await buService.updateBusinessUnit(req.params.id, req.body);
-        (0, responseHelper_1.successResponse)(res, bu, 'Business Unit updated successfully.');
+        const bu = await buService.updateTeam(req.params.id, req.body);
+        (0, responseHelper_1.successResponse)(res, bu, 'Team updated successfully.');
     }
     catch (error) {
         next(error);
@@ -86,6 +86,26 @@ const createTeam = async (req, res, next) => {
     }
 };
 exports.createTeam = createTeam;
+const updateTeam = async (req, res, next) => {
+    try {
+        const team = await buService.updateTeam(req.params.id, req.body);
+        (0, responseHelper_1.successResponse)(res, team, 'Team updated successfully.');
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.updateTeam = updateTeam;
+const deleteTeam = async (req, res, next) => {
+    try {
+        const result = await buService.deleteTeam(req.params.id);
+        (0, responseHelper_1.successResponse)(res, result, 'Team deleted successfully.');
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.deleteTeam = deleteTeam;
 const getTeamMembers = async (req, res, next) => {
     try {
         const members = await buService.getTeamMembers(req.params.id);

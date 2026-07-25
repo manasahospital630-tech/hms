@@ -22,6 +22,10 @@ router.get('/v1/teams', authenticateJWT, buCtrl.getTeams);
 router.get('/teams', authenticateJWT, buCtrl.getTeams);
 router.post('/v1/teams', authenticateJWT, enforceRBAC(['Admin']), auditLogger('CREATE', 'Team'), buCtrl.createTeam);
 router.post('/teams', authenticateJWT, enforceRBAC(['Admin']), auditLogger('CREATE', 'Team'), buCtrl.createTeam);
+router.put('/v1/teams/:id', authenticateJWT, enforceRBAC(['Admin']), auditLogger('UPDATE', 'Team'), buCtrl.updateTeam);
+router.put('/teams/:id', authenticateJWT, enforceRBAC(['Admin']), auditLogger('UPDATE', 'Team'), buCtrl.updateTeam);
+router.delete('/v1/teams/:id', authenticateJWT, enforceRBAC(['Admin']), auditLogger('DELETE', 'Team'), buCtrl.deleteTeam);
+router.delete('/teams/:id', authenticateJWT, enforceRBAC(['Admin']), auditLogger('DELETE', 'Team'), buCtrl.deleteTeam);
 
 router.get('/v1/teams/:id/members', authenticateJWT, buCtrl.getTeamMembers);
 router.get('/teams/:id/members', authenticateJWT, buCtrl.getTeamMembers);

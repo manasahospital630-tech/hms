@@ -1,50 +1,41 @@
 export declare const ensureTablesExist: () => Promise<void>;
-export declare const getBusinessUnits: () => Promise<{
-    buId: any;
-    name: any;
-    parentBuId: any;
-    parentBuName: any;
-    category: any;
-    unitHeadId: any;
-    unitHeadName: any;
-    status: any;
-    createdAt: any;
-    staffCount: number;
-    teamsCount: number;
-}[]>;
-export declare const createBusinessUnit: (data: {
-    buId?: string;
-    name: string;
-    parentBuId?: string;
-    category: string;
-    unitHeadId?: string;
-    status?: string;
-}) => Promise<any>;
-export declare const updateBusinessUnit: (buId: string, data: {
-    name?: string;
-    parentBuId?: string;
-    category?: string;
-    unitHeadId?: string;
-    status?: string;
-}) => Promise<any>;
 export declare const getTeams: () => Promise<{
     teamId: any;
     teamName: any;
-    buId: any;
-    buName: any;
+    category: any;
     teamType: any;
     teamLeadId: any;
     teamLeadName: any;
+    teamLeadEmail: any;
+    teamLeadRole: any;
+    status: any;
+    description: any;
+    createdAt: any;
     memberCount: number;
     roles: any;
 }[]>;
 export declare const createTeam: (data: {
+    teamId?: string;
     teamName: string;
-    buId: string;
+    category?: string;
     teamType?: string;
     teamLeadId?: string;
+    status?: string;
+    description?: string;
     roles?: string[];
 }) => Promise<any>;
+export declare const updateTeam: (teamId: string, data: {
+    teamName?: string;
+    category?: string;
+    teamType?: string;
+    teamLeadId?: string;
+    status?: string;
+    description?: string;
+    roles?: string[];
+}) => Promise<any>;
+export declare const deleteTeam: (teamId: string) => Promise<{
+    success: boolean;
+}>;
 export declare const getTeamMembers: (teamId: string) => Promise<{
     assignedMembers: any[];
     availableUsers: any[];
@@ -58,4 +49,38 @@ export declare const updateTeamRoles: (teamId: string, roles: string[]) => Promi
     success: boolean;
     roles: string[];
 }>;
+export declare const getBusinessUnits: () => Promise<{
+    teamId: any;
+    teamName: any;
+    category: any;
+    teamType: any;
+    teamLeadId: any;
+    teamLeadName: any;
+    teamLeadEmail: any;
+    teamLeadRole: any;
+    status: any;
+    description: any;
+    createdAt: any;
+    memberCount: number;
+    roles: any;
+}[]>;
+export declare const createBusinessUnit: (data: {
+    teamId?: string;
+    teamName: string;
+    category?: string;
+    teamType?: string;
+    teamLeadId?: string;
+    status?: string;
+    description?: string;
+    roles?: string[];
+}) => Promise<any>;
+export declare const updateBusinessUnit: (teamId: string, data: {
+    teamName?: string;
+    category?: string;
+    teamType?: string;
+    teamLeadId?: string;
+    status?: string;
+    description?: string;
+    roles?: string[];
+}) => Promise<any>;
 //# sourceMappingURL=businessUnits.service.d.ts.map

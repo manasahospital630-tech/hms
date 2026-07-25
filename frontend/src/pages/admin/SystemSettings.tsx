@@ -3,7 +3,7 @@ import {
   Settings, Shield, Building2, Save, FileText, CheckCircle,
   Users, Layers, Lock, Search, RefreshCw, KeyRound, Server, Activity, Plus,
   Sliders, ShieldCheck, Database, Check, Eye, Edit, ChevronRight, ChevronLeft,
-  X, UserPlus, Trash2, ArrowRight
+  X, UserPlus, Trash2, ArrowRight, UserCheck, ShieldAlert
 } from 'lucide-react';
 import { Table } from '../../components/ui/Table';
 import { Input } from '../../components/ui/Input';
@@ -94,16 +94,15 @@ const SECURITY_ROLES_INFO = [
 ];
 
 const SystemSettings: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'settings' | 'business' | 'security' | 'audit'>('settings');
+  const [activeTab, setActiveTab] = useState<'settings' | 'teams' | 'security' | 'audit'>('settings');
   
   // Real Backend State
-  const [businessUnits, setBusinessUnits] = useState<any[]>([]);
   const [teams, setTeams] = useState<any[]>([]);
   const [users, setUsers] = useState<any[]>([]);
   const [logs, setLogs] = useState<any[]>([]);
   const [resourceFilter, setResourceFilter] = useState('');
-  const [buSearch, setBuSearch] = useState('');
-  const [buCategoryFilter, setBuCategoryFilter] = useState('');
+  const [teamSearch, setTeamSearch] = useState('');
+  const [teamCategoryFilter, setTeamCategoryFilter] = useState('');
   
   // Hospital Settings States
   const [hospitalName, setHospitalName] = useState('');
@@ -120,28 +119,21 @@ const SystemSettings: React.FC = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
-  // Modals State
-  const [showBuModal, setShowBuModal] = useState(false);
-  const [editingBu, setEditingBu] = useState<any | null>(null);
-  const [buForm, setBuForm] = useState({
-    buId: '',
-    name: '',
-    parentBuId: '',
-    category: 'Clinical',
-    unitHeadId: '',
-    status: 'Active'
-  });
-
+  // Team Create / Edit Modal State
   const [showTeamModal, setShowTeamModal] = useState(false);
+  const [editingTeam, setEditingTeam] = useState<any | null>(null);
   const [teamForm, setTeamForm] = useState({
+    teamId: '',
     teamName: '',
-    buId: '',
+    category: 'Clinical',
     teamType: 'Owner',
     teamLeadId: '',
+    status: 'Active',
+    description: '',
     roles: [] as string[]
   });
 
-  // Screen 3 Dual-List Member Allocation Drawer State
+  // Dual-List Member Allocation Drawer State
   const [showMemberModal, setShowMemberModal] = useState(false);
   const [activeTeamForMembers, setActiveTeamForMembers] = useState<any | null>(null);
   const [assignedMembers, setAssignedMembers] = useState<any[]>([]);
@@ -170,12 +162,8 @@ const SystemSettings: React.FC = () => {
     }
   };
 
-  const fetchBusinessUnitsAndTeams = async () => {
+  const fetchTeamsAndUsers = async () => {
     try {
-      const buRes = await api.get('/admin/business-units');
-      if (buRes.data.success) {
-        setBusinessUnits(buRes.data.data || []);
-      }
       const teamsRes = await api.get('/admin/teams');
       if (teamsRes.data.success) {
         setTeams(teamsRes.data.data || []);
@@ -186,7 +174,7 @@ const SystemSettings: React.FC = () => {
         setUsers(Array.isArray(uList) ? uList : []);
       }
     } catch (err) {
-      console.error('Failed to load business units and teams:', err);
+      console.error('Failed to load teams and users:', err);
     }
   };
 
@@ -197,7 +185,7 @@ const SystemSettings: React.FC = () => {
 
   useEffect(() => {
     fetchSettings();
-    fetchBusinessUnitsAndTeams();
+    fetchTeamsAndUsers();
   }, []);
 
   useEffect(() => {
@@ -235,56 +223,33 @@ const SystemSettings: React.FC = () => {
     }
   };
 
-  // BU Modal Handlers
-  const handleOpenCreateBu = () => {
-    setEditingBu(null);
-    setBuForm({
-      buId: `BU-0${businessUnits.length + 1}`,
-      name: '',
-      parentBuId: '',
-      category: 'Clinical',
-      unitHeadId: '',
-      status: 'Active'
-    });
-    setShowBuModal(true);
-  };
-
-  const handleOpenEditBu = (bu: any) => {
-    setEditingBu(bu);
-    setBuForm({
-      buId: bu.buId,
-      name: bu.name,
-      parentBuId: bu.parentBuId || '',
-      category: bu.category || 'Clinical',
-      unitHeadId: bu.unitHeadId || '',
-      status: bu.status || 'Active'
-    });
-    setShowBuModal(true);
-  };
-
-  const handleSaveBu = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      if (editingBu) {
-        await api.put(`/admin/business-units/${editingBu.buId}`, buForm);
-      } else {
-        await api.post('/admin/business-units', buForm);
-      }
-      setShowBuModal(false);
-      fetchBusinessUnitsAndTeams();
-    } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to save Business Unit.');
-    }
-  };
-
-  // Team Modal Handlers
-  const handleOpenCreateTeam = (buIdForTeam?: string) => {
+  // Team Create / Edit Handlers
+  const handleOpenCreateTeam = () => {
+    setEditingTeam(null);
     setTeamForm({
+      teamId: `TEAM-0${teams.length + 1}`,
       teamName: '',
-      buId: buIdForTeam || (businessUnits[0]?.buId || 'BU-01'),
+      category: 'Clinical',
       teamType: 'Owner',
       teamLeadId: '',
+      status: 'Active',
+      description: '',
       roles: ['Doctor', 'Nurse']
+    });
+    setShowTeamModal(true);
+  };
+
+  const handleOpenEditTeam = (team: any) => {
+    setEditingTeam(team);
+    setTeamForm({
+      teamId: team.teamId,
+      teamName: team.teamName,
+      category: team.category || 'Clinical',
+      teamType: team.teamType || 'Owner',
+      teamLeadId: team.teamLeadId || '',
+      status: team.status || 'Active',
+      description: team.description || '',
+      roles: team.roles || []
     });
     setShowTeamModal(true);
   };
@@ -292,15 +257,29 @@ const SystemSettings: React.FC = () => {
   const handleSaveTeam = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await api.post('/admin/teams', teamForm);
+      if (editingTeam) {
+        await api.put(`/admin/teams/${editingTeam.teamId}`, teamForm);
+      } else {
+        await api.post('/admin/teams', teamForm);
+      }
       setShowTeamModal(false);
-      fetchBusinessUnitsAndTeams();
+      fetchTeamsAndUsers();
     } catch (err: any) {
-      alert(err.response?.data?.error || 'Failed to create team.');
+      alert(err.response?.data?.error || 'Failed to save team.');
     }
   };
 
-  // Member Allocation Dual-List Handlers (Screen 3)
+  const handleDeleteTeam = async (teamId: string) => {
+    if (!window.confirm(`Are you sure you want to delete Team ${teamId}?`)) return;
+    try {
+      await api.delete(`/admin/teams/${teamId}`);
+      fetchTeamsAndUsers();
+    } catch (err: any) {
+      alert(err.response?.data?.error || 'Failed to delete team.');
+    }
+  };
+
+  // Member Allocation Handlers
   const handleOpenMemberAllocation = async (team: any) => {
     setActiveTeamForMembers(team);
     try {
@@ -348,15 +327,15 @@ const SystemSettings: React.FC = () => {
       await api.post(`/admin/teams/${activeTeamForMembers.teamId}/members`, { memberUserIds });
       await api.post(`/admin/teams/${activeTeamForMembers.teamId}/roles`, { roles: selectedSecurityRoles });
       setShowMemberModal(false);
-      fetchBusinessUnitsAndTeams();
+      fetchTeamsAndUsers();
     } catch (err: any) {
       alert(err.response?.data?.error || 'Failed to update team members and roles.');
     }
   };
 
-  const filteredBUs = businessUnits.filter(bu => {
-    const matchesSearch = !buSearch || `${bu.buId} ${bu.name} ${bu.unitHeadName}`.toLowerCase().includes(buSearch.toLowerCase());
-    const matchesCategory = !buCategoryFilter || bu.category === buCategoryFilter;
+  const filteredTeams = teams.filter(t => {
+    const matchesSearch = !teamSearch || `${t.teamId} ${t.teamName} ${t.teamLeadName}`.toLowerCase().includes(teamSearch.toLowerCase());
+    const matchesCategory = !teamCategoryFilter || t.category === teamCategoryFilter;
     return matchesSearch && matchesCategory;
   });
 
@@ -371,7 +350,7 @@ const SystemSettings: React.FC = () => {
             System Administration & Settings
           </h1>
           <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0 0', fontSize: '13px' }}>
-            Manage hospital branding, business units, security roles, system diagnostics, and audit logs
+            Manage hospital profile, functional teams, team heads, security roles, and audit log history
           </p>
         </div>
       </div>
@@ -382,7 +361,7 @@ const SystemSettings: React.FC = () => {
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border-primary)', gap: '10px', marginBottom: '24px', flexWrap: 'wrap' }}>
         {[
           { id: 'settings', label: 'System Settings', icon: Sliders },
-          { id: 'business', label: 'Business Units, Users & Teams', icon: Building2 },
+          { id: 'teams', label: 'Hospital Users & Functional Teams', icon: Users },
           { id: 'security', label: 'Security Roles & RBAC Matrix', icon: ShieldCheck },
           { id: 'audit', label: 'System Audit Logs', icon: FileText }
         ].map(tab => {
@@ -581,47 +560,42 @@ const SystemSettings: React.FC = () => {
       )}
 
       {/* ------------------------------------------------------------------------- */}
-      {/* TAB 2: BUSINESS UNITS, USERS & TEAMS (SCREEN 1 & SCREEN 3) */}
+      {/* TAB 2: HOSPITAL USERS & FUNCTIONAL TEAMS */}
       {/* ------------------------------------------------------------------------- */}
-      {activeTab === 'business' && (
+      {activeTab === 'teams' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
           
           {/* Header Controls & Filters */}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
             <div>
               <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <Building2 size={22} color="var(--accent-primary)" />
-                Business Units (BUs) & Functional Teams Architecture
+                <Users size={22} color="var(--accent-primary)" />
+                Hospital Teams & Staff Allocations
               </h2>
               <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '2px 0 0 0' }}>
-                Hierarchical department management, default team creation, multi-select user allocations, and inherited role-based security
+                Functional hospital teams, team lead incharge assignments, member allocations, and inherited security roles
               </p>
             </div>
 
-            <div style={{ display: 'flex', gap: '10px' }}>
-              <Button variant="secondary" icon={<Plus size={16} />} onClick={() => handleOpenCreateTeam()}>
-                + Add Team
-              </Button>
-              <Button variant="primary" icon={<Plus size={16} />} onClick={handleOpenCreateBu}>
-                + Add Business Unit
-              </Button>
-            </div>
+            <Button variant="primary" icon={<Plus size={16} />} onClick={handleOpenCreateTeam}>
+              + Create New Team
+            </Button>
           </div>
 
           {/* Search & Filter Bar */}
           <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{ width: '280px' }}>
               <Input 
-                placeholder="Search BU Code, Name, or Unit Head..." 
-                value={buSearch}
-                onChange={(e) => setBuSearch(e.target.value)}
+                placeholder="Search Team Code, Name, or Team Head..." 
+                value={teamSearch}
+                onChange={(e) => setTeamSearch(e.target.value)}
               />
             </div>
             <div style={{ width: '200px' }}>
               <select
                 className="select"
-                value={buCategoryFilter}
-                onChange={(e) => setBuCategoryFilter(e.target.value)}
+                value={teamCategoryFilter}
+                onChange={(e) => setTeamCategoryFilter(e.target.value)}
                 style={{ width: '100%', padding: '9px 12px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', borderRadius: '8px' }}
               >
                 <option value="">All Categories</option>
@@ -631,97 +605,92 @@ const SystemSettings: React.FC = () => {
               </select>
             </div>
             <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginLeft: 'auto' }}>
-              Showing {filteredBUs.length} Business Units
+              Showing {filteredTeams.length} Hospital Teams
             </span>
           </div>
 
-          {/* Business Units Cards Grid (Screen 1 from PDF) */}
+          {/* Teams Cards Grid */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '16px' }}>
-            {filteredBUs.map((bu: any) => {
-              const buTeams = teams.filter((t: any) => t.buId === bu.buId);
-              return (
-                <div key={bu.buId} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-                  
-                  <div>
-                    {/* Header: BU Code + Name + Status */}
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                      <div>
-                        <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--accent-primary)', background: 'rgba(13,148,136,0.1)', padding: '3px 8px', borderRadius: '6px', letterSpacing: '0.5px' }}>
-                          {bu.buId}
-                        </span>
-                        <h3 style={{ fontSize: '16px', fontWeight: 800, margin: '6px 0 2px 0', color: 'var(--text-primary)' }}>
-                          {bu.name}
-                        </h3>
-                        {bu.parentBuName && (
-                          <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-                            Parent Unit: <strong>{bu.parentBuName}</strong>
-                          </div>
-                        )}
-                      </div>
-                      <Badge variant={bu.status === 'Active' ? 'success' : 'danger'}>
-                        {bu.status}
-                      </Badge>
-                    </div>
-
-                    {/* Metadata Grid */}
-                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, background: 'var(--bg-secondary)', padding: '12px', borderRadius: '10px', marginBottom: '14px' }}>
-                      <div><strong>Category:</strong> <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{bu.category}</span></div>
-                      <div><strong>Unit Head / Incharge:</strong> <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>{bu.unitHeadName}</span></div>
-                      <div><strong>Active Staff Members:</strong> <span style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{bu.staffCount} Staff</span></div>
-                      <div><strong>Teams Configured:</strong> <span style={{ fontWeight: 700 }}>{bu.teamsCount} System Teams</span></div>
-                    </div>
-
-                    {/* Associated Teams List */}
-                    {buTeams.length > 0 && (
-                      <div style={{ marginBottom: '14px' }}>
-                        <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>
-                          Functional Teams & Inherited Roles:
+            {filteredTeams.map((team: any) => (
+              <div key={team.teamId} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: '16px', padding: '20px', boxShadow: '0 2px 10px rgba(0,0,0,0.03)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+                
+                <div>
+                  {/* Header: Team Code + Name + Status */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                    <div>
+                      <span style={{ fontSize: '11px', fontWeight: 800, color: 'var(--accent-primary)', background: 'rgba(13,148,136,0.1)', padding: '3px 8px', borderRadius: '6px', letterSpacing: '0.5px' }}>
+                        {team.teamId}
+                      </span>
+                      <h3 style={{ fontSize: '16px', fontWeight: 800, margin: '6px 0 2px 0', color: 'var(--text-primary)' }}>
+                        {team.teamName}
+                      </h3>
+                      {team.description && (
+                        <div style={{ fontSize: '12px', color: 'var(--text-muted)', margin: '2px 0 0 0' }}>
+                          {team.description}
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          {buTeams.map((team: any) => (
-                            <div key={team.teamId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--bg-card)', border: '1px solid var(--border-primary)', padding: '6px 10px', borderRadius: '8px', fontSize: '11px' }}>
-                              <div>
-                                <strong style={{ color: 'var(--text-primary)' }}>{team.teamName}</strong> ({team.memberCount} members)
-                                <div style={{ color: 'var(--accent-primary)', fontSize: '10px' }}>
-                                  Roles: {team.roles && team.roles.length > 0 ? team.roles.join(', ') : 'None'}
-                                </div>
-                              </div>
-                              <button
-                                onClick={() => handleOpenMemberAllocation(team)}
-                                style={{ background: 'rgba(13,148,136,0.1)', color: 'var(--accent-primary)', border: 'none', padding: '3px 8px', borderRadius: '4px', cursor: 'pointer', fontWeight: 700, fontSize: '10px' }}
-                              >
-                                Manage Members
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
+                    <Badge variant={team.status === 'Active' ? 'success' : 'danger'}>
+                      {team.status}
+                    </Badge>
                   </div>
 
-                  {/* Card Quick Actions (Screen 1 requirement) */}
-                  <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid var(--border-primary)', paddingTop: '14px', marginTop: 'auto' }}>
-                    <Button 
-                      size="sm" 
-                      variant="secondary" 
-                      icon={<Edit size={13} />} 
-                      onClick={() => handleOpenEditBu(bu)}
-                    >
-                      Edit BU
-                    </Button>
-                    <Button 
-                      size="sm" 
-                      variant="secondary" 
-                      icon={<Users size={13} />} 
-                      onClick={() => handleOpenCreateTeam(bu.buId)}
-                    >
-                      + Team
-                    </Button>
+                  {/* Metadata Grid */}
+                  <div style={{ fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.6, background: 'var(--bg-secondary)', padding: '12px', borderRadius: '10px', marginBottom: '14px' }}>
+                    <div><strong>Category:</strong> <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{team.category}</span></div>
+                    <div><strong>Team Head / Incharge:</strong> <span style={{ color: 'var(--accent-primary)', fontWeight: 700 }}>{team.teamLeadName}</span></div>
+                    <div><strong>Team Type:</strong> <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{team.teamType} Team</span></div>
+                    <div><strong>Active Staff Members:</strong> <span style={{ fontWeight: 800, color: 'var(--text-primary)' }}>{team.memberCount} Members</span></div>
                   </div>
 
+                  {/* Security Roles */}
+                  <div style={{ marginBottom: '14px' }}>
+                    <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '6px', textTransform: 'uppercase' }}>
+                      Inherited Security Roles:
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                      {team.roles && team.roles.length > 0 ? (
+                        team.roles.map((r: string) => (
+                          <span key={r} style={{ fontSize: '11px', background: 'rgba(13,148,136,0.1)', color: 'var(--accent-primary)', border: '1px solid rgba(13,148,136,0.2)', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>
+                            ✓ {r}
+                          </span>
+                        ))
+                      ) : (
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>No security roles assigned</span>
+                      )}
+                    </div>
+                  </div>
                 </div>
-              );
-            })}
+
+                {/* Card Quick Actions */}
+                <div style={{ display: 'flex', gap: '8px', borderTop: '1px solid var(--border-primary)', paddingTop: '14px', marginTop: 'auto' }}>
+                  <Button 
+                    size="sm" 
+                    variant="secondary" 
+                    icon={<Edit size={13} />} 
+                    onClick={() => handleOpenEditTeam(team)}
+                  >
+                    Edit Team
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="primary" 
+                    icon={<Users size={13} />} 
+                    onClick={() => handleOpenMemberAllocation(team)}
+                  >
+                    Manage Members
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="ghost" 
+                    icon={<Trash2 size={13} />} 
+                    onClick={() => handleDeleteTeam(team.teamId)}
+                    style={{ color: 'var(--accent-danger)' }}
+                  />
+                </div>
+
+              </div>
+            ))}
           </div>
 
         </div>
@@ -832,29 +801,29 @@ const SystemSettings: React.FC = () => {
       )}
 
       {/* ------------------------------------------------------------------------- */}
-      {/* SCREEN 2 MODAL: ADD / EDIT BUSINESS UNIT (PDF REQUIREMENT) */}
+      {/* CREATE / EDIT TEAM MODAL */}
       {/* ------------------------------------------------------------------------- */}
-      {showBuModal && (
+      {showTeamModal && (
         <Modal
-          isOpen={showBuModal}
-          onClose={() => setShowBuModal(false)}
-          title={editingBu ? `Edit Business Unit (${editingBu.buId})` : 'Create New Business Unit'}
+          isOpen={showTeamModal}
+          onClose={() => setShowTeamModal(false)}
+          title={editingTeam ? `Edit Team (${editingTeam.teamId})` : 'Create New Hospital Team'}
         >
-          <form onSubmit={handleSaveBu} style={{ display: 'grid', gap: '16px', padding: '8px 0' }}>
+          <form onSubmit={handleSaveTeam} style={{ display: 'grid', gap: '16px', padding: '8px 0' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <Input
-                label="Unit Code (Unique) *"
-                value={buForm.buId}
-                onChange={(e) => setBuForm({ ...buForm, buId: e.target.value })}
-                placeholder="e.g. BU-09"
+                label="Team Code *"
+                value={teamForm.teamId}
+                onChange={(e) => setTeamForm({ ...teamForm, teamId: e.target.value })}
+                placeholder="e.g. TEAM-09"
                 required
-                disabled={!!editingBu}
+                disabled={!!editingTeam}
               />
               <Input
-                label="Business Unit Name *"
-                value={buForm.name}
-                onChange={(e) => setBuForm({ ...buForm, name: e.target.value })}
-                placeholder="e.g. Cardiology OPD"
+                label="Team Name *"
+                value={teamForm.teamName}
+                onChange={(e) => setTeamForm({ ...teamForm, teamName: e.target.value })}
+                placeholder="e.g. Cardiology OPD Team"
                 required
               />
             </div>
@@ -864,8 +833,8 @@ const SystemSettings: React.FC = () => {
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Category *</label>
                 <select
                   className="select"
-                  value={buForm.category}
-                  onChange={(e) => setBuForm({ ...buForm, category: e.target.value })}
+                  value={teamForm.category}
+                  onChange={(e) => setTeamForm({ ...teamForm, category: e.target.value })}
                   style={{ width: '100%', padding: '9px 12px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', borderRadius: '8px' }}
                   required
                 >
@@ -874,31 +843,14 @@ const SystemSettings: React.FC = () => {
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Parent Business Unit (Optional)</label>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Team Head / Lead Incharge *</label>
                 <select
                   className="select"
-                  value={buForm.parentBuId}
-                  onChange={(e) => setBuForm({ ...buForm, parentBuId: e.target.value })}
+                  value={teamForm.teamLeadId}
+                  onChange={(e) => setTeamForm({ ...teamForm, teamLeadId: e.target.value })}
                   style={{ width: '100%', padding: '9px 12px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', borderRadius: '8px' }}
                 >
-                  <option value="">-- None (Root BU) --</option>
-                  {businessUnits.filter(b => b.buId !== buForm.buId).map(b => (
-                    <option key={b.buId} value={b.buId}>{b.buId} - {b.name}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Unit Head / Incharge</label>
-                <select
-                  className="select"
-                  value={buForm.unitHeadId}
-                  onChange={(e) => setBuForm({ ...buForm, unitHeadId: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', borderRadius: '8px' }}
-                >
-                  <option value="">-- Select Incharge User --</option>
+                  <option value="">-- Select Team Head / Incharge User --</option>
                   {users.map(u => (
                     <option key={u.user_id} value={u.user_id}>
                       {u.first_name} {u.last_name} ({u.role} - {u.email})
@@ -906,65 +858,9 @@ const SystemSettings: React.FC = () => {
                   ))}
                 </select>
               </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Status</label>
-                <select
-                  className="select"
-                  value={buForm.status}
-                  onChange={(e) => setBuForm({ ...buForm, status: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', borderRadius: '8px' }}
-                >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
-              </div>
             </div>
-
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
-              <Button type="button" variant="secondary" onClick={() => setShowBuModal(false)}>Cancel</Button>
-              <Button type="submit" variant="primary" icon={<Save size={16} />}>
-                {editingBu ? 'Save Changes' : 'Create Business Unit'}
-              </Button>
-            </div>
-          </form>
-        </Modal>
-      )}
-
-      {/* ------------------------------------------------------------------------- */}
-      {/* CREATE TEAM MODAL */}
-      {/* ------------------------------------------------------------------------- */}
-      {showTeamModal && (
-        <Modal
-          isOpen={showTeamModal}
-          onClose={() => setShowTeamModal(false)}
-          title="Create New Functional Team"
-        >
-          <form onSubmit={handleSaveTeam} style={{ display: 'grid', gap: '16px', padding: '8px 0' }}>
-            <Input
-              label="Team Name *"
-              value={teamForm.teamName}
-              onChange={(e) => setTeamForm({ ...teamForm, teamName: e.target.value })}
-              placeholder="e.g. Cardiology OPD Team"
-              required
-            />
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Associated Business Unit *</label>
-                <select
-                  className="select"
-                  value={teamForm.buId}
-                  onChange={(e) => setTeamForm({ ...teamForm, buId: e.target.value })}
-                  style={{ width: '100%', padding: '9px 12px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', borderRadius: '8px' }}
-                  required
-                >
-                  {businessUnits.map(b => (
-                    <option key={b.buId} value={b.buId}>{b.buId} - {b.name}</option>
-                  ))}
-                </select>
-              </div>
-
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Team Type *</label>
                 <select
@@ -977,6 +873,30 @@ const SystemSettings: React.FC = () => {
                   <option value="Access">Access Team (View sharing only)</option>
                 </select>
               </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Status</label>
+                <select
+                  className="select"
+                  value={teamForm.status}
+                  onChange={(e) => setTeamForm({ ...teamForm, status: e.target.value })}
+                  style={{ width: '100%', padding: '9px 12px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', borderRadius: '8px' }}
+                >
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: 6 }}>Description</label>
+              <textarea
+                className="input"
+                style={{ minHeight: 60, resize: 'vertical', padding: '10px' }}
+                value={teamForm.description}
+                onChange={(e) => setTeamForm({ ...teamForm, description: e.target.value })}
+                placeholder="Brief description of the team's operational scope..."
+              />
             </div>
 
             <div>
@@ -1000,31 +920,33 @@ const SystemSettings: React.FC = () => {
 
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px' }}>
               <Button type="button" variant="secondary" onClick={() => setShowTeamModal(false)}>Cancel</Button>
-              <Button type="submit" variant="primary" icon={<Save size={16} />}>Create Team</Button>
+              <Button type="submit" variant="primary" icon={<Save size={16} />}>
+                {editingTeam ? 'Save Changes' : 'Create Team'}
+              </Button>
             </div>
           </form>
         </Modal>
       )}
 
       {/* ------------------------------------------------------------------------- */}
-      {/* SCREEN 3 MODAL: DUAL-LIST MEMBER ALLOCATION & SECURITY ROLES (PDF REQUIREMENT) */}
+      {/* DUAL-LIST MEMBER ALLOCATION & SECURITY ROLES MODAL */}
       {/* ------------------------------------------------------------------------- */}
       {showMemberModal && activeTeamForMembers && (
         <Modal
           isOpen={showMemberModal}
           onClose={() => setShowMemberModal(false)}
-          title={`Team Configuration & Member Allocation: ${activeTeamForMembers.teamName}`}
+          title={`Team Member Allocation & Roles: ${activeTeamForMembers.teamName}`}
         >
           <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', padding: '8px 0', minWidth: '700px' }}>
             
             {/* Section A: Team Details & Security Roles */}
             <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '12px', padding: '16px' }}>
               <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '8px' }}>
-                Section A - Team Details & Inherited Security Roles
+                Team Info & Inherited Security Roles
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px', marginBottom: '12px' }}>
                 <div><strong>Team ID:</strong> {activeTeamForMembers.teamId}</div>
-                <div><strong>Business Unit:</strong> {activeTeamForMembers.buName}</div>
+                <div><strong>Team Head:</strong> {activeTeamForMembers.teamLeadName}</div>
                 <div><strong>Team Type:</strong> {activeTeamForMembers.teamType} Team</div>
                 <div><strong>Current Members:</strong> {assignedMembers.length} Staff</div>
               </div>
@@ -1052,17 +974,17 @@ const SystemSettings: React.FC = () => {
               </div>
             </div>
 
-            {/* Section B: Member Allocation (Dual-List Component - Screen 3 requirement) */}
+            {/* Section B: Member Allocation (Dual-List Component) */}
             <div>
               <div style={{ fontSize: '14px', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '10px' }}>
-                Section B - Multi-Select Member Allocation (Dual-List)
+                Multi-Select Member Allocation (Dual-List)
               </div>
 
               {/* Filter Row */}
               <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ flex: 1 }}>
                   <Input 
-                    placeholder="Search users by name or email..." 
+                    placeholder="Search staff users by name or email..." 
                     value={memberSearch}
                     onChange={(e) => setMemberSearch(e.target.value)}
                   />

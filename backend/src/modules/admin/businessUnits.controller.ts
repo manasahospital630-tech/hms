@@ -5,22 +5,22 @@ import * as buService from './businessUnits.service';
 
 export const getBusinessUnits = async (req: ProtectedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const bus = await buService.getBusinessUnits();
+    const bus = await buService.getTeams();
     successResponse(res, bus);
   } catch (error) { next(error); }
 };
 
 export const createBusinessUnit = async (req: ProtectedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const bu = await buService.createBusinessUnit(req.body);
-    successResponse(res, bu, 'Business Unit created successfully.', 201);
+    const bu = await buService.createTeam(req.body);
+    successResponse(res, bu, 'Team created successfully.', 201);
   } catch (error) { next(error); }
 };
 
 export const updateBusinessUnit = async (req: ProtectedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const bu = await buService.updateBusinessUnit(req.params.id as string, req.body);
-    successResponse(res, bu, 'Business Unit updated successfully.');
+    const bu = await buService.updateTeam(req.params.id as string, req.body);
+    successResponse(res, bu, 'Team updated successfully.');
   } catch (error) { next(error); }
 };
 
@@ -35,6 +35,20 @@ export const createTeam = async (req: ProtectedRequest, res: Response, next: Nex
   try {
     const team = await buService.createTeam(req.body);
     successResponse(res, team, 'Team created successfully.', 201);
+  } catch (error) { next(error); }
+};
+
+export const updateTeam = async (req: ProtectedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const team = await buService.updateTeam(req.params.id as string, req.body);
+    successResponse(res, team, 'Team updated successfully.');
+  } catch (error) { next(error); }
+};
+
+export const deleteTeam = async (req: ProtectedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const result = await buService.deleteTeam(req.params.id as string);
+    successResponse(res, result, 'Team deleted successfully.');
   } catch (error) { next(error); }
 };
 
