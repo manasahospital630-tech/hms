@@ -29,6 +29,14 @@ export const create = async (req: ProtectedRequest, res: Response, next: NextFun
   } catch (error) { next(error); }
 };
 
+export const bulkCreate = async (req: ProtectedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const items = Array.isArray(req.body) ? req.body : (req.body?.items || []);
+    const result = await inventoryService.bulkCreateInventoryItems(items);
+    successResponse(res, result, `${result.importedCount} inventory items imported successfully.`, 201);
+  } catch (error) { next(error); }
+};
+
 export const update = async (req: ProtectedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const item = await inventoryService.updateInventoryItem(req.params.id as string, req.body);

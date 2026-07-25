@@ -10,6 +10,10 @@ export declare const getInventory: (options: {
 }>;
 export declare const getInventoryItemById: (id: string) => Promise<any>;
 export declare const createInventoryItem: (input: CreateInventoryItemInput) => Promise<any>;
+export declare const bulkCreateInventoryItems: (items: any[]) => Promise<{
+    importedCount: number;
+    items: any[];
+}>;
 export declare const updateInventoryItem: (id: string, input: UpdateInventoryItemInput) => Promise<any>;
 export declare const getLowStockItems: () => Promise<any[]>;
 export declare const createSale: (pharmacistId: string, input: CreateSaleInput) => Promise<any>;

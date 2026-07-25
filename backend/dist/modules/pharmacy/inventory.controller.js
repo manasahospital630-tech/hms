@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getSalesHistory = exports.createSale = exports.getLowStock = exports.update = exports.create = exports.getById = exports.getAll = void 0;
+exports.getSalesHistory = exports.createSale = exports.getLowStock = exports.update = exports.bulkCreate = exports.create = exports.getById = exports.getAll = void 0;
 const responseHelper_1 = require("../../utils/responseHelper");
 const inventoryService = __importStar(require("./inventory.service"));
 const getAll = async (req, res, next) => {
@@ -71,6 +71,17 @@ const create = async (req, res, next) => {
     }
 };
 exports.create = create;
+const bulkCreate = async (req, res, next) => {
+    try {
+        const items = Array.isArray(req.body) ? req.body : (req.body?.items || []);
+        const result = await inventoryService.bulkCreateInventoryItems(items);
+        (0, responseHelper_1.successResponse)(res, result, `${result.importedCount} inventory items imported successfully.`, 201);
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.bulkCreate = bulkCreate;
 const update = async (req, res, next) => {
     try {
         const item = await inventoryService.updateInventoryItem(req.params.id, req.body);

@@ -14,6 +14,7 @@ router.get('/inventory', authenticateJWT, enforceRBAC(['Pharmacist', 'Admin', 'D
 router.get('/inventory/low-stock', authenticateJWT, enforceRBAC(['Pharmacist', 'Admin']), inventoryCtrl.getLowStock);
 router.get('/inventory/:id', authenticateJWT, enforceRBAC(['Pharmacist', 'Admin']), inventoryCtrl.getById);
 router.post('/inventory', authenticateJWT, enforceRBAC(['Pharmacist', 'Admin']), validate(createInventoryItemSchema), auditLogger('CREATE', 'InventoryItem'), inventoryCtrl.create);
+router.post('/inventory/bulk', authenticateJWT, enforceRBAC(['Pharmacist', 'Admin']), auditLogger('CREATE', 'InventoryBulk'), inventoryCtrl.bulkCreate);
 router.put('/inventory/:id', authenticateJWT, enforceRBAC(['Pharmacist', 'Admin']), validate(updateInventoryItemSchema), auditLogger('UPDATE', 'InventoryItem'), inventoryCtrl.update);
 router.post('/sales', authenticateJWT, enforceRBAC(['Pharmacist', 'Admin']), validate(createSaleSchema), auditLogger('CREATE', 'Invoice'), inventoryCtrl.createSale);
 router.get('/sales', authenticateJWT, enforceRBAC(['Pharmacist', 'Admin']), inventoryCtrl.getSalesHistory);

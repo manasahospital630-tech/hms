@@ -46,6 +46,65 @@ export const createInventoryItem = async (input: CreateInventoryItemInput) => {
   return result.rows[0];
 };
 
+export const bulkCreateInventoryItems = async (items: any[]) => {
+  if (!Array.isArray(items) || items.length === 0) {
+    throw new AppError('No valid inventory items provided for bulk upload.', 400);
+  }
+
+  const insertedItems: any[] = [];
+  const timestamp = Date.now();
+
+  for (let i = 0; i < items.length; i++) {
+    const raw = items[i];
+    const itemName = String(raw.itemName || raw.item_name || raw.name || '').trim();
+    if (!itemName) continue; // Skip blank rows
+
+    const genericName = String(raw.genericName || raw.generic_name || itemName).trim();
+    const sku = String(raw.sku || `SKU-${timestamp}-${i + 1}`).trim();
+    const category = String(raw.category || 'General').trim();
+    const manufacturer = String(raw.manufacturer || raw.brandName || raw.brand_name || '').trim() || null;
+    const batchNo = String(raw.batchNo || raw.batch_no || raw.batchNumber || `BATCH-${timestamp}`).trim();
+    const rackNo = String(raw.rackNo || raw.rack_no || raw.rackLocation || 'Rack A-1').trim();
+
+    const stockQuantity = Math.max(0, Number(raw.stockQuantity ?? raw.stock_quantity ?? raw.quantity ?? 0));
+    const reorderLevel = Math.max(0, Number(raw.reorderLevel ?? raw.reorder_level ?? 50));
+    const unitPrice = Math.max(0, Number(raw.unitPrice ?? raw.unit_price ?? raw.sellingPrice ?? 0));
+    const purchasePrice = Math.max(0, Number(raw.purchasePrice ?? raw.purchase_price ?? raw.unitCost ?? 0));
+
+    // Expiry date handling
+    let expiryDate = raw.expiryDate || raw.expiry_date || raw.expiry;
+    if (!expiryDate || isNaN(Date.parse(expiryDate))) {
+      const nextYear = new Date();
+      nextYear.setFullYear(nextYear.getFullYear() + 1);
+      expiryDate = nextYear.toISOString().split('T')[0];
+    } else {
+      expiryDate = new Date(expiryDate).toISOString().split('T')[0];
+    }
+
+    const isSheet = String(raw.isSheet ?? raw.is_sheet ?? false).toLowerCase() === 'true' || raw.isSheet === true;
+    const tabletsPerSheet = Math.max(1, Number(raw.tabletsPerSheet ?? raw.tablets_per_sheet ?? 1));
+    const hsnCode = String(raw.hsnCode || raw.hsn_code || '30049099').trim();
+
+    const result = await query(
+      `INSERT INTO inventory_items (item_name, sku, category, manufacturer, stock_quantity, reorder_level, unit_price, expiry_date, generic_name, batch_no, rack_no, purchase_price, is_sheet, tablets_per_sheet, hsn_code)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
+      [
+        itemName, sku, category, manufacturer, stockQuantity, reorderLevel, unitPrice, expiryDate,
+        genericName, batchNo, rackNo, purchasePrice, isSheet, tabletsPerSheet, hsnCode
+      ]
+    );
+
+    if (result.rows.length > 0) {
+      insertedItems.push(result.rows[0]);
+    }
+  }
+
+  return {
+    importedCount: insertedItems.length,
+    items: insertedItems
+  };
+};
+
 export const updateInventoryItem = async (id: string, input: UpdateInventoryItemInput) => {
   const fieldMap: Record<string, string> = {
     itemName: 'item_name', category: 'category', manufacturer: 'manufacturer',
