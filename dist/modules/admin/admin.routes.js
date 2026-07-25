@@ -72,6 +72,10 @@ router.get('/audit-log', authenticate_1.authenticateJWT, (0, rbacHandler_1.enfor
 router.get('/dashboard-stats', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin', 'Management']), ctrl.getDashboardStats);
 router.get('/consolidated-revenue', authenticate_1.authenticateJWT, ctrl.getConsolidatedHospitalRevenue);
 router.get('/v1/consolidated-revenue', authenticate_1.authenticateJWT, ctrl.getConsolidatedHospitalRevenue);
+router.get('/analytics/dashboard', authenticate_1.authenticateJWT, ctrl.getConsolidatedHospitalRevenue);
+router.get('/v1/analytics/dashboard', authenticate_1.authenticateJWT, ctrl.getConsolidatedHospitalRevenue);
+router.get('/analytics/consolidated-revenue', authenticate_1.authenticateJWT, ctrl.getConsolidatedHospitalRevenue);
+router.get('/v1/analytics/consolidated-revenue', authenticate_1.authenticateJWT, ctrl.getConsolidatedHospitalRevenue);
 router.get('/doctor-profiles', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin', 'Biller']), ctrl.getDoctorProfiles);
 router.post('/doctor-profiles', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin', 'Biller']), (0, validator_1.validate)(admin_schema_1.upsertDoctorProfileSchema), (0, auditLogger_1.auditLogger)('UPDATE', 'DoctorProfile'), ctrl.upsertDoctorProfile);
 router.get('/hospital-settings/public', ctrl.getHospitalSettingsPublic);

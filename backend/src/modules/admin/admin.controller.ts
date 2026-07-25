@@ -85,7 +85,8 @@ export const getDashboardStats = async (req: ProtectedRequest, res: Response, ne
 export const getConsolidatedHospitalRevenue = async (req: ProtectedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const revenue = await adminService.getConsolidatedHospitalRevenue({
-      period: req.query.period as string,
+      period: (req.query.period || req.query.selectedTimeframe || req.query.timeframe) as string,
+      selectedTimeframe: (req.query.selectedTimeframe || req.query.period || req.query.timeframe) as string,
       startDate: req.query.startDate as string,
       endDate: req.query.endDate as string,
     });

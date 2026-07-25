@@ -446,10 +446,11 @@ export const getDashboardStats = async () => {
 
 export const getConsolidatedHospitalRevenue = async (options: {
   period?: string;
+  selectedTimeframe?: string;
   startDate?: string;
   endDate?: string;
 }) => {
-  const period = options.period || 'today';
+  const selectedTf = options.selectedTimeframe || options.period || 'today';
 
   // Helper query generator for date filter
   const buildQueriesForPeriod = async (periodKey: string, customStart?: string, customEnd?: string) => {
@@ -487,6 +488,7 @@ export const getConsolidatedHospitalRevenue = async (options: {
       dateFilterAppts = "AND a.appointment_date >= $1 AND a.appointment_date <= $2";
     }
 
+    // 1. General & IP Billing Invoices (excluding direct pharmacy sales)
     const billingRes = await query(`
       SELECT 
         COUNT(*) as count,
@@ -496,9 +498,10 @@ export const getConsolidatedHospitalRevenue = async (options: {
         COUNT(CASE WHEN i.status = 'Paid' THEN 1 END) as paid_count,
         COUNT(CASE WHEN i.status = 'Unpaid' THEN 1 END) as unpaid_count
       FROM invoices i
-      WHERE (i.notes IS NULL OR i.notes NOT LIKE '%Direct pharmacy sale%') ${dateFilterInvoices}
+      WHERE i.status != 'Cancelled' AND (i.notes IS NULL OR i.notes NOT LIKE '%Direct pharmacy sale%') ${dateFilterInvoices}
     `, paramsInvoices);
 
+    // 2. Pharmacy Sales & Medication Invoices
     const pharmacyRes = await query(`
       SELECT 
         COUNT(*) as count,
@@ -508,9 +511,10 @@ export const getConsolidatedHospitalRevenue = async (options: {
         COUNT(CASE WHEN i.status = 'Paid' THEN 1 END) as paid_count,
         COUNT(CASE WHEN i.status = 'Unpaid' THEN 1 END) as unpaid_count
       FROM invoices i
-      WHERE i.notes LIKE '%Direct pharmacy sale%' ${dateFilterInvoices}
+      WHERE i.status != 'Cancelled' AND i.notes LIKE '%Direct pharmacy sale%' ${dateFilterInvoices}
     `, paramsInvoices);
 
+    // 3. OP Check-Ins & Consultations Revenue
     const opRes = await query(`
       SELECT 
         COUNT(*) as count,
@@ -518,7 +522,7 @@ export const getConsolidatedHospitalRevenue = async (options: {
         COUNT(CASE WHEN a.status = 'Completed' OR a.status = 'In-Consultation' THEN 1 END) as completed_count
       FROM appointments a
       LEFT JOIN doctor_profiles dp ON a.doctor_id = dp.doctor_id
-      WHERE 1=1 ${dateFilterAppts}
+      WHERE a.status != 'Cancelled' ${dateFilterAppts}
     `, paramsAppts);
 
     const bRow = billingRes.rows[0] || {};
@@ -539,41 +543,40 @@ export const getConsolidatedHospitalRevenue = async (options: {
     const opCount = parseInt(opRow.count, 10) || 0;
     const opCompleted = parseInt(opRow.completed_count, 10) || 0;
 
-    const grandTotalRevenue = billingTotal + pharmacyTotal + opTotal;
-    const grandTotalCollected = billingPaid + pharmacyPaid + opTotal;
+    const totalRevenue = billingTotal + pharmacyTotal + opTotal;
+    const totalTransactions = billingCount + pharmacyCount + opCount;
+    const totalCollected = billingPaid + pharmacyPaid + opTotal;
 
     return {
-      grandTotalRevenue,
-      grandTotalCollected,
+      totalRevenue,
+      totalTransactions,
+      totalCollected,
       billing: {
-        totalRevenue: billingTotal,
+        revenue: billingTotal,
+        count: billingCount,
         paidAmount: billingPaid,
         pendingAmount: billingPending,
-        totalCount: billingCount,
         paidCount: parseInt(bRow.paid_count, 10) || 0,
         unpaidCount: parseInt(bRow.unpaid_count, 10) || 0
       },
+      opd: {
+        revenue: opTotal,
+        count: opCount,
+        completedCount: opCompleted
+      },
       pharmacy: {
-        totalRevenue: pharmacyTotal,
+        revenue: pharmacyTotal,
+        count: pharmacyCount,
         paidAmount: pharmacyPaid,
         pendingAmount: pharmacyPending,
-        totalCount: pharmacyCount,
         paidCount: parseInt(pRow.paid_count, 10) || 0,
         unpaidCount: parseInt(pRow.unpaid_count, 10) || 0
-      },
-      opConsultations: {
-        totalRevenue: opTotal,
-        totalCheckins: opCount,
-        completedCheckins: opCompleted
       }
     };
   };
 
-  // Fetch current selected period details
-  const activePeriodDetails = await buildQueriesForPeriod(period, options.startDate, options.endDate);
-
-  // Fetch summary comparison cards for all preset periods
-  const [todayData, yesterdayData, thisWeekData, lastWeekData, thisMonthData, lastMonthData, thisYearData] = await Promise.all([
+  // 1. Permanent Consolidated Summary for all timeframes
+  const [todaySummary, yesterdaySummary, thisWeekSummary, lastWeekSummary, thisMonthSummary, lastMonthSummary, thisYearSummary] = await Promise.all([
     buildQueriesForPeriod('today'),
     buildQueriesForPeriod('yesterday'),
     buildQueriesForPeriod('this_week'),
@@ -583,17 +586,60 @@ export const getConsolidatedHospitalRevenue = async (options: {
     buildQueriesForPeriod('this_year')
   ]);
 
+  const consolidatedSummary = {
+    today: todaySummary,
+    yesterday: yesterdaySummary,
+    this_week: thisWeekSummary,
+    last_week: lastWeekSummary,
+    this_month: thisMonthSummary,
+    last_month: lastMonthSummary,
+    this_year: thisYearSummary
+  };
+
+  // 2. Selected Breakdown for lower section
+  const selectedDetails = await buildQueriesForPeriod(selectedTf, options.startDate, options.endDate);
+
   return {
-    period,
-    active: activePeriodDetails,
+    consolidatedSummary,
+    selectedBreakdown: {
+      timeframe: selectedTf,
+      details: selectedDetails
+    },
+    // Backwards compatibility keys:
+    period: selectedTf,
+    active: {
+      grandTotalRevenue: selectedDetails.totalRevenue,
+      grandTotalCollected: selectedDetails.totalCollected,
+      billing: {
+        totalRevenue: selectedDetails.billing.revenue,
+        paidAmount: selectedDetails.billing.paidAmount,
+        pendingAmount: selectedDetails.billing.pendingAmount,
+        totalCount: selectedDetails.billing.count,
+        paidCount: selectedDetails.billing.paidCount,
+        unpaidCount: selectedDetails.billing.unpaidCount
+      },
+      pharmacy: {
+        totalRevenue: selectedDetails.pharmacy.revenue,
+        paidAmount: selectedDetails.pharmacy.paidAmount,
+        pendingAmount: selectedDetails.pharmacy.pendingAmount,
+        totalCount: selectedDetails.pharmacy.count,
+        paidCount: selectedDetails.pharmacy.paidCount,
+        unpaidCount: selectedDetails.pharmacy.unpaidCount
+      },
+      opConsultations: {
+        totalRevenue: selectedDetails.opd.revenue,
+        totalCheckins: selectedDetails.opd.count,
+        completedCheckins: selectedDetails.opd.completedCount
+      }
+    },
     summaryCards: {
-      today: todayData,
-      yesterday: yesterdayData,
-      thisWeek: thisWeekData,
-      lastWeek: lastWeekData,
-      thisMonth: thisMonthData,
-      lastMonth: lastMonthData,
-      thisYear: thisYearData
+      today: { grandTotalRevenue: todaySummary.totalRevenue, grandTotalCollected: todaySummary.totalCollected, totalTransactions: todaySummary.totalTransactions },
+      yesterday: { grandTotalRevenue: yesterdaySummary.totalRevenue, grandTotalCollected: yesterdaySummary.totalCollected, totalTransactions: yesterdaySummary.totalTransactions },
+      thisWeek: { grandTotalRevenue: thisWeekSummary.totalRevenue, grandTotalCollected: thisWeekSummary.totalCollected, totalTransactions: thisWeekSummary.totalTransactions },
+      lastWeek: { grandTotalRevenue: lastWeekSummary.totalRevenue, grandTotalCollected: lastWeekSummary.totalCollected, totalTransactions: lastWeekSummary.totalTransactions },
+      thisMonth: { grandTotalRevenue: thisMonthSummary.totalRevenue, grandTotalCollected: thisMonthSummary.totalCollected, totalTransactions: thisMonthSummary.totalTransactions },
+      lastMonth: { grandTotalRevenue: lastMonthSummary.totalRevenue, grandTotalCollected: lastMonthSummary.totalCollected, totalTransactions: lastMonthSummary.totalTransactions },
+      thisYear: { grandTotalRevenue: thisYearSummary.totalRevenue, grandTotalCollected: thisYearSummary.totalCollected, totalTransactions: thisYearSummary.totalTransactions }
     }
   };
 };

@@ -124,9 +124,223 @@ export declare const getDashboardStats: () => Promise<{
 }>;
 export declare const getConsolidatedHospitalRevenue: (options: {
     period?: string;
+    selectedTimeframe?: string;
     startDate?: string;
     endDate?: string;
 }) => Promise<{
+    consolidatedSummary: {
+        today: {
+            totalRevenue: number;
+            totalTransactions: number;
+            totalCollected: number;
+            billing: {
+                revenue: number;
+                count: number;
+                paidAmount: number;
+                pendingAmount: number;
+                paidCount: number;
+                unpaidCount: number;
+            };
+            opd: {
+                revenue: number;
+                count: number;
+                completedCount: number;
+            };
+            pharmacy: {
+                revenue: number;
+                count: number;
+                paidAmount: number;
+                pendingAmount: number;
+                paidCount: number;
+                unpaidCount: number;
+            };
+        };
+        yesterday: {
+            totalRevenue: number;
+            totalTransactions: number;
+            totalCollected: number;
+            billing: {
+                revenue: number;
+                count: number;
+                paidAmount: number;
+                pendingAmount: number;
+                paidCount: number;
+                unpaidCount: number;
+            };
+            opd: {
+                revenue: number;
+                count: number;
+                completedCount: number;
+            };
+            pharmacy: {
+                revenue: number;
+                count: number;
+                paidAmount: number;
+                pendingAmount: number;
+                paidCount: number;
+                unpaidCount: number;
+            };
+        };
+        this_week: {
+            totalRevenue: number;
+            totalTransactions: number;
+            totalCollected: number;
+            billing: {
+                revenue: number;
+                count: number;
+                paidAmount: number;
+                pendingAmount: number;
+                paidCount: number;
+                unpaidCount: number;
+            };
+            opd: {
+                revenue: number;
+                count: number;
+                completedCount: number;
+            };
+            pharmacy: {
+                revenue: number;
+                count: number;
+                paidAmount: number;
+                pendingAmount: number;
+                paidCount: number;
+                unpaidCount: number;
+            };
+        };
+        last_week: {
+            totalRevenue: number;
+            totalTransactions: number;
+            totalCollected: number;
+            billing: {
+                revenue: number;
+                count: number;
+                paidAmount: number;
+                pendingAmount: number;
+                paidCount: number;
+                unpaidCount: number;
+            };
+            opd: {
+                revenue: number;
+                count: number;
+                completedCount: number;
+            };
+            pharmacy: {
+                revenue: number;
+                count: number;
+                paidAmount: number;
+                pendingAmount: number;
+                paidCount: number;
+                unpaidCount: number;
+            };
+        };
+        this_month: {
+            totalRevenue: number;
+            totalTransactions: number;
+            totalCollected: number;
+            billing: {
+                revenue: number;
+                count: number;
+                paidAmount: number;
+                pendingAmount: number;
+                paidCount: number;
+                unpaidCount: number;
+            };
+            opd: {
+                revenue: number;
+                count: number;
+                completedCount: number;
+            };
+            pharmacy: {
+                revenue: number;
+                count: number;
+                paidAmount: number;
+                pendingAmount: number;
+                paidCount: number;
+                unpaidCount: number;
+            };
+        };
+        last_month: {
+            totalRevenue: number;
+            totalTransactions: number;
+            totalCollected: number;
+            billing: {
+                revenue: number;
+                count: number;
+                paidAmount: number;
+                pendingAmount: number;
+                paidCount: number;
+                unpaidCount: number;
+            };
+            opd: {
+                revenue: number;
+                count: number;
+                completedCount: number;
+            };
+            pharmacy: {
+                revenue: number;
+                count: number;
+                paidAmount: number;
+                pendingAmount: number;
+                paidCount: number;
+                unpaidCount: number;
+            };
+        };
+        this_year: {
+            totalRevenue: number;
+            totalTransactions: number;
+            totalCollected: number;
+            billing: {
+                revenue: number;
+                count: number;
+                paidAmount: number;
+                pendingAmount: number;
+                paidCount: number;
+                unpaidCount: number;
+            };
+            opd: {
+                revenue: number;
+                count: number;
+                completedCount: number;
+            };
+            pharmacy: {
+                revenue: number;
+                count: number;
+                paidAmount: number;
+                pendingAmount: number;
+                paidCount: number;
+                unpaidCount: number;
+            };
+        };
+    };
+    selectedBreakdown: {
+        timeframe: string;
+        details: {
+            totalRevenue: number;
+            totalTransactions: number;
+            totalCollected: number;
+            billing: {
+                revenue: number;
+                count: number;
+                paidAmount: number;
+                pendingAmount: number;
+                paidCount: number;
+                unpaidCount: number;
+            };
+            opd: {
+                revenue: number;
+                count: number;
+                completedCount: number;
+            };
+            pharmacy: {
+                revenue: number;
+                count: number;
+                paidAmount: number;
+                pendingAmount: number;
+                paidCount: number;
+                unpaidCount: number;
+            };
+        };
+    };
     period: string;
     active: {
         grandTotalRevenue: number;
@@ -157,177 +371,37 @@ export declare const getConsolidatedHospitalRevenue: (options: {
         today: {
             grandTotalRevenue: number;
             grandTotalCollected: number;
-            billing: {
-                totalRevenue: number;
-                paidAmount: number;
-                pendingAmount: number;
-                totalCount: number;
-                paidCount: number;
-                unpaidCount: number;
-            };
-            pharmacy: {
-                totalRevenue: number;
-                paidAmount: number;
-                pendingAmount: number;
-                totalCount: number;
-                paidCount: number;
-                unpaidCount: number;
-            };
-            opConsultations: {
-                totalRevenue: number;
-                totalCheckins: number;
-                completedCheckins: number;
-            };
+            totalTransactions: number;
         };
         yesterday: {
             grandTotalRevenue: number;
             grandTotalCollected: number;
-            billing: {
-                totalRevenue: number;
-                paidAmount: number;
-                pendingAmount: number;
-                totalCount: number;
-                paidCount: number;
-                unpaidCount: number;
-            };
-            pharmacy: {
-                totalRevenue: number;
-                paidAmount: number;
-                pendingAmount: number;
-                totalCount: number;
-                paidCount: number;
-                unpaidCount: number;
-            };
-            opConsultations: {
-                totalRevenue: number;
-                totalCheckins: number;
-                completedCheckins: number;
-            };
+            totalTransactions: number;
         };
         thisWeek: {
             grandTotalRevenue: number;
             grandTotalCollected: number;
-            billing: {
-                totalRevenue: number;
-                paidAmount: number;
-                pendingAmount: number;
-                totalCount: number;
-                paidCount: number;
-                unpaidCount: number;
-            };
-            pharmacy: {
-                totalRevenue: number;
-                paidAmount: number;
-                pendingAmount: number;
-                totalCount: number;
-                paidCount: number;
-                unpaidCount: number;
-            };
-            opConsultations: {
-                totalRevenue: number;
-                totalCheckins: number;
-                completedCheckins: number;
-            };
+            totalTransactions: number;
         };
         lastWeek: {
             grandTotalRevenue: number;
             grandTotalCollected: number;
-            billing: {
-                totalRevenue: number;
-                paidAmount: number;
-                pendingAmount: number;
-                totalCount: number;
-                paidCount: number;
-                unpaidCount: number;
-            };
-            pharmacy: {
-                totalRevenue: number;
-                paidAmount: number;
-                pendingAmount: number;
-                totalCount: number;
-                paidCount: number;
-                unpaidCount: number;
-            };
-            opConsultations: {
-                totalRevenue: number;
-                totalCheckins: number;
-                completedCheckins: number;
-            };
+            totalTransactions: number;
         };
         thisMonth: {
             grandTotalRevenue: number;
             grandTotalCollected: number;
-            billing: {
-                totalRevenue: number;
-                paidAmount: number;
-                pendingAmount: number;
-                totalCount: number;
-                paidCount: number;
-                unpaidCount: number;
-            };
-            pharmacy: {
-                totalRevenue: number;
-                paidAmount: number;
-                pendingAmount: number;
-                totalCount: number;
-                paidCount: number;
-                unpaidCount: number;
-            };
-            opConsultations: {
-                totalRevenue: number;
-                totalCheckins: number;
-                completedCheckins: number;
-            };
+            totalTransactions: number;
         };
         lastMonth: {
             grandTotalRevenue: number;
             grandTotalCollected: number;
-            billing: {
-                totalRevenue: number;
-                paidAmount: number;
-                pendingAmount: number;
-                totalCount: number;
-                paidCount: number;
-                unpaidCount: number;
-            };
-            pharmacy: {
-                totalRevenue: number;
-                paidAmount: number;
-                pendingAmount: number;
-                totalCount: number;
-                paidCount: number;
-                unpaidCount: number;
-            };
-            opConsultations: {
-                totalRevenue: number;
-                totalCheckins: number;
-                completedCheckins: number;
-            };
+            totalTransactions: number;
         };
         thisYear: {
             grandTotalRevenue: number;
             grandTotalCollected: number;
-            billing: {
-                totalRevenue: number;
-                paidAmount: number;
-                pendingAmount: number;
-                totalCount: number;
-                paidCount: number;
-                unpaidCount: number;
-            };
-            pharmacy: {
-                totalRevenue: number;
-                paidAmount: number;
-                pendingAmount: number;
-                totalCount: number;
-                paidCount: number;
-                unpaidCount: number;
-            };
-            opConsultations: {
-                totalRevenue: number;
-                totalCheckins: number;
-                completedCheckins: number;
-            };
+            totalTransactions: number;
         };
     };
 }>;

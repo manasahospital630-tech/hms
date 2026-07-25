@@ -148,7 +148,8 @@ exports.getDashboardStats = getDashboardStats;
 const getConsolidatedHospitalRevenue = async (req, res, next) => {
     try {
         const revenue = await adminService.getConsolidatedHospitalRevenue({
-            period: req.query.period,
+            period: (req.query.period || req.query.selectedTimeframe || req.query.timeframe),
+            selectedTimeframe: (req.query.selectedTimeframe || req.query.period || req.query.timeframe),
             startDate: req.query.startDate,
             endDate: req.query.endDate,
         });
