@@ -1,3 +1,4 @@
+export declare const ensureTablesExist: () => Promise<void>;
 export declare const getBusinessUnits: () => Promise<{
     buId: any;
     name: any;

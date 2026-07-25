@@ -30,7 +30,7 @@ router.post('/teams/:id/members', authenticateJWT, enforceRBAC(['Admin']), audit
 router.post('/v1/teams/:id/roles', authenticateJWT, enforceRBAC(['Admin']), auditLogger('UPDATE', 'TeamRoles'), buCtrl.updateTeamRoles);
 router.post('/teams/:id/roles', authenticateJWT, enforceRBAC(['Admin']), auditLogger('UPDATE', 'TeamRoles'), buCtrl.updateTeamRoles);
 
-router.get('/users', authenticateJWT, enforceRBAC(['Admin']), ctrl.getUsers);
+router.get('/users', authenticateJWT, ctrl.getUsers);
 router.get('/users/:id/profile', authenticateJWT, ctrl.getStaffProfile);
 router.get('/staff/profile/:id', authenticateJWT, ctrl.getStaffProfile);
 router.post('/users', authenticateJWT, enforceRBAC(['Admin']), validate(createUserSchema), auditLogger('CREATE', 'User'), ctrl.createUser);

@@ -59,7 +59,7 @@ router.post('/v1/teams/:id/members', authenticate_1.authenticateJWT, (0, rbacHan
 router.post('/teams/:id/members', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin']), (0, auditLogger_1.auditLogger)('UPDATE', 'TeamMembers'), buCtrl.updateTeamMembers);
 router.post('/v1/teams/:id/roles', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin']), (0, auditLogger_1.auditLogger)('UPDATE', 'TeamRoles'), buCtrl.updateTeamRoles);
 router.post('/teams/:id/roles', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin']), (0, auditLogger_1.auditLogger)('UPDATE', 'TeamRoles'), buCtrl.updateTeamRoles);
-router.get('/users', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin']), ctrl.getUsers);
+router.get('/users', authenticate_1.authenticateJWT, ctrl.getUsers);
 router.get('/users/:id/profile', authenticate_1.authenticateJWT, ctrl.getStaffProfile);
 router.get('/staff/profile/:id', authenticate_1.authenticateJWT, ctrl.getStaffProfile);
 router.post('/users', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin']), (0, validator_1.validate)(admin_schema_1.createUserSchema), (0, auditLogger_1.auditLogger)('CREATE', 'User'), ctrl.createUser);

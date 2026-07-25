@@ -1,40 +1,98 @@
 import { query } from '../../config/database';
 import { AppError } from '../../middleware/errorHandler';
 
+let tablesInitialized = false;
+
+export const ensureTablesExist = async () => {
+  if (tablesInitialized) return;
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS business_units (
+        bu_id VARCHAR(50) PRIMARY KEY,
+        name VARCHAR(100) NOT NULL,
+        parent_bu_id VARCHAR(50) REFERENCES business_units(bu_id) ON DELETE SET NULL,
+        category VARCHAR(50),
+        unit_head_id VARCHAR(50) REFERENCES users(user_id) ON DELETE SET NULL,
+        status VARCHAR(20) DEFAULT 'Active',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS teams (
+        team_id VARCHAR(50) PRIMARY KEY,
+        team_name VARCHAR(100) NOT NULL,
+        bu_id VARCHAR(50) NOT NULL REFERENCES business_units(bu_id) ON DELETE CASCADE,
+        team_type VARCHAR(30) DEFAULT 'Owner',
+        team_lead_id VARCHAR(50) REFERENCES users(user_id) ON DELETE SET NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      CREATE TABLE IF NOT EXISTS team_members (
+        team_id VARCHAR(50) REFERENCES teams(team_id) ON DELETE CASCADE,
+        user_id VARCHAR(50) REFERENCES users(user_id) ON DELETE CASCADE,
+        assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (team_id, user_id)
+      );
+      CREATE TABLE IF NOT EXISTS team_security_roles (
+        team_id VARCHAR(50) REFERENCES teams(team_id) ON DELETE CASCADE,
+        role VARCHAR(50) NOT NULL,
+        PRIMARY KEY (team_id, role)
+      );
+    `);
+
+    // Seed default business units if empty
+    const buCount = await query('SELECT COUNT(*) FROM business_units');
+    if (parseInt(buCount.rows[0].count, 10) === 0) {
+      await query(`
+        INSERT INTO business_units (bu_id, name, parent_bu_id, category, status) VALUES
+        ('BU-01', 'Clinical OPD & Check-in', NULL, 'Clinical', 'Active'),
+        ('BU-02', 'Inpatient Department (IPD)', NULL, 'Clinical', 'Active'),
+        ('BU-03', 'Emergency & Trauma Care (ICU)', NULL, 'Critical Care', 'Active'),
+        ('BU-04', 'Laboratory & Pathology', NULL, 'Diagnostics', 'Active'),
+        ('BU-05', 'Pharmacy & Dispensing', NULL, 'Pharmacy', 'Active'),
+        ('BU-06', 'Billing, Revenue & Finance', NULL, 'Administration', 'Active'),
+        ('BU-07', 'Reception & Front Desk', NULL, 'Operations', 'Active'),
+        ('BU-08', 'System Administration', NULL, 'IT & Infrastructure', 'Active')
+        ON CONFLICT (bu_id) DO NOTHING;
+      `);
+
+      await query(`
+        INSERT INTO teams (team_id, team_name, bu_id, team_type) VALUES
+        ('TEAM-01', 'OPD Clinical Team', 'BU-01', 'Owner'),
+        ('TEAM-02', 'IPD Ward Team', 'BU-02', 'Owner'),
+        ('TEAM-03', 'Emergency Response Team', 'BU-03', 'Owner'),
+        ('TEAM-04', 'Pathology & Lab Techs', 'BU-04', 'Owner'),
+        ('TEAM-05', 'Pharmacy Operations Team', 'BU-05', 'Owner'),
+        ('TEAM-06', 'Billing & Accounts Team', 'BU-06', 'Owner'),
+        ('TEAM-07', 'Front Desk Reception Team', 'BU-07', 'Owner'),
+        ('TEAM-08', 'System IT Admin Team', 'BU-08', 'Owner')
+        ON CONFLICT (team_id) DO NOTHING;
+      `);
+
+      await query(`
+        INSERT INTO team_security_roles (team_id, role) VALUES
+        ('TEAM-01', 'Doctor'), ('TEAM-01', 'Nurse'),
+        ('TEAM-02', 'Doctor'), ('TEAM-02', 'Nurse'),
+        ('TEAM-03', 'Doctor'), ('TEAM-03', 'Nurse'),
+        ('TEAM-04', 'Incharge'),
+        ('TEAM-05', 'Pharmacist'),
+        ('TEAM-06', 'Biller'),
+        ('TEAM-07', 'Receptionist'),
+        ('TEAM-08', 'Admin')
+        ON CONFLICT DO NOTHING;
+      `);
+    }
+
+    tablesInitialized = true;
+  } catch (err) {
+    console.error('Failed to ensure Business Units tables exist:', err);
+  }
+};
+
+// Auto-run migration check on module import
+ensureTablesExist();
+
 export const getBusinessUnits = async () => {
-  // Ensure migration tables exist
-  await query(`
-    CREATE TABLE IF NOT EXISTS business_units (
-      bu_id VARCHAR(50) PRIMARY KEY,
-      name VARCHAR(100) NOT NULL,
-      parent_bu_id VARCHAR(50) REFERENCES business_units(bu_id) ON DELETE SET NULL,
-      category VARCHAR(50),
-      unit_head_id VARCHAR(50) REFERENCES users(user_id) ON DELETE SET NULL,
-      status VARCHAR(20) DEFAULT 'Active',
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE TABLE IF NOT EXISTS teams (
-      team_id VARCHAR(50) PRIMARY KEY,
-      team_name VARCHAR(100) NOT NULL,
-      bu_id VARCHAR(50) NOT NULL REFERENCES business_units(bu_id) ON DELETE CASCADE,
-      team_type VARCHAR(30) DEFAULT 'Owner',
-      team_lead_id VARCHAR(50) REFERENCES users(user_id) ON DELETE SET NULL,
-      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    CREATE TABLE IF NOT EXISTS team_members (
-      team_id VARCHAR(50) REFERENCES teams(team_id) ON DELETE CASCADE,
-      user_id VARCHAR(50) REFERENCES users(user_id) ON DELETE CASCADE,
-      assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-      PRIMARY KEY (team_id, user_id)
-    );
-    CREATE TABLE IF NOT EXISTS team_security_roles (
-      team_id VARCHAR(50) REFERENCES teams(team_id) ON DELETE CASCADE,
-      role VARCHAR(50) NOT NULL,
-      PRIMARY KEY (team_id, role)
-    );
-  `);
+  await ensureTablesExist();
 
   const res = await query(`
     SELECT 
@@ -81,6 +139,8 @@ export const createBusinessUnit = async (data: {
   unitHeadId?: string;
   status?: string;
 }) => {
+  await ensureTablesExist();
+
   let buId = data.buId;
   if (!buId) {
     const countRes = await query('SELECT COUNT(*) FROM business_units');
@@ -113,6 +173,8 @@ export const updateBusinessUnit = async (buId: string, data: {
   unitHeadId?: string;
   status?: string;
 }) => {
+  await ensureTablesExist();
+
   const res = await query(
     `UPDATE business_units
      SET name = COALESCE($1, name),
@@ -131,6 +193,8 @@ export const updateBusinessUnit = async (buId: string, data: {
 };
 
 export const getTeams = async () => {
+  await ensureTablesExist();
+
   const res = await query(`
     SELECT 
       t.team_id, 
@@ -168,6 +232,8 @@ export const createTeam = async (data: {
   teamLeadId?: string;
   roles?: string[];
 }) => {
+  await ensureTablesExist();
+
   const countRes = await query('SELECT COUNT(*) FROM teams');
   const num = parseInt(countRes.rows[0].count, 10) + 1;
   const teamId = `TEAM-${String(num).padStart(2, '0')}`;
@@ -192,6 +258,8 @@ export const createTeam = async (data: {
 };
 
 export const getTeamMembers = async (teamId: string) => {
+  await ensureTablesExist();
+
   const assignedRes = await query(`
     SELECT u.user_id, u.first_name, u.last_name, u.email, u.role, u.employee_department
     FROM team_members tm
@@ -217,6 +285,8 @@ export const getTeamMembers = async (teamId: string) => {
 };
 
 export const updateTeamMembers = async (teamId: string, memberUserIds: string[]) => {
+  await ensureTablesExist();
+
   await query(`DELETE FROM team_members WHERE team_id = $1`, [teamId]);
   for (const uid of memberUserIds) {
     await query(`INSERT INTO team_members (team_id, user_id) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [teamId, uid]);
@@ -225,6 +295,8 @@ export const updateTeamMembers = async (teamId: string, memberUserIds: string[])
 };
 
 export const updateTeamRoles = async (teamId: string, roles: string[]) => {
+  await ensureTablesExist();
+
   await query(`DELETE FROM team_security_roles WHERE team_id = $1`, [teamId]);
   for (const role of roles) {
     await query(`INSERT INTO team_security_roles (team_id, role) VALUES ($1, $2) ON CONFLICT DO NOTHING`, [teamId, role]);

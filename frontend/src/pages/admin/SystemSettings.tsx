@@ -180,9 +180,10 @@ const SystemSettings: React.FC = () => {
       if (teamsRes.data.success) {
         setTeams(teamsRes.data.data || []);
       }
-      const usersRes = await api.get('/admin/users?limit=200');
-      if (usersRes.data.success) {
-        setUsers(usersRes.data.data?.users || usersRes.data.data || []);
+      const usersRes = await api.get('/admin/users?limit=500');
+      if (usersRes.data) {
+        const uList = usersRes.data.data?.users || usersRes.data.data || usersRes.data.users || [];
+        setUsers(Array.isArray(uList) ? uList : []);
       }
     } catch (err) {
       console.error('Failed to load business units and teams:', err);
