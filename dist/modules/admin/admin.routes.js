@@ -70,6 +70,8 @@ router.post('/users', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceR
 router.patch('/users/:id', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin']), (0, validator_1.validate)(admin_schema_1.updateUserSchema), (0, auditLogger_1.auditLogger)('UPDATE', 'User'), ctrl.updateUser);
 router.get('/audit-log', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin']), ctrl.getAuditLog);
 router.get('/dashboard-stats', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin', 'Management']), ctrl.getDashboardStats);
+router.get('/consolidated-revenue', authenticate_1.authenticateJWT, ctrl.getConsolidatedHospitalRevenue);
+router.get('/v1/consolidated-revenue', authenticate_1.authenticateJWT, ctrl.getConsolidatedHospitalRevenue);
 router.get('/doctor-profiles', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin', 'Biller']), ctrl.getDoctorProfiles);
 router.post('/doctor-profiles', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin', 'Biller']), (0, validator_1.validate)(admin_schema_1.upsertDoctorProfileSchema), (0, auditLogger_1.auditLogger)('UPDATE', 'DoctorProfile'), ctrl.upsertDoctorProfile);
 router.get('/hospital-settings/public', ctrl.getHospitalSettingsPublic);

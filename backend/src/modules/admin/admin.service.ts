@@ -444,4 +444,158 @@ export const getDashboardStats = async () => {
   };
 };
 
+export const getConsolidatedHospitalRevenue = async (options: {
+  period?: string;
+  startDate?: string;
+  endDate?: string;
+}) => {
+  const period = options.period || 'today';
+
+  // Helper query generator for date filter
+  const buildQueriesForPeriod = async (periodKey: string, customStart?: string, customEnd?: string) => {
+    let dateFilterInvoices = '';
+    let dateFilterAppts = '';
+    const paramsInvoices: any[] = [];
+    const paramsAppts: any[] = [];
+
+    if (periodKey === 'today') {
+      dateFilterInvoices = "AND i.created_at >= CURRENT_DATE AND i.created_at < CURRENT_DATE + INTERVAL '1 day'";
+      dateFilterAppts = "AND a.appointment_date >= CURRENT_DATE AND a.appointment_date < CURRENT_DATE + INTERVAL '1 day'";
+    } else if (periodKey === 'yesterday') {
+      dateFilterInvoices = "AND i.created_at >= CURRENT_DATE - INTERVAL '1 day' AND i.created_at < CURRENT_DATE";
+      dateFilterAppts = "AND a.appointment_date >= CURRENT_DATE - INTERVAL '1 day' AND a.appointment_date < CURRENT_DATE";
+    } else if (periodKey === 'this_week') {
+      dateFilterInvoices = "AND i.created_at >= date_trunc('week', CURRENT_DATE) AND i.created_at < date_trunc('week', CURRENT_DATE) + INTERVAL '1 week'";
+      dateFilterAppts = "AND a.appointment_date >= date_trunc('week', CURRENT_DATE) AND a.appointment_date < date_trunc('week', CURRENT_DATE) + INTERVAL '1 week'";
+    } else if (periodKey === 'last_week') {
+      dateFilterInvoices = "AND i.created_at >= date_trunc('week', CURRENT_DATE) - INTERVAL '1 week' AND i.created_at < date_trunc('week', CURRENT_DATE)";
+      dateFilterAppts = "AND a.appointment_date >= date_trunc('week', CURRENT_DATE) - INTERVAL '1 week' AND a.appointment_date < date_trunc('week', CURRENT_DATE)";
+    } else if (periodKey === 'this_month') {
+      dateFilterInvoices = "AND i.created_at >= date_trunc('month', CURRENT_DATE) AND i.created_at < date_trunc('month', CURRENT_DATE) + INTERVAL '1 month'";
+      dateFilterAppts = "AND a.appointment_date >= date_trunc('month', CURRENT_DATE) AND a.appointment_date < date_trunc('month', CURRENT_DATE) + INTERVAL '1 month'";
+    } else if (periodKey === 'last_month') {
+      dateFilterInvoices = "AND i.created_at >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month' AND i.created_at < date_trunc('month', CURRENT_DATE)";
+      dateFilterAppts = "AND a.appointment_date >= date_trunc('month', CURRENT_DATE) - INTERVAL '1 month' AND a.appointment_date < date_trunc('month', CURRENT_DATE)";
+    } else if (periodKey === 'this_year') {
+      dateFilterInvoices = "AND i.created_at >= date_trunc('year', CURRENT_DATE) AND i.created_at < date_trunc('year', CURRENT_DATE) + INTERVAL '1 year'";
+      dateFilterAppts = "AND a.appointment_date >= date_trunc('year', CURRENT_DATE) AND a.appointment_date < date_trunc('year', CURRENT_DATE) + INTERVAL '1 year'";
+    } else if (periodKey === 'custom' && customStart && customEnd) {
+      paramsInvoices.push(customStart, customEnd + ' 23:59:59');
+      dateFilterInvoices = "AND i.created_at >= $1 AND i.created_at <= $2";
+
+      paramsAppts.push(customStart, customEnd + ' 23:59:59');
+      dateFilterAppts = "AND a.appointment_date >= $1 AND a.appointment_date <= $2";
+    }
+
+    const billingRes = await query(`
+      SELECT 
+        COUNT(*) as count,
+        COALESCE(SUM(i.total_amount), 0) as total_revenue,
+        COALESCE(SUM(i.amount_paid), 0) as paid_amount,
+        COALESCE(SUM(i.total_amount - i.amount_paid), 0) as pending_amount,
+        COUNT(CASE WHEN i.status = 'Paid' THEN 1 END) as paid_count,
+        COUNT(CASE WHEN i.status = 'Unpaid' THEN 1 END) as unpaid_count
+      FROM invoices i
+      WHERE (i.notes IS NULL OR i.notes NOT LIKE '%Direct pharmacy sale%') ${dateFilterInvoices}
+    `, paramsInvoices);
+
+    const pharmacyRes = await query(`
+      SELECT 
+        COUNT(*) as count,
+        COALESCE(SUM(i.total_amount), 0) as total_revenue,
+        COALESCE(SUM(i.amount_paid), 0) as paid_amount,
+        COALESCE(SUM(i.total_amount - i.amount_paid), 0) as pending_amount,
+        COUNT(CASE WHEN i.status = 'Paid' THEN 1 END) as paid_count,
+        COUNT(CASE WHEN i.status = 'Unpaid' THEN 1 END) as unpaid_count
+      FROM invoices i
+      WHERE i.notes LIKE '%Direct pharmacy sale%' ${dateFilterInvoices}
+    `, paramsInvoices);
+
+    const opRes = await query(`
+      SELECT 
+        COUNT(*) as count,
+        COALESCE(SUM(COALESCE(dp.consultation_fee, 200.00)), 0) as total_revenue,
+        COUNT(CASE WHEN a.status = 'Completed' OR a.status = 'In-Consultation' THEN 1 END) as completed_count
+      FROM appointments a
+      LEFT JOIN doctor_profiles dp ON a.doctor_id = dp.doctor_id
+      WHERE 1=1 ${dateFilterAppts}
+    `, paramsAppts);
+
+    const bRow = billingRes.rows[0] || {};
+    const pRow = pharmacyRes.rows[0] || {};
+    const opRow = opRes.rows[0] || {};
+
+    const billingTotal = parseFloat(bRow.total_revenue) || 0;
+    const billingPaid = parseFloat(bRow.paid_amount) || 0;
+    const billingPending = parseFloat(bRow.pending_amount) || 0;
+    const billingCount = parseInt(bRow.count, 10) || 0;
+
+    const pharmacyTotal = parseFloat(pRow.total_revenue) || 0;
+    const pharmacyPaid = parseFloat(pRow.paid_amount) || 0;
+    const pharmacyPending = parseFloat(pRow.pending_amount) || 0;
+    const pharmacyCount = parseInt(pRow.count, 10) || 0;
+
+    const opTotal = parseFloat(opRow.total_revenue) || 0;
+    const opCount = parseInt(opRow.count, 10) || 0;
+    const opCompleted = parseInt(opRow.completed_count, 10) || 0;
+
+    const grandTotalRevenue = billingTotal + pharmacyTotal + opTotal;
+    const grandTotalCollected = billingPaid + pharmacyPaid + opTotal;
+
+    return {
+      grandTotalRevenue,
+      grandTotalCollected,
+      billing: {
+        totalRevenue: billingTotal,
+        paidAmount: billingPaid,
+        pendingAmount: billingPending,
+        totalCount: billingCount,
+        paidCount: parseInt(bRow.paid_count, 10) || 0,
+        unpaidCount: parseInt(bRow.unpaid_count, 10) || 0
+      },
+      pharmacy: {
+        totalRevenue: pharmacyTotal,
+        paidAmount: pharmacyPaid,
+        pendingAmount: pharmacyPending,
+        totalCount: pharmacyCount,
+        paidCount: parseInt(pRow.paid_count, 10) || 0,
+        unpaidCount: parseInt(pRow.unpaid_count, 10) || 0
+      },
+      opConsultations: {
+        totalRevenue: opTotal,
+        totalCheckins: opCount,
+        completedCheckins: opCompleted
+      }
+    };
+  };
+
+  // Fetch current selected period details
+  const activePeriodDetails = await buildQueriesForPeriod(period, options.startDate, options.endDate);
+
+  // Fetch summary comparison cards for all preset periods
+  const [todayData, yesterdayData, thisWeekData, lastWeekData, thisMonthData, lastMonthData, thisYearData] = await Promise.all([
+    buildQueriesForPeriod('today'),
+    buildQueriesForPeriod('yesterday'),
+    buildQueriesForPeriod('this_week'),
+    buildQueriesForPeriod('last_week'),
+    buildQueriesForPeriod('this_month'),
+    buildQueriesForPeriod('last_month'),
+    buildQueriesForPeriod('this_year')
+  ]);
+
+  return {
+    period,
+    active: activePeriodDetails,
+    summaryCards: {
+      today: todayData,
+      yesterday: yesterdayData,
+      thisWeek: thisWeekData,
+      lastWeek: lastWeekData,
+      thisMonth: thisMonthData,
+      lastMonth: lastMonthData,
+      thisYear: thisYearData
+    }
+  };
+};
+
 

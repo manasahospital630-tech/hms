@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getHospitalSettingsPublic = exports.getDashboardStats = exports.updateHospitalSettings = exports.getHospitalSettings = exports.upsertDoctorProfile = exports.getDoctorProfiles = exports.getAuditLog = exports.updateUser = exports.createUser = exports.getStaffProfile = exports.getUsers = void 0;
+exports.getHospitalSettingsPublic = exports.getConsolidatedHospitalRevenue = exports.getDashboardStats = exports.updateHospitalSettings = exports.getHospitalSettings = exports.upsertDoctorProfile = exports.getDoctorProfiles = exports.getAuditLog = exports.updateUser = exports.createUser = exports.getStaffProfile = exports.getUsers = void 0;
 const responseHelper_1 = require("../../utils/responseHelper");
 const adminService = __importStar(require("./admin.service"));
 const getUsers = async (req, res, next) => {
@@ -145,6 +145,20 @@ const getDashboardStats = async (req, res, next) => {
     }
 };
 exports.getDashboardStats = getDashboardStats;
+const getConsolidatedHospitalRevenue = async (req, res, next) => {
+    try {
+        const revenue = await adminService.getConsolidatedHospitalRevenue({
+            period: req.query.period,
+            startDate: req.query.startDate,
+            endDate: req.query.endDate,
+        });
+        (0, responseHelper_1.successResponse)(res, revenue);
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.getConsolidatedHospitalRevenue = getConsolidatedHospitalRevenue;
 const getHospitalSettingsPublic = async (req, res, next) => {
     try {
         const settings = await adminService.getHospitalSettings();

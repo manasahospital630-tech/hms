@@ -82,6 +82,17 @@ export const getDashboardStats = async (req: ProtectedRequest, res: Response, ne
   } catch (error) { next(error); }
 };
 
+export const getConsolidatedHospitalRevenue = async (req: ProtectedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const revenue = await adminService.getConsolidatedHospitalRevenue({
+      period: req.query.period as string,
+      startDate: req.query.startDate as string,
+      endDate: req.query.endDate as string,
+    });
+    successResponse(res, revenue);
+  } catch (error) { next(error); }
+};
+
 export const getHospitalSettingsPublic = async (req: any, res: Response, next: NextFunction): Promise<void> => {
   try {
     const settings = await adminService.getHospitalSettings();

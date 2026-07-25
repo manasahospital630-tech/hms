@@ -10,5 +10,6 @@ export declare const upsertDoctorProfile: (req: ProtectedRequest, res: Response,
 export declare const getHospitalSettings: (req: ProtectedRequest, res: Response, next: NextFunction) => Promise<void>;
 export declare const updateHospitalSettings: (req: ProtectedRequest, res: Response, next: NextFunction) => Promise<void>;
 export declare const getDashboardStats: (req: ProtectedRequest, res: Response, next: NextFunction) => Promise<void>;
+export declare const getConsolidatedHospitalRevenue: (req: ProtectedRequest, res: Response, next: NextFunction) => Promise<void>;
 export declare const getHospitalSettingsPublic: (req: any, res: Response, next: NextFunction) => Promise<void>;
 //# sourceMappingURL=admin.controller.d.ts.map
