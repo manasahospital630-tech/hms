@@ -41,6 +41,8 @@ const authenticate_1 = require("../../middleware/authenticate");
 const rbacHandler_1 = require("../../middleware/rbacHandler");
 const auditLogger_1 = require("../../middleware/auditLogger");
 const router = (0, express_1.Router)();
+router.get('/analytics', authenticate_1.authenticateJWT, ctrl.getAnalytics);
+router.get('/dashboard-stats', authenticate_1.authenticateJWT, ctrl.getAnalytics);
 router.post('/invoices', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Biller', 'Admin', 'Incharge']), (0, validator_1.validate)(billing_schema_1.createInvoiceSchema), (0, auditLogger_1.auditLogger)('CREATE', 'Invoice'), ctrl.create);
 router.get('/invoices', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Biller', 'Admin', 'Incharge']), ctrl.getAll);
 router.get('/invoices/:id', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Biller', 'Admin', 'Patient', 'Pharmacist', 'Incharge']), ctrl.getById);

@@ -14,4 +14,43 @@ export declare const recordPayment: (id: string, input: RecordPaymentInput) => P
 export declare const cancelInvoice: (id: string) => Promise<any>;
 export declare const returnInvoice: (id: string) => Promise<any>;
 export declare const updateInvoiceStatus: (id: string, status: "Paid" | "Unpaid", paymentMethod: string) => Promise<any>;
+export declare const getBillingAnalytics: (options: {
+    period?: string;
+    startDate?: string;
+    endDate?: string;
+}) => Promise<{
+    period: string;
+    totalInvoices: number;
+    totalRevenue: number;
+    totalAmountPaid: number;
+    totalPendingAmount: number;
+    paidInvoicesCount: number;
+    unpaidInvoicesCount: number;
+    partialInvoicesCount: number;
+    cancelledInvoicesCount: number;
+    cashCount: number;
+    cashAmount: number;
+    upiCount: number;
+    upiAmount: number;
+    cardCount: number;
+    cardAmount: number;
+    bankCount: number;
+    bankAmount: number;
+    insuranceCount: number;
+    insuranceAmount: number;
+    ipInvoicesCount: number;
+    ipAmount: number;
+    opInvoicesCount: number;
+    opAmount: number;
+    dailyTrends: {
+        date: any;
+        invoiceCount: number;
+        totalAmount: number;
+        amountPaid: number;
+        cashAmount: number;
+        upiAmount: number;
+        cardAmount: number;
+        ipAmount: number;
+    }[];
+}>;
 //# sourceMappingURL=invoice.service.d.ts.map

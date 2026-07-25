@@ -1,17 +1,32 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { FileText, Plus, Trash2, RefreshCw, AlertTriangle, CheckCircle, XCircle, Check, Ban, ArrowLeftRight, Printer, Search, X, Edit, Package } from 'lucide-react';
+import {
+  FileText, Plus, Trash2, RefreshCw, AlertTriangle, CheckCircle, XCircle, Check,
+  Ban, ArrowLeftRight, Printer, Search, X, Edit, Package, BarChart2, TrendingUp,
+  DollarSign, CreditCard, Calendar, Filter, ArrowUpRight, Shield, Layers
+} from 'lucide-react';
 import { Input } from '../../components/ui/Input';
 import { Select } from '../../components/ui/Select';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
 import { PatientSearchBar } from '../../components/shared/PatientSearchBar';
 import api from '../../api/client';
-import { formatCurrency, formatDisplayAge } from '../../utils/formatters';
+import { formatCurrency, formatDisplayAge, formatDateTime } from '../../utils/formatters';
 import { getHospitalLogoHtml } from '../../utils/logoHelper';
 
 const InvoiceGenerator: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'generator' | 'list' | 'create-item'>('generator');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'generator' | 'list' | 'create-item'>('dashboard');
   
+  // Dashboard Analytics States
+  const [analyticsPeriod, setAnalyticsPeriod] = useState<'today' | 'week' | 'month' | 'year' | 'custom'>('month');
+  const [customStartDate, setCustomStartDate] = useState<string>(() => {
+    const d = new Date();
+    d.setDate(1);
+    return d.toISOString().split('T')[0];
+  });
+  const [customEndDate, setCustomEndDate] = useState<string>(() => new Date().toISOString().split('T')[0]);
+  const [analyticsData, setAnalyticsData] = useState<any>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState<boolean>(false);
+
   // Generator States
   const [patient, setPatient] = useState<any>(null);
   const [items, setItems] = useState<{ description: string; category: string; quantity: number; unitPrice: number }[]>([]);
@@ -222,16 +237,38 @@ const InvoiceGenerator: React.FC = () => {
     }
   };
 
+  const fetchAnalytics = async () => {
+    setAnalyticsLoading(true);
+    try {
+      const params: any = { period: analyticsPeriod };
+      if (analyticsPeriod === 'custom') {
+        params.startDate = customStartDate;
+        params.endDate = customEndDate;
+      }
+      const res = await api.get('/billing/analytics', { params });
+      if (res.data.success) {
+        setAnalyticsData(res.data.data);
+      }
+    } catch (err) {
+      console.error('Failed to load billing analytics:', err);
+    } finally {
+      setAnalyticsLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadDiagnosticsAndInvoices();
     loadHospitalSettings();
+    fetchAnalytics();
   }, []);
 
   useEffect(() => {
     if (activeTab === 'list') {
       loadInvoices();
+    } else if (activeTab === 'dashboard') {
+      fetchAnalytics();
     }
-  }, [activeTab]);
+  }, [activeTab, analyticsPeriod]);
 
   const handleDiagSelect = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const serviceId = e.target.value;
@@ -870,6 +907,27 @@ const InvoiceGenerator: React.FC = () => {
       {/* Tabs */}
       <div style={{ display: 'flex', borderBottom: '1px solid var(--border-primary)', gap: '8px', marginBottom: '24px' }}>
         <button
+          onClick={() => setActiveTab('dashboard')}
+          style={{
+            padding: '8px 20px',
+            background: activeTab === 'dashboard' ? 'var(--bg-card)' : 'transparent',
+            color: activeTab === 'dashboard' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+            border: activeTab === 'dashboard' ? '1px solid var(--border-primary)' : '1px solid transparent',
+            borderBottom: activeTab === 'dashboard' ? '1px solid transparent' : '1px solid transparent',
+            borderRadius: '8px 8px 0 0',
+            fontWeight: 600,
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+            marginBottom: '-1px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '6px'
+          }}
+        >
+          <BarChart2 size={16} />
+          Billing Revenue Dashboard
+        </button>
+        <button
           onClick={() => setActiveTab('generator')}
           style={{
             padding: '8px 20px',
@@ -901,7 +959,7 @@ const InvoiceGenerator: React.FC = () => {
             marginBottom: '-1px'
           }}
         >
-          All Bills
+          All Bills & Receipts
         </button>
         <button
           onClick={() => {
@@ -928,6 +986,291 @@ const InvoiceGenerator: React.FC = () => {
       </div>
 
       {success && <div style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', color: 'var(--accent-success)', padding: '12px', borderRadius: '8px', marginBottom: '24px' }}>{success}</div>}
+
+      {/* DASHBOARD TAB */}
+      {activeTab === 'dashboard' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+          
+          {/* Controls Bar: Period Filter Buttons & Date Picker */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px', background: 'var(--bg-card)', padding: '16px 20px', borderRadius: '12px', border: '1px solid var(--border-primary)' }}>
+            <div>
+              <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <TrendingUp size={22} color="var(--accent-primary)" />
+                Billing Revenue Analytics Dashboard
+              </h2>
+              <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '2px 0 0 0' }}>
+                Real-time tracking of total revenue, paid/unpaid bills, cash, UPI, card, and IP/OP billing counts
+              </p>
+            </div>
+
+            {/* Time Period Filter Buttons */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+              {[
+                { id: 'today', label: 'Today' },
+                { id: 'week', label: 'This Week' },
+                { id: 'month', label: 'This Month' },
+                { id: 'year', label: 'This Year' },
+                { id: 'custom', label: 'Custom Range' },
+              ].map(p => (
+                <button
+                  key={p.id}
+                  onClick={() => setAnalyticsPeriod(p.id as any)}
+                  style={{
+                    padding: '6px 14px',
+                    fontSize: '13px',
+                    fontWeight: 700,
+                    borderRadius: '6px',
+                    border: '1px solid var(--border-primary)',
+                    background: analyticsPeriod === p.id ? 'var(--accent-primary)' : 'var(--bg-secondary)',
+                    color: analyticsPeriod === p.id ? '#ffffff' : 'var(--text-primary)',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {p.label}
+                </button>
+              ))}
+
+              <Button
+                variant="secondary"
+                size="sm"
+                icon={<RefreshCw size={14} />}
+                onClick={fetchAnalytics}
+                loading={analyticsLoading}
+              >
+                Refresh
+              </Button>
+            </div>
+          </div>
+
+          {/* Custom Date Range Picker Container (If Custom selected) */}
+          {analyticsPeriod === 'custom' && (
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', background: 'rgba(37,99,235,0.04)', border: '1px solid rgba(37,99,235,0.2)', padding: '12px 20px', borderRadius: '10px' }}>
+              <Calendar size={18} color="var(--accent-primary)" />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>From Date *</label>
+                  <input
+                    type="date"
+                    className="input"
+                    value={customStartDate}
+                    onChange={e => setCustomStartDate(e.target.value)}
+                    style={{ padding: '6px 10px', fontSize: '13px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: 4 }}>To Date *</label>
+                  <input
+                    type="date"
+                    className="input"
+                    value={customEndDate}
+                    onChange={e => setCustomEndDate(e.target.value)}
+                    style={{ padding: '6px 10px', fontSize: '13px' }}
+                  />
+                </div>
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={fetchAnalytics}
+                  style={{ marginTop: '18px' }}
+                >
+                  Apply Custom Range
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {/* KPI Summary Cards Grid */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '16px' }}>
+            
+            {/* KPI 1: Total Revenue */}
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: '12px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Total Billing Revenue</span>
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(37,99,235,0.1)', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <DollarSign size={20} />
+                </div>
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: 'var(--text-primary)' }}>
+                {formatCurrency(analyticsData?.totalRevenue || 0)}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                <strong>{analyticsData?.totalInvoices || 0} Total Bills Generated</strong>
+              </div>
+            </div>
+
+            {/* KPI 2: Total Paid Invoices */}
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: '12px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Paid Amount Collected</span>
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(34,197,94,0.1)', color: '#16a34a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <CheckCircle size={20} />
+                </div>
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#16a34a' }}>
+                {formatCurrency(analyticsData?.totalAmountPaid || 0)}
+              </div>
+              <div style={{ fontSize: '12px', color: '#16a34a', marginTop: '4px', fontWeight: 700 }}>
+                ✓ {analyticsData?.paidInvoicesCount || 0} Fully Paid Invoices
+              </div>
+            </div>
+
+            {/* KPI 3: Pending / Unpaid Amount */}
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: '12px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Pending Amount Outstanding</span>
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(239,68,68,0.1)', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <AlertTriangle size={20} />
+                </div>
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#ef4444' }}>
+                {formatCurrency(analyticsData?.totalPendingAmount || 0)}
+              </div>
+              <div style={{ fontSize: '12px', color: '#ef4444', marginTop: '4px', fontWeight: 700 }}>
+                ⚠️ {(analyticsData?.unpaidInvoicesCount || 0) + (analyticsData?.partialInvoicesCount || 0)} Unpaid / Partial Bills
+              </div>
+            </div>
+
+            {/* KPI 4: UPI / Online Payments */}
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: '12px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>UPI & QR Collections</span>
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(147,51,234,0.1)', color: '#9333ea', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <CreditCard size={20} />
+                </div>
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#9333ea' }}>
+                {formatCurrency(analyticsData?.upiAmount || 0)}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                📱 {analyticsData?.upiCount || 0} UPI Transactions
+              </div>
+            </div>
+
+            {/* KPI 5: Cash Collections */}
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: '12px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Cash Receipts</span>
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(217,119,6,0.1)', color: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <DollarSign size={20} />
+                </div>
+              </div>
+              <div style={{ fontSize: '24px', fontWeight: 800, color: '#d97706' }}>
+                {formatCurrency(analyticsData?.cashAmount || 0)}
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '4px' }}>
+                💵 {analyticsData?.cashCount || 0} Cash Receipts
+              </div>
+            </div>
+
+            {/* KPI 6: IP vs OP Revenue Breakdown */}
+            <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: '12px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)' }}>Inpatient (IP) vs Outpatient (OP)</span>
+                <div style={{ width: '36px', height: '36px', borderRadius: '8px', background: 'rgba(13,148,136,0.1)', color: '#0d9488', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <BarChart2 size={20} />
+                </div>
+              </div>
+              <div style={{ fontSize: '13px', color: 'var(--text-primary)', lineHeight: 1.6 }}>
+                <div><strong>🏥 IP Revenue:</strong> <span style={{ color: '#0d9488', fontWeight: 800 }}>{formatCurrency(analyticsData?.ipAmount || 0)}</span> ({analyticsData?.ipInvoicesCount || 0} Bills)</div>
+                <div><strong>🩺 OP Revenue:</strong> <span style={{ color: '#0284c7', fontWeight: 800 }}>{formatCurrency(analyticsData?.opAmount || 0)}</span> ({analyticsData?.opInvoicesCount || 0} Bills)</div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Breakdown Tables Section */}
+          <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '20px' }}>
+            
+            {/* Daily Trend Table */}
+            <Card title="Daily Revenue & Payment Method Trend" icon={<BarChart2 size={18} />}>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                  <thead>
+                    <tr style={{ background: 'var(--bg-secondary)', textAlign: 'left', borderBottom: '1px solid var(--border-primary)' }}>
+                      <th style={{ padding: '10px 12px' }}>Date</th>
+                      <th style={{ padding: '10px 12px' }}>Bills Count</th>
+                      <th style={{ padding: '10px 12px' }}>Total Revenue</th>
+                      <th style={{ padding: '10px 12px' }}>Cash Amount</th>
+                      <th style={{ padding: '10px 12px' }}>UPI Amount</th>
+                      <th style={{ padding: '10px 12px' }}>Card Amount</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(!analyticsData?.dailyTrends || analyticsData.dailyTrends.length === 0) ? (
+                      <tr>
+                        <td colSpan={6} style={{ padding: '20px', textAlign: 'center', color: 'var(--text-muted)' }}>
+                          No billing records found for the selected time period.
+                        </td>
+                      </tr>
+                    ) : (
+                      analyticsData.dailyTrends.map((t: any, idx: number) => (
+                        <tr key={idx} style={{ borderBottom: '1px solid var(--border-primary)' }}>
+                          <td style={{ padding: '10px 12px', fontWeight: 700 }}>{t.date}</td>
+                          <td style={{ padding: '10px 12px' }}>{t.invoiceCount} Bills</td>
+                          <td style={{ padding: '10px 12px', fontWeight: 800, color: 'var(--text-primary)' }}>{formatCurrency(t.totalAmount)}</td>
+                          <td style={{ padding: '10px 12px', color: '#d97706', fontWeight: 600 }}>{formatCurrency(t.cashAmount)}</td>
+                          <td style={{ padding: '10px 12px', color: '#9333ea', fontWeight: 600 }}>{formatCurrency(t.upiAmount)}</td>
+                          <td style={{ padding: '10px 12px', color: '#0284c7', fontWeight: 600 }}>{formatCurrency(t.cardAmount)}</td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            {/* Payment Method Distribution Breakdown Card */}
+            <Card title="Payment Method Share" icon={<CreditCard size={18} />}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '14px', fontSize: '13px' }}>
+                
+                <div style={{ background: 'var(--bg-secondary)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-primary)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <strong>💵 Cash Receipts</strong>
+                    <span style={{ color: '#d97706', fontWeight: 800 }}>{formatCurrency(analyticsData?.cashAmount || 0)}</span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    {analyticsData?.cashCount || 0} Transactions
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--bg-secondary)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-primary)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <strong>📱 UPI & Online QR</strong>
+                    <span style={{ color: '#9333ea', fontWeight: 800 }}>{formatCurrency(analyticsData?.upiAmount || 0)}</span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    {analyticsData?.upiCount || 0} Transactions
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--bg-secondary)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-primary)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <strong>💳 Card Payments</strong>
+                    <span style={{ color: '#0284c7', fontWeight: 800 }}>{formatCurrency(analyticsData?.cardAmount || 0)}</span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    {analyticsData?.cardCount || 0} Transactions
+                  </div>
+                </div>
+
+                <div style={{ background: 'var(--bg-secondary)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-primary)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                    <strong>🏥 Insurance & Coverage</strong>
+                    <span style={{ color: '#059669', fontWeight: 800 }}>{formatCurrency(analyticsData?.insuranceAmount || 0)}</span>
+                  </div>
+                  <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    {analyticsData?.insuranceCount || 0} Claims / Covered Bills
+                  </div>
+                </div>
+
+              </div>
+            </Card>
+
+          </div>
+
+        </div>
+      )}
 
       {activeTab === 'generator' ? (
         <>

@@ -58,8 +58,18 @@ export const returnInvoice = async (req: ProtectedRequest, res: Response, next: 
 
 export const updateStatus = async (req: ProtectedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const { status, paymentMethod } = req.body;
-    const invoice = await invoiceService.updateInvoiceStatus(req.params.id as string, status, paymentMethod);
-    successResponse(res, invoice, 'Invoice payment status updated.');
+    const invoice = await invoiceService.updateInvoiceStatus(req.params.id as string, req.body.status, req.body.paymentMethod);
+    successResponse(res, invoice, 'Invoice status updated.');
+  } catch (error) { next(error); }
+};
+
+export const getAnalytics = async (req: ProtectedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const analytics = await invoiceService.getBillingAnalytics({
+      period: req.query.period as string,
+      startDate: req.query.startDate as string,
+      endDate: req.query.endDate as string,
+    });
+    successResponse(res, analytics);
   } catch (error) { next(error); }
 };

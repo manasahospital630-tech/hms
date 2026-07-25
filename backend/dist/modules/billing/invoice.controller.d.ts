@@ -8,4 +8,5 @@ export declare const recordPayment: (req: ProtectedRequest, res: Response, next:
 export declare const cancel: (req: ProtectedRequest, res: Response, next: NextFunction) => Promise<void>;
 export declare const returnInvoice: (req: ProtectedRequest, res: Response, next: NextFunction) => Promise<void>;
 export declare const updateStatus: (req: ProtectedRequest, res: Response, next: NextFunction) => Promise<void>;
+export declare const getAnalytics: (req: ProtectedRequest, res: Response, next: NextFunction) => Promise<void>;
 //# sourceMappingURL=invoice.controller.d.ts.map

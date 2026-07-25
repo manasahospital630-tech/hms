@@ -8,6 +8,8 @@ import { auditLogger } from '../../middleware/auditLogger';
 
 const router = Router();
 
+router.get('/analytics', authenticateJWT, ctrl.getAnalytics);
+router.get('/dashboard-stats', authenticateJWT, ctrl.getAnalytics);
 router.post('/invoices', authenticateJWT, enforceRBAC(['Biller', 'Admin', 'Incharge']), validate(createInvoiceSchema), auditLogger('CREATE', 'Invoice'), ctrl.create);
 router.get('/invoices', authenticateJWT, enforceRBAC(['Biller', 'Admin', 'Incharge']), ctrl.getAll);
 router.get('/invoices/:id', authenticateJWT, enforceRBAC(['Biller', 'Admin', 'Patient', 'Pharmacist', 'Incharge']), ctrl.getById);

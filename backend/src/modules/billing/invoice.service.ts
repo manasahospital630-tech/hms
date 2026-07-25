@@ -334,3 +334,132 @@ export const updateInvoiceStatus = async (id: string, status: 'Paid' | 'Unpaid',
 
   return result.rows[0];
 };
+
+export const getBillingAnalytics = async (options: {
+  period?: string;
+  startDate?: string;
+  endDate?: string;
+}) => {
+  let dateFilter = '';
+  const params: any[] = [];
+  const period = options.period || 'month';
+
+  if (period === 'today') {
+    dateFilter = "AND i.created_at >= CURRENT_DATE AND i.created_at < CURRENT_DATE + INTERVAL '1 day'";
+  } else if (period === 'week') {
+    dateFilter = "AND i.created_at >= date_trunc('week', CURRENT_DATE) AND i.created_at < date_trunc('week', CURRENT_DATE) + INTERVAL '1 week'";
+  } else if (period === 'month') {
+    dateFilter = "AND i.created_at >= date_trunc('month', CURRENT_DATE) AND i.created_at < date_trunc('month', CURRENT_DATE) + INTERVAL '1 month'";
+  } else if (period === 'year') {
+    dateFilter = "AND i.created_at >= date_trunc('year', CURRENT_DATE) AND i.created_at < date_trunc('year', CURRENT_DATE) + INTERVAL '1 year'";
+  } else if (period === 'custom' && options.startDate && options.endDate) {
+    params.push(options.startDate);
+    params.push(options.endDate + ' 23:59:59');
+    dateFilter = `AND i.created_at >= $1 AND i.created_at <= $2`;
+  }
+
+  // Summary Metrics Query
+  const summaryRes = await query(`
+    SELECT 
+      COUNT(*) as total_invoices,
+      COALESCE(SUM(i.total_amount), 0) as total_revenue,
+      COALESCE(SUM(i.amount_paid), 0) as total_amount_paid,
+      COALESCE(SUM(i.total_amount - i.amount_paid), 0) as total_pending_amount,
+      
+      COUNT(CASE WHEN i.status = 'Paid' THEN 1 END) as paid_invoices_count,
+      COUNT(CASE WHEN i.status = 'Unpaid' THEN 1 END) as unpaid_invoices_count,
+      COUNT(CASE WHEN i.status = 'PartiallyPaid' THEN 1 END) as partial_invoices_count,
+      COUNT(CASE WHEN i.status = 'Cancelled' THEN 1 END) as cancelled_invoices_count,
+      
+      -- Payment Method Breakdown
+      COUNT(CASE WHEN LOWER(i.payment_method) = 'cash' THEN 1 END) as cash_count,
+      COALESCE(SUM(CASE WHEN LOWER(i.payment_method) = 'cash' THEN i.amount_paid ELSE 0 END), 0) as cash_amount,
+      
+      COUNT(CASE WHEN LOWER(i.payment_method) = 'upi' THEN 1 END) as upi_count,
+      COALESCE(SUM(CASE WHEN LOWER(i.payment_method) = 'upi' THEN i.amount_paid ELSE 0 END), 0) as upi_amount,
+      
+      COUNT(CASE WHEN LOWER(i.payment_method) = 'card' THEN 1 END) as card_count,
+      COALESCE(SUM(CASE WHEN LOWER(i.payment_method) = 'card' THEN i.amount_paid ELSE 0 END), 0) as card_amount,
+
+      COUNT(CASE WHEN LOWER(i.payment_method) = 'bank transfer' THEN 1 END) as bank_count,
+      COALESCE(SUM(CASE WHEN LOWER(i.payment_method) = 'bank transfer' THEN i.amount_paid ELSE 0 END), 0) as bank_amount,
+      
+      COUNT(CASE WHEN LOWER(i.payment_method) = 'insurance' OR i.insurance_coverage > 0 THEN 1 END) as insurance_count,
+      COALESCE(SUM(CASE WHEN LOWER(i.payment_method) = 'insurance' THEN i.amount_paid ELSE i.insurance_coverage END), 0) as insurance_amount,
+      
+      -- IP vs OP Breakdown
+      COUNT(CASE WHEN p.is_inpatient = true OR i.ip_admission_id IS NOT NULL THEN 1 END) as ip_invoices_count,
+      COALESCE(SUM(CASE WHEN p.is_inpatient = true OR i.ip_admission_id IS NOT NULL THEN i.total_amount ELSE 0 END), 0) as ip_amount,
+      
+      COUNT(CASE WHEN p.is_inpatient = false AND i.ip_admission_id IS NULL THEN 1 END) as op_invoices_count,
+      COALESCE(SUM(CASE WHEN p.is_inpatient = false AND i.ip_admission_id IS NULL THEN i.total_amount ELSE 0 END), 0) as op_amount
+
+    FROM invoices i
+    JOIN patients p ON i.patient_id = p.patient_id
+    WHERE 1=1 ${dateFilter}
+  `, params);
+
+  // Daily Trend Breakdown
+  const trendRes = await query(`
+    SELECT 
+      TO_CHAR(i.created_at, 'YYYY-MM-DD') as date_label,
+      COUNT(*) as invoice_count,
+      COALESCE(SUM(i.total_amount), 0) as total_amount,
+      COALESCE(SUM(i.amount_paid), 0) as amount_paid,
+      COALESCE(SUM(CASE WHEN LOWER(i.payment_method) = 'cash' THEN i.amount_paid ELSE 0 END), 0) as cash_amount,
+      COALESCE(SUM(CASE WHEN LOWER(i.payment_method) = 'upi' THEN i.amount_paid ELSE 0 END), 0) as upi_amount,
+      COALESCE(SUM(CASE WHEN LOWER(i.payment_method) = 'card' THEN i.amount_paid ELSE 0 END), 0) as card_amount,
+      COALESCE(SUM(CASE WHEN p.is_inpatient = true OR i.ip_admission_id IS NOT NULL THEN i.total_amount ELSE 0 END), 0) as ip_amount
+    FROM invoices i
+    JOIN patients p ON i.patient_id = p.patient_id
+    WHERE 1=1 ${dateFilter}
+    GROUP BY TO_CHAR(i.created_at, 'YYYY-MM-DD')
+    ORDER BY date_label ASC
+  `, params);
+
+  const row = summaryRes.rows[0] || {};
+  return {
+    period,
+    totalInvoices: parseInt(row.total_invoices, 10) || 0,
+    totalRevenue: parseFloat(row.total_revenue) || 0,
+    totalAmountPaid: parseFloat(row.total_amount_paid) || 0,
+    totalPendingAmount: parseFloat(row.total_pending_amount) || 0,
+    
+    paidInvoicesCount: parseInt(row.paid_invoices_count, 10) || 0,
+    unpaidInvoicesCount: parseInt(row.unpaid_invoices_count, 10) || 0,
+    partialInvoicesCount: parseInt(row.partial_invoices_count, 10) || 0,
+    cancelledInvoicesCount: parseInt(row.cancelled_invoices_count, 10) || 0,
+    
+    cashCount: parseInt(row.cash_count, 10) || 0,
+    cashAmount: parseFloat(row.cash_amount) || 0,
+    
+    upiCount: parseInt(row.upi_count, 10) || 0,
+    upiAmount: parseFloat(row.upi_amount) || 0,
+
+    cardCount: parseInt(row.card_count, 10) || 0,
+    cardAmount: parseFloat(row.card_amount) || 0,
+
+    bankCount: parseInt(row.bank_count, 10) || 0,
+    bankAmount: parseFloat(row.bank_amount) || 0,
+
+    insuranceCount: parseInt(row.insurance_count, 10) || 0,
+    insuranceAmount: parseFloat(row.insurance_amount) || 0,
+
+    ipInvoicesCount: parseInt(row.ip_invoices_count, 10) || 0,
+    ipAmount: parseFloat(row.ip_amount) || 0,
+
+    opInvoicesCount: parseInt(row.op_invoices_count, 10) || 0,
+    opAmount: parseFloat(row.op_amount) || 0,
+
+    dailyTrends: trendRes.rows.map(r => ({
+      date: r.date_label,
+      invoiceCount: parseInt(r.invoice_count, 10) || 0,
+      totalAmount: parseFloat(r.total_amount) || 0,
+      amountPaid: parseFloat(r.amount_paid) || 0,
+      cashAmount: parseFloat(r.cash_amount) || 0,
+      upiAmount: parseFloat(r.upi_amount) || 0,
+      cardAmount: parseFloat(r.card_amount) || 0,
+      ipAmount: parseFloat(r.ip_amount) || 0
+    }))
+  };
+};

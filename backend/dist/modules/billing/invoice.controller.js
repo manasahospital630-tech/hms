@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.updateStatus = exports.returnInvoice = exports.cancel = exports.recordPayment = exports.getPatientInvoices = exports.getById = exports.getAll = exports.create = void 0;
+exports.getAnalytics = exports.updateStatus = exports.returnInvoice = exports.cancel = exports.recordPayment = exports.getPatientInvoices = exports.getById = exports.getAll = exports.create = void 0;
 const responseHelper_1 = require("../../utils/responseHelper");
 const invoiceService = __importStar(require("./invoice.service"));
 const create = async (req, res, next) => {
@@ -112,13 +112,26 @@ const returnInvoice = async (req, res, next) => {
 exports.returnInvoice = returnInvoice;
 const updateStatus = async (req, res, next) => {
     try {
-        const { status, paymentMethod } = req.body;
-        const invoice = await invoiceService.updateInvoiceStatus(req.params.id, status, paymentMethod);
-        (0, responseHelper_1.successResponse)(res, invoice, 'Invoice payment status updated.');
+        const invoice = await invoiceService.updateInvoiceStatus(req.params.id, req.body.status, req.body.paymentMethod);
+        (0, responseHelper_1.successResponse)(res, invoice, 'Invoice status updated.');
     }
     catch (error) {
         next(error);
     }
 };
 exports.updateStatus = updateStatus;
+const getAnalytics = async (req, res, next) => {
+    try {
+        const analytics = await invoiceService.getBillingAnalytics({
+            period: req.query.period,
+            startDate: req.query.startDate,
+            endDate: req.query.endDate,
+        });
+        (0, responseHelper_1.successResponse)(res, analytics);
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.getAnalytics = getAnalytics;
 //# sourceMappingURL=invoice.controller.js.map
