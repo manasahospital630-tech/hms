@@ -988,28 +988,33 @@ export const ServiceCatalog: React.FC = () => {
     let parsedParameters = (s.parameters || []).map((p: any) => {
       const pName = (p.name || '').trim().toLowerCase();
       let rType: 'parameter' | 'reference' | 'findings' = 'parameter';
-      if (pName === 'findings' || pName === 'impression' || pName === 'technique' || pName === 'conclusion') {
+      
+      if (p.row_type || p.rowType) {
+        rType = p.row_type || p.rowType;
+      } else if (pName === 'findings' || pName === 'impression' || pName === 'technique' || pName === 'conclusion') {
         rType = 'findings';
-      } else if (p.input_type === 'Text' || (!p.unit && p.reference_range && !p.min_value && !p.max_value)) {
+      } else if (pName === 'reference range') {
         rType = 'reference';
+      } else {
+        rType = 'parameter';
       }
 
       return {
         name: p.name || '',
         unit: p.unit || '',
-        referenceRange: p.reference_range || p.referenceRange || '',
-        inputType: p.input_type || (rType !== 'parameter' ? 'Text' : 'Number'),
-        dropdownOptions: p.dropdown_options || '',
-        minValue: p.min_value !== null && p.min_value !== undefined ? p.min_value.toString() : '',
-        maxValue: p.max_value !== null && p.max_value !== undefined ? p.max_value.toString() : '',
-        ageGroup: p.age_group || 'Universal',
+        referenceRange: p.reference_range !== undefined ? p.reference_range : (p.referenceRange || ''),
+        inputType: p.input_type || p.inputType || (rType !== 'parameter' ? 'Text' : 'Number'),
+        dropdownOptions: p.dropdown_options || p.dropdownOptions || '',
+        minValue: p.min_value !== null && p.min_value !== undefined ? p.min_value.toString() : (p.minValue || ''),
+        maxValue: p.max_value !== null && p.max_value !== undefined ? p.max_value.toString() : (p.maxValue || ''),
+        ageGroup: p.age_group || p.ageGroup || 'Universal',
         gender: p.gender || 'Universal',
-        refMinMale: p.ref_min_male !== null && p.ref_min_male !== undefined ? p.ref_min_male.toString() : '',
-        refMaxMale: p.ref_max_male !== null && p.ref_max_male !== undefined ? p.ref_max_male.toString() : '',
-        refMinFemale: p.ref_min_female !== null && p.ref_min_female !== undefined ? p.ref_min_female.toString() : '',
-        refMaxFemale: p.ref_max_female !== null && p.ref_max_female !== undefined ? p.ref_max_female.toString() : '',
-        refMinChild: p.ref_min_child !== null && p.ref_min_child !== undefined ? p.ref_min_child.toString() : '',
-        refMaxChild: p.ref_max_child !== null && p.ref_max_child !== undefined ? p.ref_max_child.toString() : '',
+        refMinMale: p.ref_min_male !== null && p.ref_min_male !== undefined ? p.ref_min_male.toString() : (p.refMinMale || ''),
+        refMaxMale: p.ref_max_male !== null && p.ref_max_male !== undefined ? p.ref_max_male.toString() : (p.refMaxMale || ''),
+        refMinFemale: p.ref_min_female !== null && p.ref_min_female !== undefined ? p.ref_min_female.toString() : (p.refMinFemale || ''),
+        refMaxFemale: p.ref_max_female !== null && p.ref_max_female !== undefined ? p.ref_max_female.toString() : (p.refMaxFemale || ''),
+        refMinChild: p.ref_min_child !== null && p.ref_min_child !== undefined ? p.ref_min_child.toString() : (p.refMinChild || ''),
+        refMaxChild: p.ref_max_child !== null && p.ref_max_child !== undefined ? p.ref_max_child.toString() : (p.refMaxChild || ''),
         rowType: rType
       };
     });
@@ -1210,7 +1215,8 @@ export const ServiceCatalog: React.FC = () => {
       refMinFemale: p.refMinFemale !== undefined && p.refMinFemale !== '' && p.refMinFemale !== null ? p.refMinFemale : null,
       refMaxFemale: p.refMaxFemale !== undefined && p.refMaxFemale !== '' && p.refMaxFemale !== null ? p.refMaxFemale : null,
       refMinChild: p.refMinChild !== undefined && p.refMinChild !== '' && p.refMinChild !== null ? p.refMinChild : null,
-      refMaxChild: p.refMaxChild !== undefined && p.refMaxChild !== '' && p.refMaxChild !== null ? p.refMaxChild : null
+      refMaxChild: p.refMaxChild !== undefined && p.refMaxChild !== '' && p.refMaxChild !== null ? p.refMaxChild : null,
+      rowType: p.rowType || p.row_type || 'parameter'
     }));
 
     const payload = {
