@@ -66,6 +66,7 @@ export const ServiceCatalog: React.FC = () => {
       refMaxFemale?: string;
       refMinChild?: string;
       refMaxChild?: string;
+      rowType?: 'parameter' | 'reference' | 'findings';
     }>;
     qualitativeInputType: string;
     qualitativeOptions: string;
@@ -976,23 +977,34 @@ export const ServiceCatalog: React.FC = () => {
     setEditingService(s);
     const rType = s.report_type || 'Structured';
     
-    let parsedParameters = (s.parameters || []).map((p: any) => ({
-      name: p.name || '',
-      unit: p.unit || '',
-      referenceRange: p.reference_range || p.referenceRange || '',
-      inputType: p.input_type || 'Number',
-      dropdownOptions: p.dropdown_options || '',
-      minValue: p.min_value !== null && p.min_value !== undefined ? p.min_value.toString() : '',
-      maxValue: p.max_value !== null && p.max_value !== undefined ? p.max_value.toString() : '',
-      ageGroup: p.age_group || 'Universal',
-      gender: p.gender || 'Universal',
-      refMinMale: p.ref_min_male !== null && p.ref_min_male !== undefined ? p.ref_min_male.toString() : '',
-      refMaxMale: p.ref_max_male !== null && p.ref_max_male !== undefined ? p.ref_max_male.toString() : '',
-      refMinFemale: p.ref_min_female !== null && p.ref_min_female !== undefined ? p.ref_min_female.toString() : '',
-      refMaxFemale: p.ref_max_female !== null && p.ref_max_female !== undefined ? p.ref_max_female.toString() : '',
-      refMinChild: p.ref_min_child !== null && p.ref_min_child !== undefined ? p.ref_min_child.toString() : '',
-      refMaxChild: p.ref_max_child !== null && p.ref_max_child !== undefined ? p.ref_max_child.toString() : ''
-    }));
+    let parsedParameters = (s.parameters || []).map((p: any) => {
+      const pName = (p.name || '').trim().toLowerCase();
+      let rType: 'parameter' | 'reference' | 'findings' = 'parameter';
+      if (pName === 'findings' || pName === 'impression' || pName === 'technique' || pName === 'conclusion') {
+        rType = 'findings';
+      } else if (p.input_type === 'Text' || (!p.unit && p.reference_range && !p.min_value && !p.max_value)) {
+        rType = 'reference';
+      }
+
+      return {
+        name: p.name || '',
+        unit: p.unit || '',
+        referenceRange: p.reference_range || p.referenceRange || '',
+        inputType: p.input_type || (rType !== 'parameter' ? 'Text' : 'Number'),
+        dropdownOptions: p.dropdown_options || '',
+        minValue: p.min_value !== null && p.min_value !== undefined ? p.min_value.toString() : '',
+        maxValue: p.max_value !== null && p.max_value !== undefined ? p.max_value.toString() : '',
+        ageGroup: p.age_group || 'Universal',
+        gender: p.gender || 'Universal',
+        refMinMale: p.ref_min_male !== null && p.ref_min_male !== undefined ? p.ref_min_male.toString() : '',
+        refMaxMale: p.ref_max_male !== null && p.ref_max_male !== undefined ? p.ref_max_male.toString() : '',
+        refMinFemale: p.ref_min_female !== null && p.ref_min_female !== undefined ? p.ref_min_female.toString() : '',
+        refMaxFemale: p.ref_max_female !== null && p.ref_max_female !== undefined ? p.ref_max_female.toString() : '',
+        refMinChild: p.ref_min_child !== null && p.ref_min_child !== undefined ? p.ref_min_child.toString() : '',
+        refMaxChild: p.ref_max_child !== null && p.ref_max_child !== undefined ? p.ref_max_child.toString() : '',
+        rowType: rType
+      };
+    });
 
     let qualitativeInputType = 'Dropdown';
     let qualitativeOptions = 'Positive, Negative, Equivocal';
@@ -1065,7 +1077,8 @@ export const ServiceCatalog: React.FC = () => {
         refMinFemale: '',
         refMaxFemale: '',
         refMinChild: '',
-        refMaxChild: ''
+        refMaxChild: '',
+        rowType: 'parameter'
       }]
     }));
   };
@@ -1088,16 +1101,28 @@ export const ServiceCatalog: React.FC = () => {
         refMinFemale: '',
         refMaxFemale: '',
         refMinChild: '',
-        refMaxChild: ''
+        refMaxChild: '',
+        rowType: 'reference'
       }]
     }));
   };
 
   const handleAddFindingsRow = () => {
-    setServiceForm(prev => ({
-      ...prev,
-      parameters: [
-        ...(prev.parameters || []), 
+    setServiceForm(prev => {
+      const existing = prev.parameters || [];
+      const hasFindings = existing.some((p: any) => p.rowType === 'findings' || p.name === 'Findings');
+      const newRows = hasFindings ? [
+        { 
+          name: 'Impression', 
+          unit: '', 
+          referenceRange: 'Normal Chest X-Ray / Scan Study.', 
+          inputType: 'Text', 
+          dropdownOptions: '',
+          minValue: '',
+          maxValue: '',
+          rowType: 'findings' as const
+        }
+      ] : [
         { 
           name: 'Findings', 
           unit: '', 
@@ -1106,8 +1131,7 @@ export const ServiceCatalog: React.FC = () => {
           dropdownOptions: '',
           minValue: '',
           maxValue: '',
-          ageGroup: 'Universal',
-          gender: 'Universal'
+          rowType: 'findings' as const
         },
         { 
           name: 'Impression', 
@@ -1117,11 +1141,15 @@ export const ServiceCatalog: React.FC = () => {
           dropdownOptions: '',
           minValue: '',
           maxValue: '',
-          ageGroup: 'Universal',
-          gender: 'Universal'
+          rowType: 'findings' as const
         }
-      ]
-    }));
+      ];
+
+      return {
+        ...prev,
+        parameters: [...existing, ...newRows]
+      };
+    });
   };
 
   const handleParameterChange = (index: number, field: string, value: string) => {
@@ -2008,189 +2036,266 @@ export const ServiceCatalog: React.FC = () => {
                   </div>
 
                   {serviceForm.parameters && serviceForm.parameters.length > 0 ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '380px', overflowY: 'auto', paddingRight: '4px' }}>
-                      {serviceForm.parameters.map((p, pIdx) => (
-                        <div key={pIdx} style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'flex-end' }}>
-                            
-                            {/* Parameter Name */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '140px', flex: 2 }}>
-                              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Parameter Name *</span>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '420px', overflowY: 'auto', paddingRight: '4px' }}>
+                      {serviceForm.parameters.map((p, pIdx) => {
+                        
+                        /* TYPE 1: REFERENCE PARAMETER ROW (+ Add Reference) */
+                        if (p.rowType === 'reference') {
+                          return (
+                            <div key={pIdx} style={{ background: 'var(--bg-primary)', border: '1px solid rgba(16,185,129,0.3)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'flex-end' }}>
+                                
+                                {/* Parameter Name / Title */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '180px', flex: 1 }}>
+                                  <span style={{ fontSize: '11px', color: 'var(--accent-success)', fontWeight: 700 }}>Parameter Name / Title *</span>
+                                  <input
+                                    type="text"
+                                    className="input"
+                                    value={p.name}
+                                    onChange={(e) => handleParameterChange(pIdx, 'name', e.target.value)}
+                                    placeholder="e.g. Widal Test / Dengue IgG / Result Note"
+                                    required
+                                    style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px', height: '34px' }}
+                                  />
+                                </div>
+
+                                {/* Reference Text Box */}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '240px', flex: 2 }}>
+                                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Reference Status / Value *</span>
+                                  <input
+                                    type="text"
+                                    className="input"
+                                    value={p.referenceRange}
+                                    onChange={(e) => handleParameterChange(pIdx, 'referenceRange', e.target.value)}
+                                    placeholder="e.g. Negative / Non-Reactive / 70 - 110 mg/dL"
+                                    required
+                                    style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px', height: '34px' }}
+                                  />
+                                </div>
+
+                                {/* Remove Button */}
+                                <div style={{ display: 'flex', alignItems: 'center', height: '34px', marginLeft: 'auto' }}>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveParameterRow(pIdx)}
+                                    style={{ background: 'transparent', border: 'none', color: 'var(--accent-danger)', cursor: 'pointer', padding: '4px' }}
+                                    title="Remove reference parameter"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </div>
+
+                              </div>
+                            </div>
+                          );
+                        }
+
+                        /* TYPE 2: FINDINGS / IMPRESSION NARRATIVE ROW (+ Add Findings/Impression) */
+                        if (p.rowType === 'findings') {
+                          return (
+                            <div key={pIdx} style={{ background: 'var(--bg-primary)', border: '1px solid rgba(14,165,233,0.3)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ fontSize: '11px', color: 'var(--accent-info)', fontWeight: 700 }}>Narrative Section Title *</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveParameterRow(pIdx)}
+                                  style={{ background: 'transparent', border: 'none', color: 'var(--accent-danger)', cursor: 'pointer', padding: '4px' }}
+                                  title="Remove narrative section"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+
                               <input
                                 type="text"
                                 className="input"
                                 value={p.name}
                                 onChange={(e) => handleParameterChange(pIdx, 'name', e.target.value)}
-                                placeholder="e.g. Hemoglobin / Findings"
+                                placeholder="e.g. Findings / Impression / Technique / Conclusion"
                                 required
-                                style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px', height: '32px' }}
+                                style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px', height: '34px' }}
                               />
-                            </div>
 
-                            {/* Unit */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '70px', flex: 1 }}>
-                              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Unit</span>
-                              <input
-                                type="text"
+                              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Default Narrative Text / Description Template</span>
+                              <textarea
                                 className="input"
-                                value={p.unit}
-                                onChange={(e) => handleParameterChange(pIdx, 'unit', e.target.value)}
-                                placeholder="e.g. g/dL"
-                                style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px', height: '32px' }}
+                                rows={2}
+                                value={p.referenceRange}
+                                onChange={(e) => handleParameterChange(pIdx, 'referenceRange', e.target.value)}
+                                placeholder="Pre-define default narrative findings or impression summary..."
+                                style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '6px 8px', fontSize: '12px', width: '100%' }}
                               />
                             </div>
+                          );
+                        }
 
-                            {/* Type */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '90px', flex: 1 }}>
-                              <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Type</span>
-                              <select
-                                className="select"
-                                value={p.inputType || 'Number'}
-                                onChange={(e) => handleParameterChange(pIdx, 'inputType', e.target.value)}
-                                style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px', height: '32px' }}
-                              >
-                                <option value="Number">Number</option>
-                                <option value="Dropdown">Dropdown</option>
-                                <option value="Text">Text</option>
-                              </select>
-                            </div>
-
-                            {/* Dropdown Options (Conditional) */}
-                            {p.inputType === 'Dropdown' && (
+                        /* TYPE 3: STANDARD PARAMETER ROW (+ Add Parameter) */
+                        return (
+                          <div key={pIdx} style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', borderRadius: '8px', padding: '12px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px', alignItems: 'flex-end' }}>
+                              
+                              {/* Parameter Name */}
                               <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '140px', flex: 2 }}>
-                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Dropdown Options *</span>
+                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Parameter Name *</span>
                                 <input
                                   type="text"
                                   className="input"
-                                  value={p.dropdownOptions || ''}
-                                  onChange={(e) => handleParameterChange(pIdx, 'dropdownOptions', e.target.value)}
-                                  placeholder="Options (e.g. Positive,Negative)"
+                                  value={p.name}
+                                  onChange={(e) => handleParameterChange(pIdx, 'name', e.target.value)}
+                                  placeholder="e.g. Hemoglobin"
                                   required
                                   style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px', height: '32px' }}
                                 />
                               </div>
-                            )}
 
-                            {/* Universal Adult Ref Range or Text-based Reference/Findings */}
-                            {p.inputType === 'Text' ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '220px', flex: 3 }}>
-                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Reference Range / Narrative Text *</span>
+                              {/* Unit */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '70px', flex: 1 }}>
+                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Unit</span>
                                 <input
                                   type="text"
                                   className="input"
-                                  value={p.referenceRange}
-                                  onChange={(e) => handleParameterChange(pIdx, 'referenceRange', e.target.value)}
-                                  placeholder="e.g. Negative / Non-Reactive / Lungs clear"
+                                  value={p.unit}
+                                  onChange={(e) => handleParameterChange(pIdx, 'unit', e.target.value)}
+                                  placeholder="e.g. g/dL"
                                   style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px', height: '32px' }}
                                 />
                               </div>
-                            ) : (
-                              <>
-                                {/* Child Range */}
+
+                              {/* Type */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '90px', flex: 1 }}>
+                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Type</span>
+                                <select
+                                  className="select"
+                                  value={p.inputType || 'Number'}
+                                  onChange={(e) => handleParameterChange(pIdx, 'inputType', e.target.value)}
+                                  style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px', height: '32px' }}
+                                >
+                                  <option value="Number">Number</option>
+                                  <option value="Dropdown">Dropdown</option>
+                                  <option value="Text">Text</option>
+                                </select>
+                              </div>
+
+                              {/* Dropdown Options (Conditional) */}
+                              {p.inputType === 'Dropdown' && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '140px', flex: 2 }}>
+                                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Dropdown Options *</span>
+                                  <input
+                                    type="text"
+                                    className="input"
+                                    value={p.dropdownOptions || ''}
+                                    onChange={(e) => handleParameterChange(pIdx, 'dropdownOptions', e.target.value)}
+                                    placeholder="Options (e.g. Positive,Negative)"
+                                    required
+                                    style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px', height: '32px' }}
+                                  />
+                                </div>
+                              )}
+
+                              {/* Child Range */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '100px' }}>
+                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Child Ref Range</span>
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                  <input
+                                    type="text"
+                                    className="input"
+                                    value={p.refMinChild || ''}
+                                    onChange={(e) => handleParameterChange(pIdx, 'refMinChild', e.target.value)}
+                                    placeholder="Min"
+                                    style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '50px' }}
+                                  />
+                                  <input
+                                    type="text"
+                                    className="input"
+                                    value={p.refMaxChild || ''}
+                                    onChange={(e) => handleParameterChange(pIdx, 'refMaxChild', e.target.value)}
+                                    placeholder="Max"
+                                    style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '50px' }}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Universal Adult Ref Range */}
+                              {(!p.refMinMale && !p.refMaxMale && !p.refMinFemale && !p.refMaxFemale) && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '140px', flex: 2 }}>
+                                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Universal Adult Ref</span>
+                                  <input
+                                    type="text"
+                                    className="input"
+                                    value={p.referenceRange}
+                                    onChange={(e) => handleParameterChange(pIdx, 'referenceRange', e.target.value)}
+                                    placeholder="e.g. 13.5 - 17.5"
+                                    style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px', height: '32px' }}
+                                  />
+                                </div>
+                              )}
+
+                              {/* Male Ref Range */}
+                              {(!p.referenceRange || p.referenceRange.trim() === '') && (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '100px' }}>
-                                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Child Ref Range</span>
+                                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Male Ref Range</span>
                                   <div style={{ display: 'flex', gap: '4px' }}>
                                     <input
                                       type="text"
                                       className="input"
-                                      value={p.refMinChild || ''}
-                                      onChange={(e) => handleParameterChange(pIdx, 'refMinChild', e.target.value)}
+                                      value={p.refMinMale || ''}
+                                      onChange={(e) => handleParameterChange(pIdx, 'refMinMale', e.target.value)}
                                       placeholder="Min"
                                       style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '50px' }}
                                     />
                                     <input
                                       type="text"
                                       className="input"
-                                      value={p.refMaxChild || ''}
-                                      onChange={(e) => handleParameterChange(pIdx, 'refMaxChild', e.target.value)}
+                                      value={p.refMaxMale || ''}
+                                      onChange={(e) => handleParameterChange(pIdx, 'refMaxMale', e.target.value)}
                                       placeholder="Max"
                                       style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '50px' }}
                                     />
                                   </div>
                                 </div>
+                              )}
 
-                                {/* Universal Adult Ref Range */}
-                                {(!p.refMinMale && !p.refMaxMale && !p.refMinFemale && !p.refMaxFemale) && (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '140px', flex: 2 }}>
-                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Universal Adult Ref</span>
+                              {/* Female Ref Range */}
+                              {(!p.referenceRange || p.referenceRange.trim() === '') && (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '100px' }}>
+                                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Female Ref Range</span>
+                                  <div style={{ display: 'flex', gap: '4px' }}>
                                     <input
                                       type="text"
                                       className="input"
-                                      value={p.referenceRange}
-                                      onChange={(e) => handleParameterChange(pIdx, 'referenceRange', e.target.value)}
-                                      placeholder="e.g. 13.5 - 17.5"
-                                      style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px', height: '32px' }}
+                                      value={p.refMinFemale || ''}
+                                      onChange={(e) => handleParameterChange(pIdx, 'refMinFemale', e.target.value)}
+                                      placeholder="Min"
+                                      style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '50px' }}
+                                    />
+                                    <input
+                                      type="text"
+                                      className="input"
+                                      value={p.refMaxFemale || ''}
+                                      onChange={(e) => handleParameterChange(pIdx, 'refMaxFemale', e.target.value)}
+                                      placeholder="Max"
+                                      style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '50px' }}
                                     />
                                   </div>
-                                )}
+                                </div>
+                              )}
 
-                                {/* Male Ref Range */}
-                                {(!p.referenceRange || p.referenceRange.trim() === '') && (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '100px' }}>
-                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Male Ref Range</span>
-                                    <div style={{ display: 'flex', gap: '4px' }}>
-                                      <input
-                                        type="text"
-                                        className="input"
-                                        value={p.refMinMale || ''}
-                                        onChange={(e) => handleParameterChange(pIdx, 'refMinMale', e.target.value)}
-                                        placeholder="Min"
-                                        style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '50px' }}
-                                      />
-                                      <input
-                                        type="text"
-                                        className="input"
-                                        value={p.refMaxMale || ''}
-                                        onChange={(e) => handleParameterChange(pIdx, 'refMaxMale', e.target.value)}
-                                        placeholder="Max"
-                                        style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '50px' }}
-                                      />
-                                    </div>
-                                  </div>
-                                )}
+                              {/* Remove Button */}
+                              <div style={{ display: 'flex', alignItems: 'center', height: '32px', marginLeft: 'auto' }}>
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveParameterRow(pIdx)}
+                                  style={{ background: 'transparent', border: 'none', color: 'var(--accent-danger)', cursor: 'pointer', padding: '4px' }}
+                                  title="Remove parameter"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
 
-                                {/* Female Ref Range */}
-                                {(!p.referenceRange || p.referenceRange.trim() === '') && (
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '100px' }}>
-                                    <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Female Ref Range</span>
-                                    <div style={{ display: 'flex', gap: '4px' }}>
-                                      <input
-                                        type="text"
-                                        className="input"
-                                        value={p.refMinFemale || ''}
-                                        onChange={(e) => handleParameterChange(pIdx, 'refMinFemale', e.target.value)}
-                                        placeholder="Min"
-                                        style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '50px' }}
-                                      />
-                                      <input
-                                        type="text"
-                                        className="input"
-                                        value={p.refMaxFemale || ''}
-                                        onChange={(e) => handleParameterChange(pIdx, 'refMaxFemale', e.target.value)}
-                                        placeholder="Max"
-                                        style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '50px' }}
-                                      />
-                                    </div>
-                                  </div>
-                                )}
-                              </>
-                            )}
-
-                            {/* Remove Button */}
-                            <div style={{ display: 'flex', alignItems: 'center', height: '32px', marginLeft: 'auto' }}>
-                              <button
-                                type="button"
-                                onClick={() => handleRemoveParameterRow(pIdx)}
-                                style={{ background: 'transparent', border: 'none', color: 'var(--accent-danger)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '4px' }}
-                                title="Remove parameter"
-                              >
-                                <Trash2 size={16} />
-                              </button>
                             </div>
-
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   ) : (
                     <div style={{ background: 'var(--bg-primary)', border: '1px dashed var(--border-primary)', borderRadius: '6px', padding: '16px', textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)' }}>
