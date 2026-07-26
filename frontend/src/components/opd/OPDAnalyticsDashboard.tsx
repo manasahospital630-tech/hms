@@ -696,15 +696,6 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
               )
             },
             {
-              key: 'medical_record_number',
-              label: 'MRN',
-              render: (v) => (
-                <span style={{ color: 'var(--accent-primary)', fontFamily: 'monospace', fontWeight: 600 }}>
-                  {v}
-                </span>
-              )
-            },
-            {
               key: 'patient_name',
               label: 'PATIENT DETAILS',
               render: (v, row) => (
@@ -750,27 +741,6 @@ export const OPDAnalyticsDashboard: React.FC<OPDAnalyticsDashboardProps> = ({
                   🏥 {row.op_check_in_by || v || 'Reception Desk'}
                 </span>
               )
-            },
-            {
-              key: 'payment_method',
-              label: 'PAYMENT METHOD',
-              render: (v, row) => {
-                const method = v || row.payment_method || 'Cash';
-                const isFree = method.includes('Free');
-                return (
-                  <span style={{ 
-                    fontSize: '11px', 
-                    fontWeight: 700, 
-                    padding: '3px 8px', 
-                    borderRadius: '4px',
-                    background: isFree ? '#ecfdf5' : '#eff6ff',
-                    color: isFree ? '#047857' : '#1d4ed8',
-                    border: `1px solid ${isFree ? '#a7f3d0' : '#bfdbfe'}`
-                  }}>
-                    {method}
-                  </span>
-                );
-              }
             },
             {
               key: 'amount',
