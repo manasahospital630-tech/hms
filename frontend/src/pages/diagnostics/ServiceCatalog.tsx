@@ -2224,69 +2224,63 @@ export const ServiceCatalog: React.FC = () => {
                               </div>
 
                               {/* Universal Adult Ref Range */}
-                              {(!p.refMinMale && !p.refMaxMale && !p.refMinFemale && !p.refMaxFemale) && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '140px', flex: 2 }}>
-                                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Universal Adult Ref</span>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '130px', flex: 1 }}>
+                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Universal Adult Ref</span>
+                                <input
+                                  type="text"
+                                  className="input"
+                                  value={p.referenceRange || ''}
+                                  onChange={(e) => handleParameterChange(pIdx, 'referenceRange', e.target.value)}
+                                  placeholder="e.g. 13.5 - 17.5"
+                                  style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px', height: '32px' }}
+                                />
+                              </div>
+
+                              {/* Male Ref Range */}
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '100px' }}>
+                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Male Ref Range</span>
+                                <div style={{ display: 'flex', gap: '4px' }}>
                                   <input
                                     type="text"
                                     className="input"
-                                    value={p.referenceRange}
-                                    onChange={(e) => handleParameterChange(pIdx, 'referenceRange', e.target.value)}
-                                    placeholder="e.g. 13.5 - 17.5"
-                                    style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '12px', height: '32px' }}
+                                    value={p.refMinMale || ''}
+                                    onChange={(e) => handleParameterChange(pIdx, 'refMinMale', e.target.value)}
+                                    placeholder="Min"
+                                    style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '50px' }}
+                                  />
+                                  <input
+                                    type="text"
+                                    className="input"
+                                    value={p.refMaxMale || ''}
+                                    onChange={(e) => handleParameterChange(pIdx, 'refMaxMale', e.target.value)}
+                                    placeholder="Max"
+                                    style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '50px' }}
                                   />
                                 </div>
-                              )}
-
-                              {/* Male Ref Range */}
-                              {(!p.referenceRange || p.referenceRange.trim() === '') && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '100px' }}>
-                                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Male Ref Range</span>
-                                  <div style={{ display: 'flex', gap: '4px' }}>
-                                    <input
-                                      type="text"
-                                      className="input"
-                                      value={p.refMinMale || ''}
-                                      onChange={(e) => handleParameterChange(pIdx, 'refMinMale', e.target.value)}
-                                      placeholder="Min"
-                                      style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '50px' }}
-                                    />
-                                    <input
-                                      type="text"
-                                      className="input"
-                                      value={p.refMaxMale || ''}
-                                      onChange={(e) => handleParameterChange(pIdx, 'refMaxMale', e.target.value)}
-                                      placeholder="Max"
-                                      style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '50px' }}
-                                    />
-                                  </div>
-                                </div>
-                              )}
+                              </div>
 
                               {/* Female Ref Range */}
-                              {(!p.referenceRange || p.referenceRange.trim() === '') && (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '100px' }}>
-                                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Female Ref Range</span>
-                                  <div style={{ display: 'flex', gap: '4px' }}>
-                                    <input
-                                      type="text"
-                                      className="input"
-                                      value={p.refMinFemale || ''}
-                                      onChange={(e) => handleParameterChange(pIdx, 'refMinFemale', e.target.value)}
-                                      placeholder="Min"
-                                      style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '50px' }}
-                                    />
-                                    <input
-                                      type="text"
-                                      className="input"
-                                      value={p.refMaxFemale || ''}
-                                      onChange={(e) => handleParameterChange(pIdx, 'refMaxFemale', e.target.value)}
-                                      placeholder="Max"
-                                      style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '50px' }}
-                                    />
-                                  </div>
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', minWidth: '100px' }}>
+                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: 600 }}>Female Ref Range</span>
+                                <div style={{ display: 'flex', gap: '4px' }}>
+                                  <input
+                                    type="text"
+                                    className="input"
+                                    value={p.refMinFemale || ''}
+                                    onChange={(e) => handleParameterChange(pIdx, 'refMinFemale', e.target.value)}
+                                    placeholder="Min"
+                                    style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '50px' }}
+                                  />
+                                  <input
+                                    type="text"
+                                    className="input"
+                                    value={p.refMaxFemale || ''}
+                                    onChange={(e) => handleParameterChange(pIdx, 'refMaxFemale', e.target.value)}
+                                    placeholder="Max"
+                                    style={{ background: 'var(--bg-card)', color: 'var(--text-primary)', padding: '4px 8px', fontSize: '11px', height: '32px', width: '50px' }}
+                                  />
                                 </div>
-                              )}
+                              </div>
 
                               {/* Remove Button */}
                               <div style={{ display: 'flex', alignItems: 'center', height: '32px', marginLeft: 'auto' }}>
