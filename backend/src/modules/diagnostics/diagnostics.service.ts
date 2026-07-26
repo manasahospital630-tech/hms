@@ -203,6 +203,16 @@ export const editService = async (serviceId: string, input: any) => {
       for (let i = 0; i < input.parameters.length; i++) {
         const p = input.parameters[i];
         if (p.name && p.name.trim()) {
+          const refRange = p.referenceRange !== undefined ? p.referenceRange : (p.reference_range !== undefined ? p.reference_range : '');
+          const inputType = p.inputType || p.input_type || 'Number';
+          const dropdownOptions = p.dropdownOptions !== undefined ? p.dropdownOptions : (p.dropdown_options !== undefined ? p.dropdown_options : null);
+
+          const getValue = (camel: any, snake: any) => {
+            const val = camel !== undefined ? camel : snake;
+            if (val === null || val === undefined || val === '') return null;
+            return val;
+          };
+
           await query(`
             INSERT INTO diagnostic_parameters (
               service_id, name, unit, reference_range, display_order, input_type, dropdown_options, 
@@ -213,21 +223,21 @@ export const editService = async (serviceId: string, input: any) => {
           `, [
             serviceId, 
             p.name.trim(), 
-            p.unit || '', 
-            p.referenceRange || p.reference_range || '', 
+            p.unit !== undefined ? p.unit : (p.unit_name || ''), 
+            refRange, 
             i + 1,
-            p.inputType || p.input_type || 'Number',
-            p.dropdownOptions || p.dropdown_options || null,
-            p.minValue !== undefined && p.minValue !== '' && p.minValue !== null ? p.minValue : (p.min_value !== undefined && p.min_value !== '' && p.min_value !== null ? p.min_value : null),
-            p.maxValue !== undefined && p.maxValue !== '' && p.maxValue !== null ? p.maxValue : (p.max_value !== undefined && p.max_value !== '' && p.max_value !== null ? p.max_value : null),
+            inputType,
+            dropdownOptions,
+            getValue(p.minValue, p.min_value),
+            getValue(p.maxValue, p.max_value),
             p.ageGroup || p.age_group || 'Universal',
             p.gender || 'Universal',
-            p.refMinMale !== undefined && p.refMinMale !== '' && p.refMinMale !== null ? p.refMinMale : (p.ref_min_male !== undefined && p.ref_min_male !== '' && p.ref_min_male !== null ? p.ref_min_male : null),
-            p.refMaxMale !== undefined && p.refMaxMale !== '' && p.refMaxMale !== null ? p.refMaxMale : (p.ref_max_male !== undefined && p.ref_max_male !== '' && p.ref_max_male !== null ? p.ref_max_male : null),
-            p.refMinFemale !== undefined && p.refMinFemale !== '' && p.refMinFemale !== null ? p.refMinFemale : (p.ref_min_female !== undefined && p.ref_min_female !== '' && p.ref_min_female !== null ? p.ref_min_female : null),
-            p.refMaxFemale !== undefined && p.refMaxFemale !== '' && p.refMaxFemale !== null ? p.refMaxFemale : (p.ref_max_female !== undefined && p.ref_max_female !== '' && p.ref_max_female !== null ? p.ref_max_female : null),
-            p.refMinChild !== undefined && p.refMinChild !== '' && p.refMinChild !== null ? p.refMinChild : (p.ref_min_child !== undefined && p.ref_min_child !== '' && p.ref_min_child !== null ? p.ref_min_child : null),
-            p.refMaxChild !== undefined && p.refMaxChild !== '' && p.refMaxChild !== null ? p.refMaxChild : (p.ref_max_child !== undefined && p.ref_max_child !== '' && p.ref_max_child !== null ? p.ref_max_child : null)
+            getValue(p.refMinMale, p.ref_min_male),
+            getValue(p.refMaxMale, p.ref_max_male),
+            getValue(p.refMinFemale, p.ref_min_female),
+            getValue(p.refMaxFemale, p.ref_max_female),
+            getValue(p.refMinChild, p.ref_min_child),
+            getValue(p.refMaxChild, p.ref_max_child)
           ]);
         }
       }

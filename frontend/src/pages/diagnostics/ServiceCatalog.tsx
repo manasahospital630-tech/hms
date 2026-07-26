@@ -127,7 +127,15 @@ export const ServiceCatalog: React.FC = () => {
       ]);
 
       if (catsRes.data.success) setCategories(catsRes.data.data);
-      if (servsRes.data.success) setServices(servsRes.data.data);
+      if (servsRes.data.success) {
+        const freshServices = servsRes.data.data;
+        setServices(freshServices);
+        setSelectedParamService((prev: any) => {
+          if (!prev) return null;
+          const updated = freshServices.find((s: any) => s.service_id === prev.service_id);
+          return updated || prev;
+        });
+      }
       if (pkgsRes.data.success) setPackages(pkgsRes.data.data);
       if (settingsRes.data.success) setHospitalSettings(settingsRes.data.data);
     } catch (err: any) {
@@ -1188,21 +1196,21 @@ export const ServiceCatalog: React.FC = () => {
     setModalError('');
 
     const finalParams = (serviceForm.parameters || []).map((p: any) => ({
-      name: p.name,
-      unit: p.unit || '',
-      referenceRange: p.referenceRange || p.reference_range || '',
-      inputType: p.inputType || 'Number',
-      dropdownOptions: p.dropdownOptions || '',
-      minValue: p.minValue || null,
-      maxValue: p.maxValue || null,
-      ageGroup: p.ageGroup || 'Universal',
+      name: (p.name || '').trim(),
+      unit: p.unit !== undefined ? p.unit : '',
+      referenceRange: p.referenceRange !== undefined ? p.referenceRange : (p.reference_range !== undefined ? p.reference_range : ''),
+      inputType: p.inputType || p.input_type || 'Number',
+      dropdownOptions: p.dropdownOptions !== undefined ? p.dropdownOptions : (p.dropdown_options || ''),
+      minValue: p.minValue !== undefined && p.minValue !== '' && p.minValue !== null ? p.minValue : null,
+      maxValue: p.maxValue !== undefined && p.maxValue !== '' && p.maxValue !== null ? p.maxValue : null,
+      ageGroup: p.ageGroup || p.age_group || 'Universal',
       gender: p.gender || 'Universal',
-      refMinMale: p.refMinMale || null,
-      refMaxMale: p.refMaxMale || null,
-      refMinFemale: p.refMinFemale || null,
-      refMaxFemale: p.refMaxFemale || null,
-      refMinChild: p.refMinChild || null,
-      refMaxChild: p.refMaxChild || null
+      refMinMale: p.refMinMale !== undefined && p.refMinMale !== '' && p.refMinMale !== null ? p.refMinMale : null,
+      refMaxMale: p.refMaxMale !== undefined && p.refMaxMale !== '' && p.refMaxMale !== null ? p.refMaxMale : null,
+      refMinFemale: p.refMinFemale !== undefined && p.refMinFemale !== '' && p.refMinFemale !== null ? p.refMinFemale : null,
+      refMaxFemale: p.refMaxFemale !== undefined && p.refMaxFemale !== '' && p.refMaxFemale !== null ? p.refMaxFemale : null,
+      refMinChild: p.refMinChild !== undefined && p.refMinChild !== '' && p.refMinChild !== null ? p.refMinChild : null,
+      refMaxChild: p.refMaxChild !== undefined && p.refMaxChild !== '' && p.refMaxChild !== null ? p.refMaxChild : null
     }));
 
     const payload = {
