@@ -433,14 +433,14 @@ const SalesHistory: React.FC = () => {
                   ${getHospitalLogoHtml(hospitalDetails?.hospital_logo, 60)}
                 </td>
                 <td class="header-center">
-                  <h1>${hospitalDetails?.hospital_name || 'Hannah Hospitals India Pvt. Ltd.'}</h1>
-                  <p>${hospitalDetails?.hospital_address || '44-617/12, Adjacent to BSNL Exchange, Nacharam, Secunderabad - 500076'}</p>
-                  <p>Phone: ${hospitalDetails?.phone_number || '040 - 68244555, 88012 33333'} | Web: ${hospitalDetails?.website || 'https://hannahhospitals.in'} | Email: ${hospitalDetails?.email || 'info@hannahhospitals.in'}</p>
+                  <h1>${hospitalDetails?.hospital_name || 'MANASA HOSPITAL'}</h1>
+                  <p>${hospitalDetails?.hospital_address || 'Market Lane, Narsingi, Gandipet Mandal Rangareddy Dist - 500089'}</p>
+                  <p>Phone: ${hospitalDetails?.phone_number || 'Ph: 7386301348'} | Web: ${hospitalDetails?.website || 'www.manasahospital.co.in'} | Email: ${hospitalDetails?.email || 'info@manasahospital.co.in'}</p>
                   ${hospitalDetails?.gstin ? `<p style="margin-top: 4px;"><strong>GSTIN: ${hospitalDetails.gstin}</strong></p>` : ''}
                 </td>
                 <td class="header-stamp">
                   <div class="stamp-box">
-                    REG NO: PR-2026/8508
+                    REG NO: ${hospitalDetails?.license_info || 'PR-2026/8508'}
                   </div>
                 </td>
               </tr>
@@ -507,7 +507,7 @@ const SalesHistory: React.FC = () => {
               <div class="rx-box">
                 <strong>R<sub>x</sub></strong>
                 <div>
-                  Thank you for choosing Hannah Hospitals Pharmacy. Please consult your physician before taking any medicine.
+                  Thank you for choosing ${hospitalDetails?.hospital_name ? (hospitalDetails.hospital_name.toLowerCase().includes('pharmacy') ? hospitalDetails.hospital_name : `${hospitalDetails.hospital_name} Pharmacy`) : 'MANASA HOSPITAL Pharmacy'}. Please consult your physician before taking any medicine.
                   <div class="count-box">
                     TOTAL ITEMS: <strong>${items.length}</strong> | TOTAL QTY: <strong>${totalQty}</strong>
                   </div>

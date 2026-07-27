@@ -578,14 +578,14 @@ const MedicineSales: React.FC = () => {
                   ${getHospitalLogoHtml(hospitalDetails?.hospital_logo, 60)}
                 </td>
                 <td class="header-center">
-                  <h1>${hospitalDetails?.hospital_name || 'Hannah Hospitals India Pvt. Ltd.'}</h1>
-                  <p>${hospitalDetails?.hospital_address || '44-617/12, Adjacent to BSNL Exchange, Nacharam, Secunderabad - 500076'}</p>
-                  <p>Phone: ${hospitalDetails?.phone_number || '040 - 68244555, 88012 33333'} | Web: ${hospitalDetails?.website || 'https://hannahhospitals.in'} | Email: ${hospitalDetails?.email || 'info@hannahhospitals.in'}</p>
+                  <h1>${hospitalDetails?.hospital_name || 'MANASA HOSPITAL'}</h1>
+                  <p>${hospitalDetails?.hospital_address || 'Market Lane, Narsingi, Gandipet Mandal Rangareddy Dist - 500089'}</p>
+                  <p>Phone: ${hospitalDetails?.phone_number || 'Ph: 7386301348'} | Web: ${hospitalDetails?.website || 'www.manasahospital.co.in'} | Email: ${hospitalDetails?.email || 'info@manasahospital.co.in'}</p>
                   ${hospitalDetails?.gstin ? `<p style="margin-top: 4px;"><strong>GSTIN: ${hospitalDetails.gstin}</strong></p>` : ''}
                 </td>
                 <td class="header-stamp">
                   <div class="stamp-box">
-                    REG NO: PR-2026/8508
+                    REG NO: ${hospitalDetails?.license_info || 'PR-2026/8508'}
                   </div>
                 </td>
               </tr>
@@ -628,18 +628,18 @@ const MedicineSales: React.FC = () => {
             <table class="items-table">
               <thead>
                 <tr>
-                  <th style="width: 5%; text-align: center;">S.No</th>
-                  <th style="width: 25%;">Medicine Name</th>
-                  <th style="width: 20%;">Composition</th>
-                  <th style="width: 10%; text-align: center;">HSN Code</th>
-                  <th style="width: 10%;">Batch No.</th>
-                  <th style="width: 8%; text-align: center;">Expiry</th>
-                  <th style="width: 5%; text-align: center;">Qty</th>
-                  <th style="width: 8%; text-align: center;">Unit</th>
-                  <th style="width: 8%;" class="text-right">MRP (₹)</th>
-                  <th style="width: 8%;" class="text-right">Disc (₹)</th>
-                  <th style="width: 8%;" class="text-right">Rate (₹)</th>
-                  <th style="width: 10%;" class="text-right">Amount (₹)</th>
+                  <th style="width: 6%;">S.NO</th>
+                  <th style="width: 24%;">MEDICINE NAME</th>
+                  <th style="width: 20%;">COMPOSITION</th>
+                  <th style="width: 10%;">HSN CODE</th>
+                  <th style="width: 14%;">BATCH NO.</th>
+                  <th style="width: 10%;">EXPIRY</th>
+                  <th style="width: 6%;" class="text-center">QTY</th>
+                  <th style="width: 8%;">UNIT</th>
+                  <th style="width: 10%;" class="text-right">MRP (₹)</th>
+                  <th style="width: 8%;" class="text-right">DISC (₹)</th>
+                  <th style="width: 8%;" class="text-right">RATE (₹)</th>
+                  <th style="width: 10%;" class="text-right">AMOUNT (₹)</th>
                 </tr>
               </thead>
               <tbody>
@@ -652,7 +652,7 @@ const MedicineSales: React.FC = () => {
               <div class="rx-box">
                 <strong>R<sub>x</sub></strong>
                 <div>
-                  Thank you for choosing Hannah Hospitals Pharmacy. Please consult your physician before taking any medicine.
+                  Thank you for choosing ${hospitalDetails?.hospital_name ? (hospitalDetails.hospital_name.toLowerCase().includes('pharmacy') ? hospitalDetails.hospital_name : `${hospitalDetails.hospital_name} Pharmacy`) : 'MANASA HOSPITAL Pharmacy'}. Please consult your physician before taking any medicine.
                   <div class="count-box">
                     TOTAL ITEMS: <strong>${items.length}</strong> | TOTAL QTY: <strong>${totalQty}</strong>
                   </div>
