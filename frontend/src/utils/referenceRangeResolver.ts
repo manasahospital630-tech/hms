@@ -31,8 +31,26 @@ export interface ParameterRefInfo {
 /**
  * Calculates patient age in years from patient object.
  */
-export const getPatientAgeInYears = (patient?: PatientInfo | null): number => {
+export const getPatientAgeInYears = (patient?: PatientInfo | any | null): number => {
   if (!patient) return 25; // Default to adult if unspecified
+
+  const rawAge = patient.age !== undefined && patient.age !== null ? patient.age : patient.patient_age;
+  if (rawAge !== undefined && rawAge !== null) {
+    const ageStr = rawAge.toString().trim().toLowerCase();
+    if (ageStr === 'child' || ageStr.includes('child') || ageStr.includes('pediatric')) {
+      return 10;
+    }
+    const numericPart = parseFloat(ageStr);
+    if (!isNaN(numericPart)) {
+      if (ageStr.includes('m') || ageStr.includes('month')) {
+        return numericPart / 12;
+      }
+      if (ageStr.includes('d') || ageStr.includes('day')) {
+        return numericPart / 365;
+      }
+      return numericPart;
+    }
+  }
 
   const dob = patient.dob || patient.date_of_birth || patient.patient_birth_date || patient.birth_date;
   if (dob) {
@@ -48,19 +66,8 @@ export const getPatientAgeInYears = (patient?: PatientInfo | null): number => {
     }
   }
 
-  const rawAge = patient.age !== undefined && patient.age !== null ? patient.age : patient.patient_age;
-  if (rawAge !== undefined && rawAge !== null) {
-    const ageStr = rawAge.toString().trim().toLowerCase();
-    const numericPart = parseFloat(ageStr);
-    if (!isNaN(numericPart)) {
-      if (ageStr.includes('m') || ageStr.includes('month')) {
-        return numericPart / 12;
-      }
-      if (ageStr.includes('d') || ageStr.includes('day')) {
-        return numericPart / 365;
-      }
-      return numericPart;
-    }
+  if (patient.ageGroup === 'Child' || patient.age_group === 'Child') {
+    return 10;
   }
 
   return 25; // Fallback to adult

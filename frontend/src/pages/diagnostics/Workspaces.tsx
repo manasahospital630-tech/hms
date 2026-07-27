@@ -201,16 +201,25 @@ export const Workspaces: React.FC = () => {
   };
 
   const renderParameterInput = (p: any) => {
-    const iType = p.input_type || 'Number';
+    const pKey = p.parameter_id || p.parameterId || p.name || 'param';
+    const val = paramValues[pKey] !== undefined ? paramValues[pKey] : (p.name ? (paramValues[p.name] || '') : '');
+    const iType = p.input_type || p.inputType || 'Number';
     
     if (iType === 'Dropdown') {
-      const opts = (p.dropdown_options || '').split(',').map((opt: string) => opt.trim()).filter(Boolean);
+      const opts = (p.dropdown_options || p.dropdownOptions || '').split(',').map((opt: string) => opt.trim()).filter(Boolean);
       return (
         <select
           className="select"
           required
-          value={paramValues[p.parameter_id] || ''}
-          onChange={(e) => setParamValues({ ...paramValues, [p.parameter_id]: e.target.value })}
+          value={val}
+          onChange={(e) => {
+            const newV = e.target.value;
+            setParamValues((prev: any) => {
+              const updated = { ...prev, [pKey]: newV };
+              if (p.name) updated[p.name] = newV;
+              return updated;
+            });
+          }}
           style={{ height: '28px', padding: '0 8px', fontSize: '12px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', width: '100%', borderRadius: '6px' }}
         >
           <option value="">Select Result</option>
@@ -226,8 +235,15 @@ export const Workspaces: React.FC = () => {
         type="text"
         className="input" 
         required
-        value={paramValues[p.parameter_id] || ''} 
-        onChange={(e) => setParamValues({ ...paramValues, [p.parameter_id]: e.target.value })}
+        value={val} 
+        onChange={(e) => {
+          const newV = e.target.value;
+          setParamValues((prev: any) => {
+            const updated = { ...prev, [pKey]: newV };
+            if (p.name) updated[p.name] = newV;
+            return updated;
+          });
+        }}
         placeholder={iType === 'Number' ? 'Numeric/Text Value' : 'Text Result'}
         style={{ height: '28px', padding: '4px 8px', fontSize: '12px', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', borderRadius: '6px', width: '100%' }}
       />
@@ -312,26 +328,35 @@ export const Workspaces: React.FC = () => {
 
     // Initialize parameter values
     const initialParams: { [key: string]: string } = {};
+    const setVal = (pKey: string, pName: string, val: string) => {
+      if (pKey) initialParams[pKey] = val;
+      if (pName) initialParams[pName] = val;
+    };
+
     if (isPkg) {
       item.items.forEach((pItem: any) => {
         if (pItem.result_parameters && Array.isArray(pItem.result_parameters) && pItem.result_parameters.length > 0) {
           pItem.result_parameters.forEach((rp: any) => {
-            initialParams[rp.parameter_id] = rp.actual_value || '';
+            setVal(rp.parameter_id, rp.parameter_name || rp.name, rp.actual_value || '');
           });
-        } else if (pItem.parameters && Array.isArray(pItem.parameters)) {
+        }
+        if (pItem.parameters && Array.isArray(pItem.parameters)) {
           pItem.parameters.forEach((p: any) => {
-            initialParams[p.parameter_id] = '';
+            const existing = initialParams[p.parameter_id] || initialParams[p.name] || '';
+            setVal(p.parameter_id, p.name, existing);
           });
         }
       });
     } else if (firstItem) {
       if (firstItem.result_parameters && Array.isArray(firstItem.result_parameters) && firstItem.result_parameters.length > 0) {
         firstItem.result_parameters.forEach((rp: any) => {
-          initialParams[rp.parameter_id] = rp.actual_value || '';
+          setVal(rp.parameter_id, rp.parameter_name || rp.name, rp.actual_value || '');
         });
-      } else if (firstItem.parameters && Array.isArray(firstItem.parameters)) {
+      }
+      if (firstItem.parameters && Array.isArray(firstItem.parameters)) {
         firstItem.parameters.forEach((p: any) => {
-          initialParams[p.parameter_id] = '';
+          const existing = initialParams[p.parameter_id] || initialParams[p.name] || '';
+          setVal(p.parameter_id, p.name, existing);
         });
       }
     }
@@ -624,6 +649,11 @@ export const Workspaces: React.FC = () => {
           patientMrn: o.medical_record_number,
           patientAge: o.patient_age || o.age,
           patientGender: o.patient_gender || o.gender,
+          patient: {
+            dob: o.patient_birth_date || o.birth_date,
+            age: o.patient_age || o.age,
+            gender: o.patient_gender || o.gender
+          },
           priority: o.priority,
           clinicalNotes: o.clinical_notes,
           diagnosis: o.diagnosis,
@@ -643,6 +673,11 @@ export const Workspaces: React.FC = () => {
           patientMrn: o.medical_record_number,
           patientAge: o.patient_age || o.age,
           patientGender: o.patient_gender || o.gender,
+          patient: {
+            dob: o.patient_birth_date || o.birth_date,
+            age: o.patient_age || o.age,
+            gender: o.patient_gender || o.gender
+          },
           priority: o.priority,
           clinicalNotes: o.clinical_notes,
           diagnosis: o.diagnosis,
