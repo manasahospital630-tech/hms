@@ -102,7 +102,7 @@ export const PublicReportView: React.FC = () => {
   const email = hospitalSettings?.email || 'info@hannahhospitals.in';
   const gstin = hospitalSettings?.gstin || '36AABCU2450J1ZD';
   const licenseInfo = hospitalSettings?.license_info || 'PR-2026/8508';
-  const logoUrl = hospitalSettings?.hospital_logo || null;
+  const logoUrl = hospitalSettings?.hospital_logo || hospitalSettings?.logo_url || hospitalSettings?.logo || null;
 
   const dateObj = new Date(report.created_at);
   const pad = (n: number) => n.toString().padStart(2, '0');
@@ -380,8 +380,22 @@ export const PublicReportView: React.FC = () => {
                 <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '8px' }}>
                   <tbody>
                     <tr>
-                      <td style={{ width: '75px', verticalAlign: 'middle', padding: 0 }}>
-                        <ManasaLogoSvg size={70} />
+                      <td style={{ width: '120px', verticalAlign: 'middle', padding: 0 }}>
+                        {logoUrl ? (
+                          <img 
+                            src={logoUrl} 
+                            alt={hospitalName} 
+                            style={{ height: '70px', maxWidth: '140px', objectFit: 'contain', display: 'block' }} 
+                            onError={(e) => {
+                              (e.target as HTMLElement).style.display = 'none';
+                              const fallback = (e.target as HTMLElement).nextElementSibling as HTMLElement;
+                              if (fallback) fallback.style.display = 'block';
+                            }}
+                          />
+                        ) : null}
+                        <div style={{ display: logoUrl ? 'none' : 'block' }}>
+                          <ManasaLogoSvg size={70} />
+                        </div>
                       </td>
                       <td style={{ verticalAlign: 'middle', paddingLeft: '15px', paddingRight: '15px' }}>
                         <h1 style={{ fontSize: '22px', fontWeight: 800, color: '#0f172a', margin: '0 0 4px 0', lineHeight: 1.1 }}>{hospitalName}</h1>

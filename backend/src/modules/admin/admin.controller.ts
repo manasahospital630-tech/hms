@@ -100,6 +100,7 @@ export const getHospitalSettingsPublic = async (req: any, res: Response, next: N
     const publicSettings = {
       hospital_name: settings.hospital_name,
       hospital_logo: settings.hospital_logo,
+      logo_url: settings.hospital_logo,
       theme: settings.theme || 'dark',
       website: settings.website,
       hospital_address: settings.hospital_address,
