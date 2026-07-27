@@ -194,12 +194,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
   };
 
   const isPathAllowed = (path?: string) => {
-    if (!path || !permissions || user?.role === 'Admin') return true;
+    if (!path) return true;
+    // If no permissions matrix at all, allow everything (user has no RBAC assigned)
+    if (!permissions || Object.keys(permissions).length === 0) return true;
     const modKey = pathToModuleKey[path];
     if (!modKey) return true;
     const perm = permissions[modKey];
+    // No specific permission entry for this module → allow by default
     if (!perm) return true;
-    // If explicitly hidden, never show — even if can_view might be true (defensive)
+    // If explicitly hidden, never render in sidebar — applies to ALL roles including Admin
     if (perm.is_hidden) return false;
     return Boolean(perm.can_view);
   };

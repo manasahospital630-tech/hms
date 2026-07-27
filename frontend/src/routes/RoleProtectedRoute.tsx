@@ -35,7 +35,6 @@ const routeToModuleKey: Record<string, string> = {
 };
 
 const getModuleKeyForPath = (pathname: string): string | null => {
-  // Try exact match first, then prefix match
   if (routeToModuleKey[pathname]) return routeToModuleKey[pathname];
   const prefix = Object.keys(routeToModuleKey).find(k => pathname.startsWith(k));
   return prefix ? routeToModuleKey[prefix] : null;
@@ -52,19 +51,18 @@ export const RoleProtectedRoute: React.FC<{ permittedRoles: string[] }> = ({ per
   const allowedRoles = permittedRoles.map(r => r.trim().toUpperCase());
 
   const isRoleAllowed = userRole === 'ADMIN' || userRole === 'SUPER_ADMIN' || userRole === 'MANAGEMENT' || allowedRoles.includes(userRole);
-
   if (!isRoleAllowed) return <Navigate to="/unauthorized" replace />;
 
-  // RBAC: Check if this route's module is hidden for the user
-  // Skip check for admins and if no permissions matrix available
+  // RBAC is_hidden / can_view check — applies to ALL roles including Admin.
+  // Only skip if no permissions matrix is set at all (unassigned user).
   const permissions = (user as any)?.permissions;
-  if (permissions && userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN' && userRole !== 'MANAGEMENT') {
+  if (permissions && Object.keys(permissions).length > 0) {
     const modKey = getModuleKeyForPath(location.pathname);
     if (modKey) {
       const perm = permissions[modKey];
       if (perm) {
         if (perm.is_hidden) {
-          // Module is explicitly hidden — redirect to dashboard with state
+          // Module explicitly hidden → redirect to dashboard with access-denied banner
           return <Navigate to="/dashboard" replace state={{ accessDenied: true, reason: 'hidden' }} />;
         }
         if (perm.can_view === false) {
