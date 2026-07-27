@@ -13,6 +13,7 @@ import { Badge } from '../../components/ui/Badge';
 import { Modal } from '../../components/ui/Modal';
 import api from '../../api/client';
 import { formatDateTime } from '../../utils/formatters';
+import RoleMatrixManagement from './RoleMatrixManagement';
 
 const CATEGORY_OPTIONS = [
   'Clinical',
@@ -700,46 +701,7 @@ const SystemSettings: React.FC = () => {
       {/* TAB 3: SECURITY ROLES & RBAC MATRIX */}
       {/* ------------------------------------------------------------------------- */}
       {activeTab === 'security' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-          
-          <div>
-            <h2 style={{ fontSize: '18px', fontWeight: 700, margin: 0 }}>🛡️ Security Roles & Role-Based Access Control (RBAC) Matrix</h2>
-            <p style={{ color: 'var(--text-secondary)', fontSize: '13px', margin: '2px 0 0 0' }}>
-              System roles, assigned capabilities, security boundaries, and user allocations
-            </p>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))', gap: '16px' }}>
-            {SECURITY_ROLES_INFO.map(roleItem => (
-              <div key={roleItem.role} style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', borderRadius: '12px', padding: '18px', boxShadow: '0 2px 8px rgba(0,0,0,0.03)' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                  <span style={{ fontWeight: 800, fontSize: '16px', color: roleItem.color, background: roleItem.bg, padding: '4px 12px', borderRadius: '6px' }}>
-                    {roleItem.role}
-                  </span>
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                    {roleItem.userCount} Users
-                  </span>
-                </div>
-
-                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: '0 0 12px 0', lineHeight: 1.5 }}>
-                  {roleItem.description}
-                </p>
-
-                <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '6px' }}>
-                  Key Role Capabilities:
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                  {roleItem.permissions.map((perm, pIdx) => (
-                    <span key={pIdx} style={{ fontSize: '11px', background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', padding: '2px 8px', borderRadius: '4px', color: 'var(--text-primary)' }}>
-                      ✓ {perm}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-
-        </div>
+        <RoleMatrixManagement />
       )}
 
       {/* ------------------------------------------------------------------------- */}

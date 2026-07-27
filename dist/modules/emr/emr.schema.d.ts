@@ -94,12 +94,12 @@ export declare const addDiagnosisSchema: z.ZodObject<{
     description: z.ZodString;
     isPrimary: z.ZodDefault<z.ZodOptional<z.ZodBoolean>>;
 }, "strip", z.ZodTypeAny, {
-    icdCode: string;
     description: string;
+    icdCode: string;
     isPrimary: boolean;
 }, {
-    icdCode: string;
     description: string;
+    icdCode: string;
     isPrimary?: boolean | undefined;
 }>;
 export type CreateEncounterInput = z.infer<typeof createEncounterSchema>;

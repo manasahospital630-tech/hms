@@ -8,6 +8,7 @@ export declare const loginUser: (input: LoginInput) => Promise<{
         first_name: any;
         last_name: any;
         role: any;
+        permissions: Record<string, any>;
     };
 }>;
 export declare const getUserProfile: (userId: string) => Promise<any>;

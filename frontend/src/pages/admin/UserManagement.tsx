@@ -74,11 +74,19 @@ const UserManagement: React.FC = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const [dynamicRoles, setDynamicRoles] = useState<any[]>([]);
+
   const fetchData = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/admin/users?search=${encodeURIComponent(search)}&limit=200`);
-      setUsers(res.data.data?.users || []);
+      const [userRes, rolesRes] = await Promise.all([
+        api.get(`/admin/users?search=${encodeURIComponent(search)}&limit=200`),
+        api.get('/admin/roles').catch(() => ({ data: { data: [] } }))
+      ]);
+      setUsers(userRes.data.data?.users || []);
+      if (rolesRes.data.data && rolesRes.data.data.length > 0) {
+        setDynamicRoles(rolesRes.data.data);
+      }
     } catch (err: any) {
       console.error('Failed to fetch users:', err);
     } finally {
@@ -243,7 +251,10 @@ const UserManagement: React.FC = () => {
             style={{ width: '100%', background: 'var(--bg-card)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)', padding: '8px 12px', borderRadius: '8px' }}
           >
             <option value="">All Staff Roles</option>
-            {ROLE_OPTIONS.map((r) => (
+            {(dynamicRoles.length > 0
+              ? dynamicRoles.map((r: any) => ({ value: r.role_name, label: `${r.role_name}${r.is_system_role ? '' : ' (Custom)'}` }))
+              : ROLE_OPTIONS
+            ).map((r) => (
               <option key={r.value} value={r.value}>{r.label}</option>
             ))}
           </select>
@@ -419,7 +430,10 @@ const UserManagement: React.FC = () => {
                       required
                       style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
                     >
-                      {ROLE_OPTIONS.map((r) => (
+                      {(dynamicRoles.length > 0
+                        ? dynamicRoles.map((r: any) => ({ value: r.role_name, label: `${r.role_name}${r.is_system_role ? '' : ' (Custom Security Role)'}` }))
+                        : ROLE_OPTIONS
+                      ).map((r) => (
                         <option key={r.value} value={r.value}>{r.label}</option>
                       ))}
                     </select>

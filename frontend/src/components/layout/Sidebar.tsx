@@ -163,7 +163,54 @@ interface SidebarProps { collapsed: boolean; onToggle: () => void; }
 
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
   const { user } = useAuth();
-  const items = navByRole[user?.role || 'Patient'] || [];
+  const baseItems = navByRole[user?.role || ''] || navByRole['Admin'];
+  const permissions = (user as any)?.permissions || null;
+
+  const pathToModuleKey: Record<string, string> = {
+    '/admin/dashboard': 'dashboard',
+    '/admin/users': 'admin_users',
+    '/admin/settings': 'admin_master_config',
+    '/reception/register': 'patients_reg',
+    '/reception/patients': 'patients_history',
+    '/reception/opcheckin': 'op_checkin',
+    '/reception/appointments': 'appointments_booking',
+    '/reception/queue': 'appointments_queues',
+    '/doctor/emergency': 'emergency_mgmt',
+    '/doctor/dashboard': 'doctor_opd',
+    '/doctor/history': 'patient_timeline',
+    '/inpatient/admission': 'ipd_admission',
+    '/inpatient/dashboard': 'ipd_billing',
+    '/inpatient/beds': 'ipd_billing',
+    '/diagnostics/dashboard': 'diag_dashboard',
+    '/diagnostics/workspaces': 'diag_workspaces',
+    '/diagnostics/catalog': 'diag_catalog',
+    '/diagnostics/billing': 'diag_ref_ranges',
+    '/diagnostics/equipment': 'diag_equipment',
+    '/pharmacy/inventory': 'pharmacy_inventory',
+    '/pharmacy/dispense': 'pharmacy_sales',
+    '/pharmacy/sales': 'pharmacy_sales',
+    '/billing/invoices': 'billing_financials',
+    '/billing/payments': 'billing_financials'
+  };
+
+  const isPathAllowed = (path?: string) => {
+    if (!path || !permissions || user?.role === 'Admin') return true;
+    const modKey = pathToModuleKey[path];
+    if (!modKey) return true;
+    const perm = permissions[modKey];
+    if (!perm) return true;
+    return Boolean(perm.can_view);
+  };
+
+  const items = baseItems.map(item => {
+    if (item.children) {
+      const allowedChildren = item.children.filter(child => isPathAllowed(child.path));
+      if (allowedChildren.length === 0) return null;
+      return { ...item, children: allowedChildren };
+    }
+    if (!isPathAllowed(item.path)) return null;
+    return item;
+  }).filter(Boolean) as NavItem[];
   
   // Track expanded state of dropdown items
   const [expandedMenus, setExpandedMenus] = React.useState<Record<string, boolean>>({

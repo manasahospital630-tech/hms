@@ -8,6 +8,7 @@ const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const database_1 = require("../../config/database");
 const jwt_1 = require("../../config/jwt");
 const errorHandler_1 = require("../../middleware/errorHandler");
+const rbac_service_1 = require("../admin/rbac.service");
 const SALT_ROUNDS = 12;
 const registerUser = async (input) => {
     // Check if email already exists
@@ -48,6 +49,7 @@ const loginUser = async (input) => {
             first_name: user.first_name,
             last_name: user.last_name,
             role: user.role,
+            permissions: await (0, rbac_service_1.getUserPermissionMatrix)(user.user_id)
         },
     };
 };
@@ -58,7 +60,12 @@ const getUserProfile = async (userId) => {
     if (result.rows.length === 0) {
         throw new errorHandler_1.AppError('User not found.', 404);
     }
-    return result.rows[0];
+    const user = result.rows[0];
+    const permissions = await (0, rbac_service_1.getUserPermissionMatrix)(user.user_id);
+    return {
+        ...user,
+        permissions
+    };
 };
 exports.getUserProfile = getUserProfile;
 //# sourceMappingURL=auth.service.js.map

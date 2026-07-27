@@ -55,5 +55,14 @@ router.get('/hospital-settings/public', ctrl.getHospitalSettingsPublic);
 router.get('/hospital-settings', authenticateJWT, enforceRBAC(['Admin', 'Receptionist', 'Biller', 'Pharmacist']), ctrl.getHospitalSettings);
 router.put('/hospital-settings', authenticateJWT, enforceRBAC(['Admin']), auditLogger('UPDATE', 'HospitalSettings'), ctrl.updateHospitalSettings);
 
+import * as rbacCtrl from './rbac.controller';
+
+router.get('/modules', authenticateJWT, rbacCtrl.getModulesMaster);
+router.get('/roles', authenticateJWT, rbacCtrl.getRoles);
+router.get('/roles/:id', authenticateJWT, rbacCtrl.getRoleById);
+router.post('/roles', authenticateJWT, enforceRBAC(['Admin']), auditLogger('CREATE', 'SecurityRole'), rbacCtrl.createRole);
+router.put('/roles/:id', authenticateJWT, enforceRBAC(['Admin']), auditLogger('UPDATE', 'SecurityRole'), rbacCtrl.updateRole);
+router.delete('/roles/:id', authenticateJWT, enforceRBAC(['Admin']), auditLogger('DELETE', 'SecurityRole'), rbacCtrl.deleteRole);
+
 // Route registrations completed
 export default router;

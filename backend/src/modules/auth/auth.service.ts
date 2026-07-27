@@ -3,6 +3,7 @@ import { query } from '../../config/database';
 import { generateToken } from '../../config/jwt';
 import { RegisterInput, LoginInput } from './auth.schema';
 import { AppError } from '../../middleware/errorHandler';
+import { getUserPermissionMatrix } from '../admin/rbac.service';
 
 const SALT_ROUNDS = 12;
 
@@ -60,6 +61,7 @@ export const loginUser = async (input: LoginInput) => {
       first_name: user.first_name,
       last_name: user.last_name,
       role: user.role,
+      permissions: await getUserPermissionMatrix(user.user_id)
     },
   };
 };
@@ -75,5 +77,11 @@ export const getUserProfile = async (userId: string) => {
     throw new AppError('User not found.', 404);
   }
 
-  return result.rows[0];
+  const user = result.rows[0];
+  const permissions = await getUserPermissionMatrix(user.user_id);
+
+  return {
+    ...user,
+    permissions
+  };
 };

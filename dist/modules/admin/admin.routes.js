@@ -81,6 +81,13 @@ router.post('/doctor-profiles', authenticate_1.authenticateJWT, (0, rbacHandler_
 router.get('/hospital-settings/public', ctrl.getHospitalSettingsPublic);
 router.get('/hospital-settings', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin', 'Receptionist', 'Biller', 'Pharmacist']), ctrl.getHospitalSettings);
 router.put('/hospital-settings', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin']), (0, auditLogger_1.auditLogger)('UPDATE', 'HospitalSettings'), ctrl.updateHospitalSettings);
+const rbacCtrl = __importStar(require("./rbac.controller"));
+router.get('/modules', authenticate_1.authenticateJWT, rbacCtrl.getModulesMaster);
+router.get('/roles', authenticate_1.authenticateJWT, rbacCtrl.getRoles);
+router.get('/roles/:id', authenticate_1.authenticateJWT, rbacCtrl.getRoleById);
+router.post('/roles', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin']), (0, auditLogger_1.auditLogger)('CREATE', 'SecurityRole'), rbacCtrl.createRole);
+router.put('/roles/:id', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin']), (0, auditLogger_1.auditLogger)('UPDATE', 'SecurityRole'), rbacCtrl.updateRole);
+router.delete('/roles/:id', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Admin']), (0, auditLogger_1.auditLogger)('DELETE', 'SecurityRole'), rbacCtrl.deleteRole);
 // Route registrations completed
 exports.default = router;
 //# sourceMappingURL=admin.routes.js.map
