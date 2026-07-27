@@ -9,6 +9,7 @@ export interface PermissionMatrixItem {
     can_delete: boolean;
     can_append: boolean;
     can_append_to: boolean;
+    is_hidden: boolean;
     custom_permissions?: Record<string, boolean>;
 }
 export interface CreateRoleInput {

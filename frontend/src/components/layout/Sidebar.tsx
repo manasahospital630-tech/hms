@@ -199,6 +199,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     if (!modKey) return true;
     const perm = permissions[modKey];
     if (!perm) return true;
+    // If explicitly hidden, never show — even if can_view might be true (defensive)
+    if (perm.is_hidden) return false;
     return Boolean(perm.can_view);
   };
 

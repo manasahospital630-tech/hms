@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Plus, Edit2, Trash2, CheckSquare, Square, RefreshCw, CheckCircle, AlertCircle, Save, X, Search, Layers, Lock, UserCheck } from 'lucide-react';
+import { Shield, Plus, Edit2, Trash2, CheckSquare, Square, RefreshCw, CheckCircle, AlertCircle, Save, X, Search, Layers, Lock, UserCheck, EyeOff } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import api from '../../api/client';
@@ -15,6 +15,7 @@ interface PermissionItem {
   can_delete: boolean;
   can_append: boolean;
   can_append_to: boolean;
+  is_hidden: boolean;
   custom_permissions?: Record<string, boolean>;
 }
 
@@ -83,6 +84,7 @@ export const RoleMatrixManagement: React.FC = () => {
       can_delete: false,
       can_append: false,
       can_append_to: false,
+      is_hidden: false,
       custom_permissions: {
         view_timeline: false,
         approve_bills: false,
@@ -119,6 +121,7 @@ export const RoleMatrixManagement: React.FC = () => {
           can_delete: found ? found.can_delete : false,
           can_append: found ? found.can_append : false,
           can_append_to: found ? found.can_append_to : false,
+          is_hidden: found ? (found.is_hidden || false) : false,
           custom_permissions: found?.custom_permissions || {
             view_timeline: false,
             approve_bills: false,
@@ -153,7 +156,26 @@ export const RoleMatrixManagement: React.FC = () => {
   const handleTogglePermission = (moduleId: string, field: keyof PermissionItem) => {
     setPermissionMatrix(prev => prev.map(item => {
       if (item.module_id === moduleId) {
-        return { ...item, [field]: !item[field] };
+        const newVal = !item[field];
+        // When toggling is_hidden ON: clear all other permissions
+        if (field === 'is_hidden' && newVal === true) {
+          return {
+            ...item,
+            is_hidden: true,
+            can_view: false,
+            can_create: false,
+            can_edit: false,
+            can_delete: false,
+            can_append: false,
+            can_append_to: false,
+            custom_permissions: { view_timeline: false, approve_bills: false, modify_clinical_notes: false, print_reports: false }
+          };
+        }
+        // When toggling a CRUD perm ON: auto-clear is_hidden
+        if (field !== 'is_hidden' && newVal === true && item.is_hidden) {
+          return { ...item, [field]: newVal, is_hidden: false };
+        }
+        return { ...item, [field]: newVal };
       }
       return item;
     }));
@@ -186,6 +208,7 @@ export const RoleMatrixManagement: React.FC = () => {
           can_delete: state,
           can_append: state,
           can_append_to: state,
+          is_hidden: false,
           custom_permissions: {
             view_timeline: state,
             approve_bills: state,
@@ -216,6 +239,7 @@ export const RoleMatrixManagement: React.FC = () => {
       can_delete: true,
       can_append: true,
       can_append_to: true,
+      is_hidden: false,
       custom_permissions: {
         view_timeline: true,
         approve_bills: true,
@@ -234,12 +258,23 @@ export const RoleMatrixManagement: React.FC = () => {
       can_delete: false,
       can_append: false,
       can_append_to: false,
+      is_hidden: false,
       custom_permissions: {
         view_timeline: false,
         approve_bills: false,
         modify_clinical_notes: false,
         print_reports: false
       }
+    })));
+  };
+
+  const handleHideAll = () => {
+    setPermissionMatrix(prev => prev.map(item => ({
+      ...item,
+      can_view: false, can_create: false, can_edit: false,
+      can_delete: false, can_append: false, can_append_to: false,
+      is_hidden: true,
+      custom_permissions: { view_timeline: false, approve_bills: false, modify_clinical_notes: false, print_reports: false }
     })));
   };
 
@@ -418,12 +453,15 @@ export const RoleMatrixManagement: React.FC = () => {
 
                 {/* Matrix Action Bar */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
                     <Button type="button" variant="secondary" size="sm" onClick={handleSelectAll}>
                       Select All Permissions
                     </Button>
                     <Button type="button" variant="secondary" size="sm" onClick={handleDeselectAll}>
                       Deselect All
+                    </Button>
+                    <Button type="button" variant="secondary" size="sm" icon={<EyeOff size={13} />} onClick={handleHideAll} style={{ color: '#f97316', borderColor: 'rgba(249,115,22,0.3)' }}>
+                      Hide All Menus
                     </Button>
                   </div>
                   <div style={{ width: '260px', position: 'relative' }}>
@@ -476,6 +514,12 @@ export const RoleMatrixManagement: React.FC = () => {
                               APPEND TO
                             </button>
                           </th>
+                          <th style={{ padding: '10px 8px', textTransform: 'uppercase', textAlign: 'center', color: '#f97316', fontWeight: 800, fontSize: '11px', whiteSpace: 'nowrap' }}>
+                            <button type="button" onClick={() => handleToggleColumn('is_hidden')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#f97316', fontWeight: 800, fontSize: '11px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <EyeOff size={13} />
+                              HIDE MENU
+                            </button>
+                          </th>
                           <th style={{ padding: '10px 14px', textTransform: 'uppercase', width: '220px' }}>SPECIAL SCOPES</th>
                           <th style={{ padding: '10px 8px', textAlign: 'center' }}>ROW TOGGLE</th>
                         </tr>
@@ -499,60 +543,84 @@ export const RoleMatrixManagement: React.FC = () => {
                               </tr>
                               {catItems.map((p) => {
                                 const isRowAll = p.can_view && p.can_create && p.can_edit && p.can_delete && p.can_append && p.can_append_to;
+                                const rowStyle: React.CSSProperties = {
+                                  borderBottom: '1px solid var(--border-primary)',
+                                  background: p.is_hidden ? 'rgba(249,115,22,0.05)' : 'transparent',
+                                  opacity: p.is_hidden ? 0.75 : 1
+                                };
                                 return (
-                                  <tr key={p.module_id} style={{ borderBottom: '1px solid var(--border-primary)' }}>
+                                  <tr key={p.module_id} style={rowStyle}>
                                     <td style={{ padding: '10px 14px', fontWeight: 600 }}>
-                                      {p.module_name}
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        {p.is_hidden && <span title="Hidden from sidebar"><EyeOff size={13} color="#f97316" /></span>}
+                                        {p.module_name}
+                                      </div>
                                     </td>
                                     <td style={{ textAlign: 'center', padding: '8px' }}>
                                       <input 
                                         type="checkbox" 
-                                        checked={p.can_view} 
+                                        checked={p.can_view && !p.is_hidden} 
+                                        disabled={p.is_hidden}
                                         onChange={() => handleTogglePermission(p.module_id, 'can_view')} 
-                                        style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--accent-primary)' }}
+                                        style={{ width: '16px', height: '16px', cursor: p.is_hidden ? 'not-allowed' : 'pointer', accentColor: 'var(--accent-primary)', opacity: p.is_hidden ? 0.4 : 1 }}
                                       />
                                     </td>
                                     <td style={{ textAlign: 'center', padding: '8px' }}>
                                       <input 
                                         type="checkbox" 
-                                        checked={p.can_create} 
+                                        checked={p.can_create && !p.is_hidden} 
+                                        disabled={p.is_hidden}
                                         onChange={() => handleTogglePermission(p.module_id, 'can_create')} 
-                                        style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--accent-primary)' }}
+                                        style={{ width: '16px', height: '16px', cursor: p.is_hidden ? 'not-allowed' : 'pointer', accentColor: 'var(--accent-primary)', opacity: p.is_hidden ? 0.4 : 1 }}
                                       />
                                     </td>
                                     <td style={{ textAlign: 'center', padding: '8px' }}>
                                       <input 
                                         type="checkbox" 
-                                        checked={p.can_edit} 
+                                        checked={p.can_edit && !p.is_hidden} 
+                                        disabled={p.is_hidden}
                                         onChange={() => handleTogglePermission(p.module_id, 'can_edit')} 
-                                        style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--accent-primary)' }}
+                                        style={{ width: '16px', height: '16px', cursor: p.is_hidden ? 'not-allowed' : 'pointer', accentColor: 'var(--accent-primary)', opacity: p.is_hidden ? 0.4 : 1 }}
                                       />
                                     </td>
                                     <td style={{ textAlign: 'center', padding: '8px' }}>
                                       <input 
                                         type="checkbox" 
-                                        checked={p.can_delete} 
+                                        checked={p.can_delete && !p.is_hidden} 
+                                        disabled={p.is_hidden}
                                         onChange={() => handleTogglePermission(p.module_id, 'can_delete')} 
-                                        style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#ef4444' }}
+                                        style={{ width: '16px', height: '16px', cursor: p.is_hidden ? 'not-allowed' : 'pointer', accentColor: '#ef4444', opacity: p.is_hidden ? 0.4 : 1 }}
                                       />
                                     </td>
                                     <td style={{ textAlign: 'center', padding: '8px' }}>
                                       <input 
                                         type="checkbox" 
-                                        checked={p.can_append} 
+                                        checked={p.can_append && !p.is_hidden} 
+                                        disabled={p.is_hidden}
                                         onChange={() => handleTogglePermission(p.module_id, 'can_append')} 
-                                        style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--accent-primary)' }}
+                                        style={{ width: '16px', height: '16px', cursor: p.is_hidden ? 'not-allowed' : 'pointer', accentColor: 'var(--accent-primary)', opacity: p.is_hidden ? 0.4 : 1 }}
                                       />
                                     </td>
                                     <td style={{ textAlign: 'center', padding: '8px' }}>
                                       <input 
                                         type="checkbox" 
-                                        checked={p.can_append_to} 
+                                        checked={p.can_append_to && !p.is_hidden} 
+                                        disabled={p.is_hidden}
                                         onChange={() => handleTogglePermission(p.module_id, 'can_append_to')} 
-                                        style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: 'var(--accent-primary)' }}
+                                        style={{ width: '16px', height: '16px', cursor: p.is_hidden ? 'not-allowed' : 'pointer', accentColor: 'var(--accent-primary)', opacity: p.is_hidden ? 0.4 : 1 }}
                                       />
                                     </td>
-                                    <td style={{ padding: '8px 14px' }}>
+                                    {/* HIDE MENU Column */}
+                                    <td style={{ textAlign: 'center', padding: '8px' }}>
+                                      <input 
+                                        type="checkbox" 
+                                        checked={p.is_hidden} 
+                                        onChange={() => handleTogglePermission(p.module_id, 'is_hidden')} 
+                                        style={{ width: '16px', height: '16px', cursor: 'pointer', accentColor: '#f97316' }}
+                                        title="Hide this module from sidebar navigation"
+                                      />
+                                    </td>
+                                    <td style={{ padding: '8px 14px', opacity: p.is_hidden ? 0.4 : 1 }}>
                                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                         {['view_timeline', 'approve_bills', 'modify_clinical_notes', 'print_reports'].map((customKey) => {
                                           const labelMap: Record<string, string> = {
@@ -561,12 +629,13 @@ export const RoleMatrixManagement: React.FC = () => {
                                             modify_clinical_notes: 'Modify Notes',
                                             print_reports: 'Print Reports'
                                           };
-                                          const isChecked = Boolean(p.custom_permissions?.[customKey]);
+                                          const isChecked = Boolean(p.custom_permissions?.[customKey]) && !p.is_hidden;
                                           return (
-                                            <label key={customKey} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', cursor: 'pointer', background: isChecked ? 'rgba(59, 130, 246, 0.1)' : 'transparent', padding: '2px 6px', borderRadius: '4px', border: `1px solid ${isChecked ? 'rgba(59, 130, 246, 0.3)' : 'var(--border-primary)'}` }}>
+                                            <label key={customKey} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px', fontSize: '11px', cursor: p.is_hidden ? 'not-allowed' : 'pointer', background: isChecked ? 'rgba(59, 130, 246, 0.1)' : 'transparent', padding: '2px 6px', borderRadius: '4px', border: `1px solid ${isChecked ? 'rgba(59, 130, 246, 0.3)' : 'var(--border-primary)'}` }}>
                                               <input 
                                                 type="checkbox" 
                                                 checked={isChecked} 
+                                                disabled={p.is_hidden}
                                                 onChange={() => handleToggleCustomPermission(p.module_id, customKey)} 
                                                 style={{ width: '12px', height: '12px' }}
                                               />
@@ -580,10 +649,11 @@ export const RoleMatrixManagement: React.FC = () => {
                                       <button 
                                         type="button" 
                                         onClick={() => handleToggleRow(p.module_id, !isRowAll)}
-                                        style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: isRowAll ? '#10b981' : 'var(--text-muted)' }}
+                                        disabled={p.is_hidden}
+                                        style={{ background: 'transparent', border: 'none', cursor: p.is_hidden ? 'not-allowed' : 'pointer', color: isRowAll && !p.is_hidden ? '#10b981' : 'var(--text-muted)', opacity: p.is_hidden ? 0.4 : 1 }}
                                         title={isRowAll ? 'Deselect Row' : 'Select Row All'}
                                       >
-                                        {isRowAll ? <CheckSquare size={16} /> : <Square size={16} />}
+                                        {isRowAll && !p.is_hidden ? <CheckSquare size={16} /> : <Square size={16} />}
                                       </button>
                                     </td>
                                   </tr>

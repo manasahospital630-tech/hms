@@ -11,6 +11,7 @@ export interface PermissionMatrixItem {
   can_delete: boolean;
   can_append: boolean;
   can_append_to: boolean;
+  is_hidden: boolean;
   custom_permissions?: Record<string, boolean>;
 }
 
@@ -65,6 +66,7 @@ export const getRoleById = async (roleId: string) => {
       COALESCE(rp.can_delete, false) as can_delete,
       COALESCE(rp.can_append, false) as can_append,
       COALESCE(rp.can_append_to, false) as can_append_to,
+      COALESCE(rp.is_hidden, false) as is_hidden,
       COALESCE(rp.custom_permissions, '{}'::jsonb) as custom_permissions
     FROM modules_master mm
     LEFT JOIN role_permissions rp ON mm.module_id = rp.module_id AND rp.role_id = $1
@@ -90,9 +92,10 @@ export const createRole = async (input: CreateRoleInput) => {
 
   if (permissions && Array.isArray(permissions)) {
     for (const p of permissions) {
+      const hidden = p.is_hidden || false;
       await query(`
-        INSERT INTO role_permissions (role_id, module_id, can_view, can_create, can_edit, can_delete, can_append, can_append_to, custom_permissions)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        INSERT INTO role_permissions (role_id, module_id, can_view, can_create, can_edit, can_delete, can_append, can_append_to, is_hidden, custom_permissions)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         ON CONFLICT (role_id, module_id) DO UPDATE SET
           can_view = EXCLUDED.can_view,
           can_create = EXCLUDED.can_create,
@@ -100,17 +103,19 @@ export const createRole = async (input: CreateRoleInput) => {
           can_delete = EXCLUDED.can_delete,
           can_append = EXCLUDED.can_append,
           can_append_to = EXCLUDED.can_append_to,
+          is_hidden = EXCLUDED.is_hidden,
           custom_permissions = EXCLUDED.custom_permissions;
       `, [
         role.role_id,
         p.module_id,
-        p.can_view || false,
-        p.can_create || false,
-        p.can_edit || false,
-        p.can_delete || false,
-        p.can_append || false,
-        p.can_append_to || false,
-        JSON.stringify(p.custom_permissions || {})
+        hidden ? false : (p.can_view || false),
+        hidden ? false : (p.can_create || false),
+        hidden ? false : (p.can_edit || false),
+        hidden ? false : (p.can_delete || false),
+        hidden ? false : (p.can_append || false),
+        hidden ? false : (p.can_append_to || false),
+        hidden,
+        JSON.stringify(hidden ? {} : (p.custom_permissions || {}))
       ]);
     }
   }
@@ -133,9 +138,10 @@ export const updateRole = async (roleId: string, input: Partial<CreateRoleInput>
 
   if (permissions && Array.isArray(permissions)) {
     for (const p of permissions) {
+      const hidden = p.is_hidden || false;
       await query(`
-        INSERT INTO role_permissions (role_id, module_id, can_view, can_create, can_edit, can_delete, can_append, can_append_to, custom_permissions)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        INSERT INTO role_permissions (role_id, module_id, can_view, can_create, can_edit, can_delete, can_append, can_append_to, is_hidden, custom_permissions)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         ON CONFLICT (role_id, module_id) DO UPDATE SET
           can_view = EXCLUDED.can_view,
           can_create = EXCLUDED.can_create,
@@ -143,18 +149,20 @@ export const updateRole = async (roleId: string, input: Partial<CreateRoleInput>
           can_delete = EXCLUDED.can_delete,
           can_append = EXCLUDED.can_append,
           can_append_to = EXCLUDED.can_append_to,
+          is_hidden = EXCLUDED.is_hidden,
           custom_permissions = EXCLUDED.custom_permissions,
           updated_at = NOW();
       `, [
         roleId,
         p.module_id,
-        p.can_view || false,
-        p.can_create || false,
-        p.can_edit || false,
-        p.can_delete || false,
-        p.can_append || false,
-        p.can_append_to || false,
-        JSON.stringify(p.custom_permissions || {})
+        hidden ? false : (p.can_view || false),
+        hidden ? false : (p.can_create || false),
+        hidden ? false : (p.can_edit || false),
+        hidden ? false : (p.can_delete || false),
+        hidden ? false : (p.can_append || false),
+        hidden ? false : (p.can_append_to || false),
+        hidden,
+        JSON.stringify(hidden ? {} : (p.custom_permissions || {}))
       ]);
     }
   }
@@ -197,6 +205,7 @@ export const getUserPermissionMatrix = async (userId: string) => {
       bool_or(COALESCE(rp.can_delete, false)) as can_delete,
       bool_or(COALESCE(rp.can_append, false)) as can_append,
       bool_or(COALESCE(rp.can_append_to, false)) as can_append_to,
+      bool_or(COALESCE(rp.is_hidden, false)) as is_hidden,
       jsonb_object_agg(COALESCE(rp.module_id::text, 'default'), COALESCE(rp.custom_permissions, '{}'::jsonb)) as custom_permissions
     FROM user_roles ur
     JOIN role_permissions rp ON ur.role_id = rp.role_id
@@ -208,12 +217,13 @@ export const getUserPermissionMatrix = async (userId: string) => {
   const matrix: Record<string, any> = {};
   res.rows.forEach(r => {
     matrix[r.module_key] = {
-      can_view: r.can_view,
-      can_create: r.can_create,
-      can_edit: r.can_edit,
-      can_delete: r.can_delete,
-      can_append: r.can_append,
-      can_append_to: r.can_append_to,
+      can_view: r.is_hidden ? false : r.can_view,
+      can_create: r.is_hidden ? false : r.can_create,
+      can_edit: r.is_hidden ? false : r.can_edit,
+      can_delete: r.is_hidden ? false : r.can_delete,
+      can_append: r.is_hidden ? false : r.can_append,
+      can_append_to: r.is_hidden ? false : r.can_append_to,
+      is_hidden: r.is_hidden,
       custom_permissions: r.custom_permissions
     };
   });
