@@ -257,7 +257,39 @@ export const editService = async (serviceId: string, input: any) => {
     }
 
     await query('COMMIT');
-    return result.rows[0];
+
+    const updatedRes = await query(`
+      SELECT s.*, c.name as category_name,
+             COALESCE((
+               SELECT json_agg(json_build_object(
+                 'parameter_id', dp.parameter_id,
+                 'name', dp.name,
+                 'unit', dp.unit,
+                 'reference_range', dp.reference_range,
+                 'display_order', dp.display_order,
+                 'input_type', dp.input_type,
+                 'dropdown_options', dp.dropdown_options,
+                 'min_value', dp.min_value,
+                 'max_value', dp.max_value,
+                 'age_group', dp.age_group,
+                 'gender', dp.gender,
+                 'ref_min_male', dp.ref_min_male,
+                 'ref_max_male', dp.ref_max_male,
+                 'ref_min_female', dp.ref_min_female,
+                 'ref_max_female', dp.ref_max_female,
+                 'ref_min_child', dp.ref_min_child,
+                 'ref_max_child', dp.ref_max_child,
+                 'row_type', dp.row_type
+               ) ORDER BY dp.display_order)
+               FROM diagnostic_parameters dp
+               WHERE dp.service_id = s.service_id
+             ), '[]'::json) as parameters
+       FROM diagnostic_services s
+       LEFT JOIN diagnostic_categories c ON s.category_id = c.category_id
+       WHERE s.service_id = $1
+    `, [serviceId]);
+
+    return updatedRes.rows[0];
   } catch (err) {
     await query('ROLLBACK');
     throw err;

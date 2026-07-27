@@ -1,7 +1,26 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.qcLogSchema = exports.referralDoctorSchema = exports.machineSchema = exports.reportVerificationSchema = exports.ecgReportSchema = exports.ultrasoundReportSchema = exports.radiologyReportSchema = exports.labResultSchema = exports.sampleCollectionSchema = exports.orderSchema = exports.packageSchema = exports.serviceSchema = void 0;
+exports.qcLogSchema = exports.referralDoctorSchema = exports.machineSchema = exports.reportVerificationSchema = exports.ecgReportSchema = exports.ultrasoundReportSchema = exports.radiologyReportSchema = exports.labResultSchema = exports.sampleCollectionSchema = exports.orderSchema = exports.packageSchema = exports.serviceSchema = exports.parameterSchema = void 0;
 const zod_1 = require("zod");
+exports.parameterSchema = zod_1.z.object({
+    parameterId: zod_1.z.string().optional().nullable(),
+    name: zod_1.z.string().min(1),
+    unit: zod_1.z.string().optional().nullable(),
+    referenceRange: zod_1.z.string().optional().nullable(),
+    inputType: zod_1.z.string().optional().nullable(),
+    dropdownOptions: zod_1.z.string().optional().nullable(),
+    minValue: zod_1.z.union([zod_1.z.number(), zod_1.z.string()]).optional().nullable(),
+    maxValue: zod_1.z.union([zod_1.z.number(), zod_1.z.string()]).optional().nullable(),
+    ageGroup: zod_1.z.string().optional().nullable(),
+    gender: zod_1.z.string().optional().nullable(),
+    refMinMale: zod_1.z.union([zod_1.z.number(), zod_1.z.string()]).optional().nullable(),
+    refMaxMale: zod_1.z.union([zod_1.z.number(), zod_1.z.string()]).optional().nullable(),
+    refMinFemale: zod_1.z.union([zod_1.z.number(), zod_1.z.string()]).optional().nullable(),
+    refMaxFemale: zod_1.z.union([zod_1.z.number(), zod_1.z.string()]).optional().nullable(),
+    refMinChild: zod_1.z.union([zod_1.z.number(), zod_1.z.string()]).optional().nullable(),
+    refMaxChild: zod_1.z.union([zod_1.z.number(), zod_1.z.string()]).optional().nullable(),
+    rowType: zod_1.z.string().optional().nullable()
+});
 exports.serviceSchema = zod_1.z.object({
     name: zod_1.z.string().min(1),
     categoryId: zod_1.z.string().uuid(),
@@ -9,12 +28,14 @@ exports.serviceSchema = zod_1.z.object({
     price: zod_1.z.number().positive(),
     gstPercentage: zod_1.z.number().nonnegative().default(18.00),
     durationMinutes: zod_1.z.number().positive().default(30),
-    sampleRequired: zod_1.z.string().optional(),
-    normalRange: zod_1.z.string().optional(),
-    machineRequired: zod_1.z.string().optional(),
+    sampleRequired: zod_1.z.string().optional().nullable(),
+    normalRange: zod_1.z.string().optional().nullable(),
+    machineRequired: zod_1.z.string().optional().nullable(),
     homeCollectionAvailable: zod_1.z.boolean().default(false),
     emergencyAvailable: zod_1.z.boolean().default(false),
-    isActive: zod_1.z.boolean().default(true)
+    isActive: zod_1.z.boolean().default(true),
+    reportType: zod_1.z.string().optional().default('Structured'),
+    parameters: zod_1.z.array(exports.parameterSchema).optional()
 });
 exports.packageSchema = zod_1.z.object({
     name: zod_1.z.string().min(1),

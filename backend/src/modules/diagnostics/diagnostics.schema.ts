@@ -1,5 +1,25 @@
 import { z } from 'zod';
 
+export const parameterSchema = z.object({
+  parameterId: z.string().optional().nullable(),
+  name: z.string().min(1),
+  unit: z.string().optional().nullable(),
+  referenceRange: z.string().optional().nullable(),
+  inputType: z.string().optional().nullable(),
+  dropdownOptions: z.string().optional().nullable(),
+  minValue: z.union([z.number(), z.string()]).optional().nullable(),
+  maxValue: z.union([z.number(), z.string()]).optional().nullable(),
+  ageGroup: z.string().optional().nullable(),
+  gender: z.string().optional().nullable(),
+  refMinMale: z.union([z.number(), z.string()]).optional().nullable(),
+  refMaxMale: z.union([z.number(), z.string()]).optional().nullable(),
+  refMinFemale: z.union([z.number(), z.string()]).optional().nullable(),
+  refMaxFemale: z.union([z.number(), z.string()]).optional().nullable(),
+  refMinChild: z.union([z.number(), z.string()]).optional().nullable(),
+  refMaxChild: z.union([z.number(), z.string()]).optional().nullable(),
+  rowType: z.string().optional().nullable()
+});
+
 export const serviceSchema = z.object({
   name: z.string().min(1),
   categoryId: z.string().uuid(),
@@ -7,12 +27,14 @@ export const serviceSchema = z.object({
   price: z.number().positive(),
   gstPercentage: z.number().nonnegative().default(18.00),
   durationMinutes: z.number().positive().default(30),
-  sampleRequired: z.string().optional(),
-  normalRange: z.string().optional(),
-  machineRequired: z.string().optional(),
+  sampleRequired: z.string().optional().nullable(),
+  normalRange: z.string().optional().nullable(),
+  machineRequired: z.string().optional().nullable(),
   homeCollectionAvailable: z.boolean().default(false),
   emergencyAvailable: z.boolean().default(false),
-  isActive: z.boolean().default(true)
+  isActive: z.boolean().default(true),
+  reportType: z.string().optional().default('Structured'),
+  parameters: z.array(parameterSchema).optional()
 });
 
 export const packageSchema = z.object({
