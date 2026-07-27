@@ -1168,7 +1168,27 @@ export const ServiceCatalog: React.FC = () => {
   const handleParameterChange = (index: number, field: string, value: string) => {
     setServiceForm(prev => {
       const updated = [...(prev.parameters || [])];
-      updated[index] = { ...updated[index], [field]: value };
+      const param = { ...updated[index], [field]: value };
+
+      if (['refMinMale', 'refMaxMale', 'refMinFemale', 'refMaxFemale', 'refMinChild', 'refMaxChild'].includes(field)) {
+        const parts = [];
+        const mMin = param.refMinMale;
+        const mMax = param.refMaxMale;
+        const fMin = param.refMinFemale;
+        const fMax = param.refMaxFemale;
+        const cMin = param.refMinChild;
+        const cMax = param.refMaxChild;
+
+        if (mMin || mMax) parts.push(`M: ${mMin || 0}-${mMax || 0}`);
+        if (fMin || fMax) parts.push(`F: ${fMin || 0}-${fMax || 0}`);
+        if (cMin || cMax) parts.push(`Child: ${cMin || 0}-${cMax || 0}`);
+
+        if (parts.length > 0) {
+          param.referenceRange = parts.join(' | ');
+        }
+      }
+
+      updated[index] = param;
       return { ...prev, parameters: updated };
     });
   };
@@ -2354,7 +2374,16 @@ export const ServiceCatalog: React.FC = () => {
                         <td style={{ padding: '8px 12px', color: 'var(--text-muted)' }}>{idx + 1}</td>
                         <td style={{ padding: '8px 12px', fontWeight: 600, color: 'var(--text-primary)' }}>{p.name}</td>
                         <td style={{ padding: '8px 12px', color: 'var(--text-secondary)' }}>{p.unit || '—'}</td>
-                        <td style={{ padding: '8px 12px', fontFamily: 'monospace', color: 'var(--accent-primary)' }}>{p.reference_range || '—'}</td>
+                        <td style={{ padding: '8px 12px', fontFamily: 'monospace', color: 'var(--accent-primary)' }}>
+                          {(() => {
+                            if (p.reference_range && p.reference_range.trim()) return p.reference_range;
+                            const parts = [];
+                            if (p.ref_min_male || p.ref_max_male) parts.push(`M: ${p.ref_min_male || 0}-${p.ref_max_male || 0}`);
+                            if (p.ref_min_female || p.ref_max_female) parts.push(`F: ${p.ref_min_female || 0}-${p.ref_max_female || 0}`);
+                            if (p.ref_min_child || p.ref_max_child) parts.push(`Child: ${p.ref_min_child || 0}-${p.ref_max_child || 0}`);
+                            return parts.length > 0 ? parts.join(' | ') : '—';
+                          })()}
+                        </td>
                       </tr>
                     ))}
                   </tbody>
