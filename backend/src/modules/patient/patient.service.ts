@@ -25,8 +25,8 @@ export const createPatient = async (input: CreatePatientInput) => {
     `INSERT INTO patients (
       user_id, medical_record_number, first_name, last_name, date_of_birth, age, gender,
       blood_group, address, phone, email, emergency_contact_name, emergency_contact_phone,
-      insurance_provider, insurance_policy_number, allergies, assigned_doctor_id
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+      insurance_provider, insurance_policy_number, allergies, assigned_doctor_id, referred_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
     RETURNING *`,
     [
       input.userId || null,
@@ -46,6 +46,7 @@ export const createPatient = async (input: CreatePatientInput) => {
       input.insurancePolicyNumber || null,
       input.allergies || null,
       input.assignedDoctorId || null,
+      input.referredBy || null,
     ]
   );
 
@@ -163,6 +164,7 @@ export const updatePatient = async (patientId: string, input: UpdatePatientInput
     insurancePolicyNumber: 'insurance_policy_number',
     allergies: 'allergies',
     assignedDoctorId: 'assigned_doctor_id',
+    referredBy: 'referred_by',
   };
 
   const setClauses: string[] = [];

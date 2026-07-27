@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { ShoppingCart, Plus, Trash2, IndianRupee, Printer, CheckCircle, Layers, Search } from 'lucide-react';
+import { ShoppingCart, Plus, Trash2, IndianRupee, Printer, CheckCircle, Layers, Search, UserPlus, X } from 'lucide-react';
 import { Card } from '../../components/ui/Card';
 import { Table } from '../../components/ui/Table';
 import { Button } from '../../components/ui/Button';
@@ -103,6 +103,53 @@ const MedicineSales: React.FC = () => {
 
   // Hospital settings
   const [hospitalDetails, setHospitalDetails] = useState<any>(null);
+
+  // Quick Patient Registration Modal state
+  const [showPatientModal, setShowPatientModal] = useState(false);
+  const [regForm, setRegForm] = useState({
+    firstName: '',
+    lastName: '',
+    age: '',
+    ageMonths: '',
+    gender: 'Male',
+    patientCategory: 'Adult',
+    phone: '',
+    bloodGroup: '',
+    address: '',
+    referredBy: ''
+  });
+  const [regLoading, setRegLoading] = useState(false);
+  const [regError, setRegError] = useState('');
+
+  const handleQuickPatientSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setRegLoading(true);
+    setRegError('');
+    try {
+      const formattedAge = regForm.patientCategory === 'Child'
+        ? (regForm.age ? `${regForm.age} Years ${regForm.ageMonths || '0'} Months` : `${regForm.ageMonths || '0'} Months`)
+        : `${regForm.age} Years`;
+
+      const payload = {
+        ...regForm,
+        age: formattedAge
+      };
+
+      const res = await api.post('/patients', payload);
+      if (res.data.success && res.data.data) {
+        setPatient(res.data.data);
+        setShowPatientModal(false);
+        setRegForm({
+          firstName: '', lastName: '', age: '', ageMonths: '', gender: 'Male',
+          patientCategory: 'Adult', phone: '', bloodGroup: '', address: '', referredBy: ''
+        });
+      }
+    } catch (err: any) {
+      setRegError(err.response?.data?.error || 'Failed to register patient.');
+    } finally {
+      setRegLoading(false);
+    }
+  };
 
   // Fetch inventory items & hospital settings on mount
   useEffect(() => {
@@ -771,7 +818,23 @@ const MedicineSales: React.FC = () => {
           {/* Patient Selection */}
           <Card title="1. Select Patient" style={{ position: 'relative', zIndex: 50 }}>
             <div style={{ display: 'grid', gap: 'var(--space-md)' }}>
-              <PatientSearchBar onSelect={(p) => setPatient(p)} />
+              <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+                <div style={{ flex: 1 }}>
+                  <PatientSearchBar
+                    onSelect={(p) => setPatient(p)}
+                    showRegisterOption={true}
+                    onRegisterClick={() => setShowPatientModal(true)}
+                  />
+                </div>
+                <Button
+                  variant="secondary"
+                  type="button"
+                  onClick={() => setShowPatientModal(true)}
+                  style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}
+                >
+                  <UserPlus size={16} /> + Quick Register OP Patient
+                </Button>
+              </div>
               {patient && (
                 <div style={{ padding: 'var(--space-md)', background: 'rgba(255,255,255,0.03)', borderRadius: 'var(--radius)', border: '1px solid var(--border)' }}>
                   <h4 style={{ margin: '0 0 var(--space-sm) 0', color: 'var(--primary)' }}>Patient Information</h4>
@@ -783,6 +846,7 @@ const MedicineSales: React.FC = () => {
                     <div><strong>Phone:</strong> {patient.phone || '—'}</div>
                     <div><strong>Address:</strong> {patient.address || '—'}</div>
                     <div><strong>Blood Group:</strong> {patient.blood_group || '—'}</div>
+                    <div><strong>Referred By:</strong> <span style={{ fontWeight: 600, color: 'var(--accent-primary)' }}>{patient.referred_by || '—'}</span></div>
                     <div><strong>Assigned Doctor:</strong> {patient.doctor_first_name ? `Dr. ${patient.doctor_first_name} ${patient.doctor_last_name}` : 'None'}</div>
                     <div style={{ gridColumn: 'span 2' }}><strong>Allergies:</strong> <span style={{ color: patient.allergies && patient.allergies.toLowerCase() !== 'none' ? 'var(--danger)' : 'inherit' }}>{patient.allergies || 'None'}</span></div>
                   </div>
@@ -1004,6 +1068,143 @@ const MedicineSales: React.FC = () => {
             <Button variant="secondary" onClick={() => setShowReceiptModal(false)}>Close</Button>
           </div>
         </div>
+      </Modal>
+      {/* Quick Patient Registration Modal */}
+      <Modal isOpen={showPatientModal} onClose={() => setShowPatientModal(false)} title="Quick Patient Registration (Pharmacy Sales)" size="lg">
+        <form onSubmit={handleQuickPatientSubmit}>
+          <div style={{ display: 'grid', gap: 'var(--space-md)' }}>
+            {regError && (
+              <div style={{ color: 'var(--accent-danger)', fontSize: 'var(--font-sm)', padding: 'var(--space-sm)', background: 'rgba(239,68,68,0.08)', borderRadius: 'var(--radius-sm)' }}>
+                ⚠️ {regError}
+              </div>
+            )}
+
+            <div style={{ marginBottom: '16px', background: 'var(--bg-primary)', padding: '12px', borderRadius: '8px', border: '1px solid var(--border-primary)' }}>
+              <label style={{ fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', display: 'block', marginBottom: '8px' }}>
+                Patient Category *
+              </label>
+              <div style={{ display: 'flex', gap: '24px', alignItems: 'center' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="pharmacyPatientCategory"
+                    value="Adult"
+                    checked={regForm.patientCategory !== 'Child'}
+                    onChange={() => setRegForm({ ...regForm, patientCategory: 'Adult' })}
+                  />
+                  👨‍💼 Adult (≥ 10 Years)
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>
+                  <input
+                    type="radio"
+                    name="pharmacyPatientCategory"
+                    value="Child"
+                    checked={regForm.patientCategory === 'Child'}
+                    onChange={() => setRegForm({ ...regForm, patientCategory: 'Child' })}
+                  />
+                  👶 Child / Pediatric (&lt; 10 Years)
+                </label>
+              </div>
+            </div>
+
+            <div className="form-row">
+              <Input 
+                label="First Name *" 
+                value={regForm.firstName} 
+                onChange={e => setRegForm({ ...regForm, firstName: e.target.value })} 
+                required 
+              />
+              <Input 
+                label="Last Name *" 
+                value={regForm.lastName} 
+                onChange={e => setRegForm({ ...regForm, lastName: e.target.value })} 
+                required 
+              />
+            </div>
+
+            {regForm.patientCategory === 'Child' ? (
+              <div className="form-row">
+                <Input 
+                  label="Age (Years)" 
+                  type="number" 
+                  min="0"
+                  max="9"
+                  placeholder="e.g. 4"
+                  value={regForm.age} 
+                  onChange={e => setRegForm({ ...regForm, age: e.target.value })} 
+                />
+                <Input 
+                  label="Age (Months) *" 
+                  type="number" 
+                  min="0"
+                  max="11"
+                  placeholder="e.g. 6"
+                  value={regForm.ageMonths} 
+                  onChange={e => setRegForm({ ...regForm, ageMonths: e.target.value })} 
+                  required
+                />
+                <Select 
+                  label="Gender *" 
+                  value={regForm.gender} 
+                  onChange={e => setRegForm({ ...regForm, gender: e.target.value })}
+                  options={[{ value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }, { value: 'Other', label: 'Other' }]} 
+                />
+              </div>
+            ) : (
+              <div className="form-row">
+                <Input 
+                  label="Age (Years) *" 
+                  type="number" 
+                  min="10"
+                  max="120"
+                  placeholder="e.g. 35"
+                  value={regForm.age} 
+                  onChange={e => setRegForm({ ...regForm, age: e.target.value })} 
+                  required 
+                />
+                <Select 
+                  label="Gender *" 
+                  value={regForm.gender} 
+                  onChange={e => setRegForm({ ...regForm, gender: e.target.value })}
+                  options={[{ value: 'Male', label: 'Male' }, { value: 'Female', label: 'Female' }, { value: 'Other', label: 'Other' }]} 
+                />
+              </div>
+            )}
+
+            <div className="form-row">
+              <Input 
+                label="Phone Number" 
+                value={regForm.phone} 
+                onChange={e => setRegForm({ ...regForm, phone: e.target.value })} 
+              />
+              <Select 
+                label="Blood Group" 
+                value={regForm.bloodGroup} 
+                onChange={e => setRegForm({ ...regForm, bloodGroup: e.target.value })}
+                options={[{ value: '', label: '-- Select --' }, ...['A+','A-','B+','B-','AB+','AB-','O+','O-'].map(v => ({ value: v, label: v }))]} 
+              />
+            </div>
+
+            <div className="form-row">
+              <Input 
+                label="Patient Referred By" 
+                value={regForm.referredBy} 
+                onChange={e => setRegForm({ ...regForm, referredBy: e.target.value })} 
+                placeholder="Doctor / Clinic / Source name" 
+              />
+              <Input 
+                label="Address" 
+                value={regForm.address} 
+                onChange={e => setRegForm({ ...regForm, address: e.target.value })} 
+              />
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-md)', marginTop: 'var(--space-md)' }}>
+              <Button type="button" variant="secondary" onClick={() => setShowPatientModal(false)}>Cancel</Button>
+              <Button type="submit" variant="primary" loading={regLoading} icon={<UserPlus size={16} />}>Register & Select Patient</Button>
+            </div>
+          </div>
+        </form>
       </Modal>
     </div>
   );

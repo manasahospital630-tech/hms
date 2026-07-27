@@ -105,7 +105,7 @@ const OPCheckIn: React.FC = () => {
     firstName: '', lastName: '', age: '', gender: 'Male',
     bloodGroup: '', address: '', phone: '', email: '',
     emergencyContactName: '', emergencyContactPhone: '',
-    insuranceProvider: '', insurancePolicyNumber: '', allergies: ''
+    insuranceProvider: '', insurancePolicyNumber: '', allergies: '', referredBy: ''
   });
   const [regLoading, setRegLoading] = useState(false);
   const [regError, setRegError] = useState('');
@@ -231,7 +231,7 @@ const OPCheckIn: React.FC = () => {
           firstName: '', lastName: '', age: '', ageMonths: '', gender: 'Male',
           patientCategory: 'Adult', bloodGroup: '', address: '', phone: '', email: '',
           emergencyContactName: '', emergencyContactPhone: '',
-          insuranceProvider: '', insurancePolicyNumber: '', allergies: ''
+          insuranceProvider: '', insurancePolicyNumber: '', allergies: '', referredBy: ''
         } as any);
       }
     } catch (err: any) {
@@ -1098,11 +1098,19 @@ const OPCheckIn: React.FC = () => {
               />
             </div>
 
-            <Input 
-              label="Address" 
-              value={regForm.address} 
-              onChange={e => setRegForm({ ...regForm, address: e.target.value })} 
-            />
+            <div className="form-row">
+              <Input 
+                label="Patient Referred By" 
+                value={(regForm as any).referredBy || ''} 
+                onChange={e => setRegForm({ ...regForm, referredBy: e.target.value } as any)} 
+                placeholder="Doctor / Clinic / Source name" 
+              />
+              <Input 
+                label="Address" 
+                value={regForm.address} 
+                onChange={e => setRegForm({ ...regForm, address: e.target.value })} 
+              />
+            </div>
 
             <div style={{ border: '1px solid var(--border-primary)', borderRadius: 'var(--radius-md)', padding: 'var(--space-md)', background: 'rgba(255,255,255,0.01)', marginTop: 'var(--space-xs)' }}>
               <strong style={{ display: 'block', fontSize: 'var(--font-sm)', marginBottom: 'var(--space-sm)' }}>Emergency Contact</strong>

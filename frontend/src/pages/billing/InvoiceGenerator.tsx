@@ -73,7 +73,8 @@ const InvoiceGenerator: React.FC = () => {
     patientCategory: 'Adult',
     phone: '',
     bloodGroup: '',
-    address: ''
+    address: '',
+    referredBy: ''
   });
   const [regLoading, setRegLoading] = useState(false);
   const [regError, setRegError] = useState('');
@@ -105,7 +106,8 @@ const InvoiceGenerator: React.FC = () => {
           patientCategory: 'Adult',
           phone: '',
           bloodGroup: '',
-          address: ''
+          address: '',
+          referredBy: ''
         });
       }
     } catch (err: any) {
@@ -1981,9 +1983,15 @@ const InvoiceGenerator: React.FC = () => {
                   </div>
                 </div>
 
-                <div>
-                  <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Address</label>
-                  <input type="text" className="input" value={regForm.address} onChange={e => setRegForm({ ...regForm, address: e.target.value })} placeholder="City, Locality" style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Patient Referred By</label>
+                    <input type="text" className="input" value={regForm.referredBy} onChange={e => setRegForm({ ...regForm, referredBy: e.target.value })} placeholder="Doctor / Clinic / Source" style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Address</label>
+                    <input type="text" className="input" value={regForm.address} onChange={e => setRegForm({ ...regForm, address: e.target.value })} placeholder="City, Locality" style={{ width: '100%', background: 'var(--bg-primary)', color: 'var(--text-primary)' }} />
+                  </div>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '14px', borderTop: '1px solid var(--border-primary)', paddingTop: '16px' }}>

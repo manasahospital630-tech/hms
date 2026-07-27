@@ -17,6 +17,7 @@ export const createPatientSchema = z.object({
   allergies: z.string().optional(),
   userId: z.string().uuid().optional(),
   assignedDoctorId: z.string().uuid().optional().nullable(),
+  referredBy: z.string().max(255).optional(),
 });
 
 export const updatePatientSchema = z.object({
@@ -35,6 +36,7 @@ export const updatePatientSchema = z.object({
   insurancePolicyNumber: z.string().max(100).optional(),
   allergies: z.string().optional(),
   assignedDoctorId: z.string().uuid().optional().nullable(),
+  referredBy: z.string().max(255).optional(),
 });
 
 export type CreatePatientInput = z.infer<typeof createPatientSchema>;

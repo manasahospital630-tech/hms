@@ -25,8 +25,8 @@ const createPatient = async (input) => {
     const result = await (0, database_1.query)(`INSERT INTO patients (
       user_id, medical_record_number, first_name, last_name, date_of_birth, age, gender,
       blood_group, address, phone, email, emergency_contact_name, emergency_contact_phone,
-      insurance_provider, insurance_policy_number, allergies, assigned_doctor_id
-    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)
+      insurance_provider, insurance_policy_number, allergies, assigned_doctor_id, referred_by
+    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18)
     RETURNING *`, [
         input.userId || null,
         mrn,
@@ -45,6 +45,7 @@ const createPatient = async (input) => {
         input.insurancePolicyNumber || null,
         input.allergies || null,
         input.assignedDoctorId || null,
+        input.referredBy || null,
     ]);
     return result.rows[0];
 };
@@ -135,6 +136,7 @@ const updatePatient = async (patientId, input) => {
         insurancePolicyNumber: 'insurance_policy_number',
         allergies: 'allergies',
         assignedDoctorId: 'assigned_doctor_id',
+        referredBy: 'referred_by',
     };
     const setClauses = [];
     const values = [];

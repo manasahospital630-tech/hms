@@ -19,6 +19,7 @@ exports.createPatientSchema = zod_1.z.object({
     allergies: zod_1.z.string().optional(),
     userId: zod_1.z.string().uuid().optional(),
     assignedDoctorId: zod_1.z.string().uuid().optional().nullable(),
+    referredBy: zod_1.z.string().max(255).optional(),
 });
 exports.updatePatientSchema = zod_1.z.object({
     firstName: zod_1.z.string().min(1).max(100).trim().optional(),
@@ -36,5 +37,6 @@ exports.updatePatientSchema = zod_1.z.object({
     insurancePolicyNumber: zod_1.z.string().max(100).optional(),
     allergies: zod_1.z.string().optional(),
     assignedDoctorId: zod_1.z.string().uuid().optional().nullable(),
+    referredBy: zod_1.z.string().max(255).optional(),
 });
 //# sourceMappingURL=patient.schema.js.map

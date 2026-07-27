@@ -16,6 +16,7 @@ export declare const createPatientSchema: z.ZodObject<{
     allergies: z.ZodOptional<z.ZodString>;
     userId: z.ZodOptional<z.ZodString>;
     assignedDoctorId: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    referredBy: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     firstName: string;
     lastName: string;
@@ -33,6 +34,7 @@ export declare const createPatientSchema: z.ZodObject<{
     insurancePolicyNumber?: string | undefined;
     allergies?: string | undefined;
     assignedDoctorId?: string | null | undefined;
+    referredBy?: string | undefined;
 }, {
     firstName: string;
     lastName: string;
@@ -50,6 +52,7 @@ export declare const createPatientSchema: z.ZodObject<{
     insurancePolicyNumber?: string | undefined;
     allergies?: string | undefined;
     assignedDoctorId?: string | null | undefined;
+    referredBy?: string | undefined;
 }>;
 export declare const updatePatientSchema: z.ZodObject<{
     firstName: z.ZodOptional<z.ZodString>;
@@ -67,6 +70,7 @@ export declare const updatePatientSchema: z.ZodObject<{
     insurancePolicyNumber: z.ZodOptional<z.ZodString>;
     allergies: z.ZodOptional<z.ZodString>;
     assignedDoctorId: z.ZodNullable<z.ZodOptional<z.ZodString>>;
+    referredBy: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     email?: string | undefined;
     firstName?: string | undefined;
@@ -83,6 +87,7 @@ export declare const updatePatientSchema: z.ZodObject<{
     insurancePolicyNumber?: string | undefined;
     allergies?: string | undefined;
     assignedDoctorId?: string | null | undefined;
+    referredBy?: string | undefined;
 }, {
     email?: string | undefined;
     firstName?: string | undefined;
@@ -99,6 +104,7 @@ export declare const updatePatientSchema: z.ZodObject<{
     insurancePolicyNumber?: string | undefined;
     allergies?: string | undefined;
     assignedDoctorId?: string | null | undefined;
+    referredBy?: string | undefined;
 }>;
 export type CreatePatientInput = z.infer<typeof createPatientSchema>;
 export type UpdatePatientInput = z.infer<typeof updatePatientSchema>;

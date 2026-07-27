@@ -7,7 +7,7 @@ import { Button } from '../../components/ui/Button';
 import api from '../../api/client';
 
 const PatientRegistration: React.FC = () => {
-  const [form, setForm] = useState({ firstName: '', lastName: '', age: '', ageMonths: '', gender: 'Male', bloodGroup: '', phone: '', email: '', address: '', emergencyContactName: '', emergencyContactPhone: '', insuranceProvider: '', insurancePolicyNumber: '', allergies: '', patientCategory: 'Adult' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', age: '', ageMonths: '', gender: 'Male', bloodGroup: '', phone: '', email: '', address: '', emergencyContactName: '', emergencyContactPhone: '', insuranceProvider: '', insurancePolicyNumber: '', allergies: '', referredBy: '', patientCategory: 'Adult' });
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState<{ mrn: string } | null>(null);
   const [error, setError] = useState('');
@@ -28,7 +28,7 @@ const PatientRegistration: React.FC = () => {
 
       const res = await api.post('/patients', payload);
       setSuccess({ mrn: res.data.data.medical_record_number });
-      setForm({ firstName: '', lastName: '', age: '', ageMonths: '', gender: 'Male', bloodGroup: '', phone: '', email: '', address: '', emergencyContactName: '', emergencyContactPhone: '', insuranceProvider: '', insurancePolicyNumber: '', allergies: '', patientCategory: 'Adult' });
+      setForm({ firstName: '', lastName: '', age: '', ageMonths: '', gender: 'Male', bloodGroup: '', phone: '', email: '', address: '', emergencyContactName: '', emergencyContactPhone: '', insuranceProvider: '', insurancePolicyNumber: '', allergies: '', referredBy: '', patientCategory: 'Adult' });
     } catch (err: any) { setError(err.response?.data?.error || 'Failed to register patient.'); }
     finally { setLoading(false); }
   };
@@ -98,7 +98,10 @@ const PatientRegistration: React.FC = () => {
         <div className="form-section"><div className="form-section-title">Insurance</div>
           <div className="form-row"><Input label="Provider" value={form.insuranceProvider} onChange={set('insuranceProvider')} /><Input label="Policy Number" value={form.insurancePolicyNumber} onChange={set('insurancePolicyNumber')} /></div>
         </div>
-        <div className="form-section"><div className="form-section-title">Medical</div>
+        <div className="form-section"><div className="form-section-title">Medical & Referral Info</div>
+          <div className="form-row" style={{ marginBottom: 'var(--space-md)' }}>
+            <Input label="Patient Referred By (Doctor / Clinic / Source)" value={form.referredBy} onChange={set('referredBy')} placeholder="e.g. Dr. Sharma / Self / Website" />
+          </div>
           <Textarea label="Known Allergies" value={form.allergies} onChange={set('allergies')} placeholder="List any known allergies..." />
         </div>
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 'var(--space-md)', marginTop: 'var(--space-lg)' }}>
