@@ -115,18 +115,16 @@ export const HMSDashboard: React.FC = () => {
   const occupiedStroke = (occupiedPercent / 100) * circumference;
   const availableStroke = (availablePercent / 100) * circumference;
 
-  // Departmental breakdown values for selected filter
+  // Departmental breakdown values for selected filter (Billing + OP only)
   const billingInfo = breakdown?.billing || { revenue: 0, count: 0, paidAmount: 0, pendingAmount: 0 };
   const opdInfo = breakdown?.opd || breakdown?.opConsultations || { revenue: 0, count: 0, completedCount: 0 };
-  const pharmInfo = breakdown?.pharmacy || { revenue: 0, count: 0, paidAmount: 0, pendingAmount: 0 };
   
-  const totalRevBreakdown = breakdown?.totalRevenue || (billingInfo.revenue + opdInfo.revenue + pharmInfo.revenue);
-  const totalTxBreakdown = breakdown?.totalTransactions || (billingInfo.count + opdInfo.count + pharmInfo.count);
-  const totalCollBreakdown = breakdown?.totalCollected || (billingInfo.paidAmount + pharmInfo.paidAmount + opdInfo.revenue);
+  const totalRevBreakdown = breakdown?.totalRevenue || (billingInfo.revenue + opdInfo.revenue);
+  const totalTxBreakdown = breakdown?.totalTransactions || (billingInfo.count + opdInfo.count);
+  const totalCollBreakdown = breakdown?.totalCollected || (billingInfo.paidAmount + opdInfo.revenue);
 
   const billPct = totalRevBreakdown > 0 ? Math.round((billingInfo.revenue / totalRevBreakdown) * 100) : 0;
   const opPct = totalRevBreakdown > 0 ? Math.round((opdInfo.revenue / totalRevBreakdown) * 100) : 0;
-  const pharmPct = totalRevBreakdown > 0 ? Math.round((pharmInfo.revenue / totalRevBreakdown) * 100) : 0;
 
   return (
     <div style={{ padding: '24px', background: 'var(--bg-primary)', minHeight: '100vh', color: 'var(--text-primary)' }}>
@@ -139,7 +137,7 @@ export const HMSDashboard: React.FC = () => {
             Hospital Executive & Revenue Dashboard
           </h1>
           <p style={{ color: 'var(--text-secondary)', margin: '4px 0 0 0', fontSize: '13px' }}>
-            Real-time consolidated tracking for Billing Invoices, OP Check-ins, and Pharmacy Revenue
+            Real-time consolidated tracking for Billing Invoices and OP Check-in Revenue
           </p>
         </div>
         <div style={{ display: 'flex', gap: '10px' }}>
@@ -171,7 +169,7 @@ export const HMSDashboard: React.FC = () => {
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
           <h2 style={{ fontSize: '16px', fontWeight: 700, margin: 0, display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-primary)' }}>
             <DollarSign size={18} color="var(--accent-success)" />
-            Consolidated Revenue Across Timeframes (Billing + OP + Pharmacy)
+            Consolidated Revenue Across Timeframes (Billing + OP)
           </h2>
           <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Fixed Header Cards (Static Overview)</span>
         </div>
@@ -292,7 +290,7 @@ export const HMSDashboard: React.FC = () => {
               Selected Timeframe Analytics Filter
             </h2>
             <p style={{ color: 'var(--text-secondary)', fontSize: '12px', margin: '2px 0 0 0' }}>
-              Filter lower section departmental breakdowns below (Billing, OP Consultations, Pharmacy)
+              Filter lower section departmental breakdowns below (Billing, OP Consultations)
             </p>
           </div>
 
@@ -377,7 +375,7 @@ export const HMSDashboard: React.FC = () => {
                 {formatCurrency(totalRevBreakdown)}
               </div>
               <div style={{ fontSize: '12px', color: 'var(--accent-success)', fontWeight: 700 }}>
-                ✓ {totalTxBreakdown} Total Transactions ({billingInfo.count} Invoices, {opdInfo.count} OP, {pharmInfo.count} Pharmacy)
+                ✓ {totalTxBreakdown} Total Transactions ({billingInfo.count} Invoices, {opdInfo.count} OP Check-ins)
               </div>
             </div>
 
@@ -390,20 +388,17 @@ export const HMSDashboard: React.FC = () => {
               <div style={{ height: '10px', width: '100%', background: 'rgba(0,0,0,0.1)', borderRadius: '5px', overflow: 'hidden', display: 'flex' }}>
                 <div style={{ width: `${billPct}%`, background: '#2563eb' }} title={`Billing: ${billPct}%`} />
                 <div style={{ width: `${opPct}%`, background: '#059669' }} title={`OP Check-ins: ${opPct}%`} />
-                <div style={{ width: `${pharmPct}%`, background: '#9333ea' }} title={`Pharmacy: ${pharmPct}%`} />
               </div>
               <div style={{ display: 'flex', gap: '12px', fontSize: '11px', marginTop: '8px', flexWrap: 'wrap' }}>
                 <span style={{ color: '#2563eb', fontWeight: 700 }}>■ Billing ({billPct}%)</span>
                 <span style={{ color: '#059669', fontWeight: 700 }}>■ OP Check-ins ({opPct}%)</span>
-                <span style={{ color: '#9333ea', fontWeight: 700 }}>■ Pharmacy ({pharmPct}%)</span>
               </div>
             </div>
           </div>
         </div>
 
         {/* ========================================================================= */}
-        {/* SECTION 3: DEPARTMENTAL BREAKDOWN CARDS (Billing + OP + Pharmacy) */}
-        {/* Spec 3: Render three isolated departmental breakdown boxes */}
+        {/* SECTION 3: DEPARTMENTAL BREAKDOWN CARDS (Billing + OP) */}
         {/* ========================================================================= */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
           
@@ -440,24 +435,6 @@ export const HMSDashboard: React.FC = () => {
             <div style={{ fontSize: '11px', color: 'var(--text-secondary)', borderTop: '1px dashed rgba(16,185,129,0.2)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between' }}>
               <span>Completed Visits: <strong>{opdInfo.completedCount || 0}</strong></span>
               <span style={{ color: '#059669', fontWeight: 600 }}>Fees Collected</span>
-            </div>
-          </div>
-
-          {/* Box 3: Pharmacy Revenue Card */}
-          <div style={{ background: 'rgba(147,51,234,0.03)', border: '1px solid rgba(147,51,234,0.2)', borderRadius: '12px', padding: '18px' }}>
-            <div style={{ fontSize: '12px', fontWeight: 700, color: '#9333ea', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-              <Pill size={16} />
-              Pharmacy Sales Revenue
-            </div>
-            <div style={{ fontSize: '24px', fontWeight: 800, color: '#581c87', marginBottom: '4px' }}>
-              {formatCurrency(pharmInfo.revenue)}
-            </div>
-            <div style={{ fontSize: '12px', color: '#9333ea', fontWeight: 700, marginBottom: '8px' }}>
-              • Count: {pharmInfo.count} Pharmacy Invoices
-            </div>
-            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', borderTop: '1px dashed rgba(147,51,234,0.2)', paddingTop: '8px', display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#16a34a', fontWeight: 600 }}>Paid: {formatCurrency(pharmInfo.paidAmount || 0)}</span>
-              <span style={{ color: '#eab308', fontWeight: 600 }}>Ledger: {formatCurrency(pharmInfo.pendingAmount || 0)}</span>
             </div>
           </div>
 
