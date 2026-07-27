@@ -445,7 +445,14 @@ export const getOrders = async () => {
                    'min_value', dp.min_value,
                    'max_value', dp.max_value,
                    'age_group', dp.age_group,
-                   'gender', dp.gender
+                   'gender', dp.gender,
+                   'ref_min_male', dp.ref_min_male,
+                   'ref_max_male', dp.ref_max_male,
+                   'ref_min_female', dp.ref_min_female,
+                   'ref_max_female', dp.ref_max_female,
+                   'ref_min_child', dp.ref_min_child,
+                   'ref_max_child', dp.ref_max_child,
+                   'row_type', dp.row_type
                  ) ORDER BY dp.display_order)
                  FROM diagnostic_parameters dp 
                  WHERE dp.service_id = toi.service_id

@@ -5,6 +5,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import api from '../../api/client';
 import { ManasaLogoSvg, getQrSvgSync } from '../../utils/logoHelper';
+import { resolvePatientReferenceRange } from '../../utils/referenceRangeResolver';
 
 export const PublicReportView: React.FC = () => {
   const { itemId } = useParams<{ itemId: string }>();
@@ -530,10 +531,14 @@ export const PublicReportView: React.FC = () => {
                                     );
                                   }
 
-                                  const refVal = rp.reference_range || refRanges[name.toUpperCase()] || '—';
-                                  const isAbnormal = (rp.status && rp.status !== 'Normal') || checkIsAbnormal(rp.actual_value || rp.actualValue || '', refVal);
-                                  const flagText = rp.status && rp.status !== 'Normal' ? `${rp.status} / ` : (isAbnormal ? 'Abnormal / ' : '');
-                                  const displayVal = rp.actual_value || rp.actualValue || '—';
+                                  const paramDef = (pkgItem.parameters || report.parameters || []).find((p: any) =>
+                                     (p.parameter_id && (p.parameter_id === rp.parameter_id || p.parameter_id === rp.parameterId)) ||
+                                     (p.name && p.name.trim().toLowerCase() === (rp.parameter_name || rp.name || name || '').trim().toLowerCase())
+                                   );
+                                   const refVal = resolvePatientReferenceRange(paramDef || rp, report);
+                                   const isAbnormal = (rp.status && rp.status !== 'Normal') || checkIsAbnormal(rp.actual_value || rp.actualValue || '', refVal);
+                                   const flagText = rp.status && rp.status !== 'Normal' ? `${rp.status} / ` : (isAbnormal ? 'Abnormal / ' : '');
+                                   const displayVal = rp.actual_value || rp.actualValue || '—';
 
                                   return (
                                     <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
@@ -619,8 +624,12 @@ export const PublicReportView: React.FC = () => {
                                        );
                                      }
 
-                                     const refVal = rp.reference_range || refRanges[name.toUpperCase()] || '—';
-                                     const isAbnormal = (rp.status && rp.status !== 'Normal') || checkIsAbnormal(rp.actual_value || rp.actualValue || '', refVal);
+                                      const paramDef = (report.parameters || []).find((p: any) =>
+                                        (p.parameter_id && (p.parameter_id === rp.parameter_id || p.parameter_id === rp.parameterId)) ||
+                                        (p.name && p.name.trim().toLowerCase() === (rp.parameter_name || rp.name || name || '').trim().toLowerCase())
+                                      );
+                                      const refVal = resolvePatientReferenceRange(paramDef || rp, report);
+                                      const isAbnormal = (rp.status && rp.status !== 'Normal') || checkIsAbnormal(rp.actual_value || rp.actualValue || '', refVal);
                                      const flagText = rp.status && rp.status !== 'Normal' ? `${rp.status} / ` : (isAbnormal ? 'Abnormal / ' : '');
                                      return (
                                        <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>

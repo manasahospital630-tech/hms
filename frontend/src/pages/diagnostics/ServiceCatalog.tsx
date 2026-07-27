@@ -4,6 +4,7 @@ import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import api from '../../api/client';
 import { getHospitalLogoHtml, getQrCodeHeaderSyncHtml } from '../../utils/logoHelper';
+import { resolvePatientReferenceRange } from '../../utils/referenceRangeResolver';
 
 export const ServiceCatalog: React.FC = () => {
   const [categories, setCategories] = useState<any[]>([]);
@@ -759,7 +760,11 @@ export const ServiceCatalog: React.FC = () => {
                 `;
               }
 
-              const refVal = rp.reference_range || refRanges[name.toUpperCase()] || '—';
+              const paramDef = (tItem.parameters || []).find((p: any) =>
+                (p.parameter_id && (p.parameter_id === rp.parameter_id || p.parameter_id === rp.parameterId)) ||
+                (p.name && p.name.trim().toLowerCase() === (rp.parameter_name || rp.name || name || '').trim().toLowerCase())
+              );
+              const refVal = resolvePatientReferenceRange(paramDef || rp, item.order || item || tItem);
               const isAbnormal = (rp.status && rp.status !== 'Normal') || checkIsAbnormal(rp.actual_value || rp.actualValue || '', refVal);
               const flagText = rp.status && rp.status !== 'Normal' ? `${rp.status} / ` : (isAbnormal ? 'Abnormal / ' : '');
               const displayVal = rp.actual_value || rp.actualValue || '—';

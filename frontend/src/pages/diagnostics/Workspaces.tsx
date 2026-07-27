@@ -3,6 +3,7 @@ import { Beaker, ShieldAlert, Award, FileText, CheckCircle, RefreshCw, X, AlertT
 import { Card } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
 import api from '../../api/client';
+import { resolvePatientReferenceRange } from '../../utils/referenceRangeResolver';
 
 export const Workspaces: React.FC = () => {
   const [orders, setOrders] = useState<any[]>([]);
@@ -108,26 +109,7 @@ export const Workspaces: React.FC = () => {
   };
 
   const getPatientReferenceRange = (p: any, patientAge: any, patientGender: string) => {
-    const age = parseInt(patientAge || '30', 10);
-    const gender = (patientGender || 'Universal').toLowerCase();
-    
-    if (age < 18) {
-      if (p.ref_min_child !== null && p.ref_max_child !== null && p.ref_min_child !== undefined && p.ref_max_child !== undefined) {
-        return `${p.ref_min_child} - ${p.ref_max_child}`;
-      }
-    } else {
-      if (gender === 'male' || gender === 'm') {
-        if (p.ref_min_male !== null && p.ref_max_male !== null && p.ref_min_male !== undefined && p.ref_max_male !== undefined) {
-          return `${p.ref_min_male} - ${p.ref_max_male}`;
-        }
-      } else if (gender === 'female' || gender === 'f') {
-        if (p.ref_min_female !== null && p.ref_max_female !== null && p.ref_min_female !== undefined && p.ref_max_female !== undefined) {
-          return `${p.ref_min_female} - ${p.ref_max_female}`;
-        }
-      }
-    }
-    
-    return p.reference_range || p.referenceRange || '—';
+    return resolvePatientReferenceRange(p, { age: patientAge, gender: patientGender });
   };
 
   const getAbnormalStatus = (valStr: string, rangeStr: string): 'Normal' | 'Low' | 'High' => {
@@ -1281,7 +1263,11 @@ export const Workspaces: React.FC = () => {
                                     {sParams && sParams.length > 0 ? (
                                       sParams.map((rp: any, idx: number) => {
                                         const rpName = (rp.parameter_name || rp.name || '').toUpperCase();
-                                        const refVal = rp.reference_range && rp.reference_range !== '-' ? rp.reference_range : (refRanges[rpName] || '—');
+                                        const paramDef = (actionItem.item?.parameters || []).find((p: any) =>
+                                          (p.parameter_id && p.parameter_id === rp.parameter_id) ||
+                                          (p.name && p.name.trim().toLowerCase() === (rp.parameter_name || rp.name || '').trim().toLowerCase())
+                                        );
+                                        const refVal = resolvePatientReferenceRange(paramDef || rp, actionItem.patient || { age: actionItem.patientAge, gender: actionItem.patientGender });
                                         const valClean = (rp.actual_value || rp.actualValue || '—').trim();
                                         const isAbnormal = (rp.status && rp.status !== 'Normal') || checkIsAbnormal(valClean, refVal);
                                         const flagUnitStr = isAbnormal ? `Abnormal / ${rp.unit || '%'}` : (rp.unit || '—');
