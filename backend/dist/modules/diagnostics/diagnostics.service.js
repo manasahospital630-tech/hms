@@ -118,11 +118,10 @@ const addService = async (input) => {
                     const inputType = p.inputType || p.input_type || 'Number';
                     const dropdownOptions = p.dropdownOptions !== undefined ? p.dropdownOptions : (p.dropdown_options !== undefined ? p.dropdown_options : null);
                     const rowType = p.rowType || p.row_type || 'parameter';
-                    const getValue = (camel, snake) => {
-                        const val = camel !== undefined ? camel : snake;
-                        if (val === null || val === undefined || val === '')
+                    const getVal = (v) => {
+                        if (v === null || v === undefined || v === '')
                             return null;
-                        return val;
+                        return v.toString().trim();
                     };
                     await (0, database_1.query)(`
             INSERT INTO diagnostic_parameters (
@@ -139,16 +138,16 @@ const addService = async (input) => {
                         i + 1,
                         inputType,
                         dropdownOptions,
-                        getValue(p.minValue, p.min_value),
-                        getValue(p.maxValue, p.max_value),
+                        getVal(p.minValue),
+                        getVal(p.maxValue),
                         p.ageGroup || p.age_group || 'Universal',
                         p.gender || 'Universal',
-                        getValue(p.refMinMale, p.ref_min_male),
-                        getValue(p.refMaxMale, p.ref_max_male),
-                        getValue(p.refMinFemale, p.ref_min_female),
-                        getValue(p.refMaxFemale, p.ref_max_female),
-                        getValue(p.refMinChild, p.ref_min_child),
-                        getValue(p.refMaxChild, p.ref_max_child),
+                        getVal(p.refMinMale),
+                        getVal(p.refMaxMale),
+                        getVal(p.refMinFemale),
+                        getVal(p.refMaxFemale),
+                        getVal(p.refMinChild),
+                        getVal(p.refMaxChild),
                         rowType
                     ]);
                 }
@@ -187,11 +186,10 @@ const editService = async (serviceId, input) => {
                     const inputType = p.inputType || p.input_type || 'Number';
                     const dropdownOptions = p.dropdownOptions !== undefined ? p.dropdownOptions : (p.dropdown_options !== undefined ? p.dropdown_options : null);
                     const rowType = p.rowType || p.row_type || 'parameter';
-                    const getValue = (camel, snake) => {
-                        const val = camel !== undefined ? camel : snake;
-                        if (val === null || val === undefined || val === '')
+                    const getVal = (v) => {
+                        if (v === null || v === undefined || v === '')
                             return null;
-                        return val;
+                        return v.toString().trim();
                     };
                     await (0, database_1.query)(`
             INSERT INTO diagnostic_parameters (
@@ -208,16 +206,16 @@ const editService = async (serviceId, input) => {
                         i + 1,
                         inputType,
                         dropdownOptions,
-                        getValue(p.minValue, p.min_value),
-                        getValue(p.maxValue, p.max_value),
+                        getVal(p.minValue),
+                        getVal(p.maxValue),
                         p.ageGroup || p.age_group || 'Universal',
                         p.gender || 'Universal',
-                        getValue(p.refMinMale, p.ref_min_male),
-                        getValue(p.refMaxMale, p.ref_max_male),
-                        getValue(p.refMinFemale, p.ref_min_female),
-                        getValue(p.refMaxFemale, p.ref_max_female),
-                        getValue(p.refMinChild, p.ref_min_child),
-                        getValue(p.refMaxChild, p.ref_max_child),
+                        getVal(p.refMinMale),
+                        getVal(p.refMaxMale),
+                        getVal(p.refMinFemale),
+                        getVal(p.refMaxFemale),
+                        getVal(p.refMinChild),
+                        getVal(p.refMaxChild),
                         rowType
                     ]);
                 }

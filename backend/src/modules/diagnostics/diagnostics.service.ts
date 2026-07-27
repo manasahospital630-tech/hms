@@ -150,10 +150,9 @@ export const addService = async (input: any) => {
           const dropdownOptions = p.dropdownOptions !== undefined ? p.dropdownOptions : (p.dropdown_options !== undefined ? p.dropdown_options : null);
           const rowType = p.rowType || p.row_type || 'parameter';
 
-          const getValue = (camel: any, snake: any) => {
-            const val = camel !== undefined ? camel : snake;
-            if (val === null || val === undefined || val === '') return null;
-            return val;
+          const getVal = (v: any) => {
+            if (v === null || v === undefined || v === '') return null;
+            return v.toString().trim();
           };
 
           await query(`
@@ -171,16 +170,16 @@ export const addService = async (input: any) => {
             i + 1,
             inputType,
             dropdownOptions,
-            getValue(p.minValue, p.min_value),
-            getValue(p.maxValue, p.max_value),
+            getVal(p.minValue),
+            getVal(p.maxValue),
             p.ageGroup || p.age_group || 'Universal',
             p.gender || 'Universal',
-            getValue(p.refMinMale, p.ref_min_male),
-            getValue(p.refMaxMale, p.ref_max_male),
-            getValue(p.refMinFemale, p.ref_min_female),
-            getValue(p.refMaxFemale, p.ref_max_female),
-            getValue(p.refMinChild, p.ref_min_child),
-            getValue(p.refMaxChild, p.ref_max_child),
+            getVal(p.refMinMale),
+            getVal(p.refMaxMale),
+            getVal(p.refMinFemale),
+            getVal(p.refMaxFemale),
+            getVal(p.refMinChild),
+            getVal(p.refMaxChild),
             rowType
           ]);
         }
@@ -221,10 +220,9 @@ export const editService = async (serviceId: string, input: any) => {
           const dropdownOptions = p.dropdownOptions !== undefined ? p.dropdownOptions : (p.dropdown_options !== undefined ? p.dropdown_options : null);
           const rowType = p.rowType || p.row_type || 'parameter';
 
-          const getValue = (camel: any, snake: any) => {
-            const val = camel !== undefined ? camel : snake;
-            if (val === null || val === undefined || val === '') return null;
-            return val;
+          const getVal = (v: any) => {
+            if (v === null || v === undefined || v === '') return null;
+            return v.toString().trim();
           };
 
           await query(`
@@ -242,16 +240,16 @@ export const editService = async (serviceId: string, input: any) => {
             i + 1,
             inputType,
             dropdownOptions,
-            getValue(p.minValue, p.min_value),
-            getValue(p.maxValue, p.max_value),
+            getVal(p.minValue),
+            getVal(p.maxValue),
             p.ageGroup || p.age_group || 'Universal',
             p.gender || 'Universal',
-            getValue(p.refMinMale, p.ref_min_male),
-            getValue(p.refMaxMale, p.ref_max_male),
-            getValue(p.refMinFemale, p.ref_min_female),
-            getValue(p.refMaxFemale, p.ref_max_female),
-            getValue(p.refMinChild, p.ref_min_child),
-            getValue(p.refMaxChild, p.ref_max_child),
+            getVal(p.refMinMale),
+            getVal(p.refMaxMale),
+            getVal(p.refMinFemale),
+            getVal(p.refMaxFemale),
+            getVal(p.refMinChild),
+            getVal(p.refMaxChild),
             rowType
           ]);
         }
