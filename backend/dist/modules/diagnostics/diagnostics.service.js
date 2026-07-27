@@ -803,6 +803,23 @@ const getPublicReport = async (itemId) => {
       (SELECT row_to_json(rv) FROM report_verifications rv WHERE rv.order_item_id = toi.item_id LIMIT 1) as verification,
       (
         SELECT json_agg(json_build_object(
+          'parameter_id', dp.parameter_id,
+          'name', dp.name,
+          'unit', dp.unit,
+          'reference_range', dp.reference_range,
+          'ref_min_male', dp.ref_min_male,
+          'ref_max_male', dp.ref_max_male,
+          'ref_min_female', dp.ref_min_female,
+          'ref_max_female', dp.ref_max_female,
+          'ref_min_child', dp.ref_min_child,
+          'ref_max_child', dp.ref_max_child,
+          'row_type', dp.row_type
+        ) ORDER BY dp.display_order)
+        FROM diagnostic_parameters dp
+        WHERE dp.service_id = toi.service_id
+      ) as parameters,
+      (
+        SELECT json_agg(json_build_object(
           'result_parameter_id', lrp.result_parameter_id,
           'parameter_id', lrp.parameter_id,
           'name', lrp.parameter_name,
@@ -817,10 +834,11 @@ const getPublicReport = async (itemId) => {
     FROM test_order_items toi
     JOIN test_orders o ON toi.order_id = o.order_id
     JOIN patients p ON o.patient_id = p.patient_id
-    JOIN users u ON o.doctor_id = u.user_id
+    LEFT JOIN users u ON o.doctor_id = u.user_id
     JOIN diagnostic_services ds ON toi.service_id = ds.service_id
     JOIN diagnostic_categories c ON ds.category_id = c.category_id
-    WHERE toi.item_id = $1 AND (toi.status = 'Completed' OR toi.status = 'Verified' OR toi.status = 'Resulted')
+    WHERE (toi.item_id::text = $1 OR o.order_id::text = $1 OR o.order_number = $1)
+    ORDER BY toi.created_at DESC
     LIMIT 1
   `, [itemId]);
     if (result.rows.length === 0)
@@ -849,6 +867,23 @@ const getPublicReport = async (itemId) => {
         (SELECT row_to_json(rv) FROM report_verifications rv WHERE rv.order_item_id = toi.item_id LIMIT 1) as verification,
         (
           SELECT json_agg(json_build_object(
+            'parameter_id', dp.parameter_id,
+            'name', dp.name,
+            'unit', dp.unit,
+            'reference_range', dp.reference_range,
+            'ref_min_male', dp.ref_min_male,
+            'ref_max_male', dp.ref_max_male,
+            'ref_min_female', dp.ref_min_female,
+            'ref_max_female', dp.ref_max_female,
+            'ref_min_child', dp.ref_min_child,
+            'ref_max_child', dp.ref_max_child,
+            'row_type', dp.row_type
+          ) ORDER BY dp.display_order)
+          FROM diagnostic_parameters dp
+          WHERE dp.service_id = toi.service_id
+        ) as parameters,
+        (
+          SELECT json_agg(json_build_object(
             'result_parameter_id', lrp.result_parameter_id,
             'parameter_id', lrp.parameter_id,
             'name', lrp.parameter_name,
@@ -863,21 +898,23 @@ const getPublicReport = async (itemId) => {
       FROM test_order_items toi
       JOIN diagnostic_services ds ON toi.service_id = ds.service_id
       JOIN diagnostic_categories c ON ds.category_id = c.category_id
-      WHERE toi.order_id = (SELECT order_id FROM test_order_items WHERE item_id = $1)
+      WHERE toi.order_id = (SELECT order_id FROM test_order_items WHERE item_id::text = $1 OR order_id::text = $1 LIMIT 1)
         AND toi.package_id = $2
     `, [itemId, item.package_id]);
         packageItems = pkgItemsRes.rows;
     }
-    const cleanId = (item.item_id || 'report').replace(/[^a-zA-Z0-9_-]/g, '_');
-    const s3QrUrl = `https://pamobniywbuloarioxiu.supabase.co/storage/v1/object/public/logos/qr_${cleanId}.png`;
-    const frontendUrl = process.env.FRONTEND_URL || 'https://hms-simon518.vercel.app';
-    const verifyUrl = `${frontendUrl}/verify/reports/${item.item_id}`;
-    (0, s3Upload_1.generateAndUploadQrCode)(verifyUrl, item.item_id).catch(() => { });
-    return {
-        ...item,
-        package_items: packageItems,
-        qr_code_url: s3QrUrl
-    };
+    packageItems = pkgItemsRes.rows;
 };
 exports.getPublicReport = getPublicReport;
+const cleanId = (item.item_id || 'report').replace(/[^a-zA-Z0-9_-]/g, '_');
+const s3QrUrl = `https://pamobniywbuloarioxiu.supabase.co/storage/v1/object/public/logos/qr_${cleanId}.png`;
+const frontendUrl = process.env.FRONTEND_URL || 'https://hms-simon518.vercel.app';
+const verifyUrl = `${frontendUrl}/verify/reports/${item.item_id}`;
+(0, s3Upload_1.generateAndUploadQrCode)(verifyUrl, item.item_id).catch(() => { });
+return {
+    ...item,
+    package_items: packageItems,
+    qr_code_url: s3QrUrl
+};
+;
 //# sourceMappingURL=diagnostics.service.js.map

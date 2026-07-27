@@ -863,6 +863,23 @@ export const getPublicReport = async (itemId: string) => {
       (SELECT row_to_json(rv) FROM report_verifications rv WHERE rv.order_item_id = toi.item_id LIMIT 1) as verification,
       (
         SELECT json_agg(json_build_object(
+          'parameter_id', dp.parameter_id,
+          'name', dp.name,
+          'unit', dp.unit,
+          'reference_range', dp.reference_range,
+          'ref_min_male', dp.ref_min_male,
+          'ref_max_male', dp.ref_max_male,
+          'ref_min_female', dp.ref_min_female,
+          'ref_max_female', dp.ref_max_female,
+          'ref_min_child', dp.ref_min_child,
+          'ref_max_child', dp.ref_max_child,
+          'row_type', dp.row_type
+        ) ORDER BY dp.display_order)
+        FROM diagnostic_parameters dp
+        WHERE dp.service_id = toi.service_id
+      ) as parameters,
+      (
+        SELECT json_agg(json_build_object(
           'result_parameter_id', lrp.result_parameter_id,
           'parameter_id', lrp.parameter_id,
           'name', lrp.parameter_name,
@@ -877,10 +894,11 @@ export const getPublicReport = async (itemId: string) => {
     FROM test_order_items toi
     JOIN test_orders o ON toi.order_id = o.order_id
     JOIN patients p ON o.patient_id = p.patient_id
-    JOIN users u ON o.doctor_id = u.user_id
+    LEFT JOIN users u ON o.doctor_id = u.user_id
     JOIN diagnostic_services ds ON toi.service_id = ds.service_id
     JOIN diagnostic_categories c ON ds.category_id = c.category_id
-    WHERE toi.item_id = $1 AND (toi.status = 'Completed' OR toi.status = 'Verified' OR toi.status = 'Resulted')
+    WHERE (toi.item_id::text = $1 OR o.order_id::text = $1 OR o.order_number = $1)
+    ORDER BY toi.created_at DESC
     LIMIT 1
   `, [itemId]);
 
@@ -911,6 +929,23 @@ export const getPublicReport = async (itemId: string) => {
         (SELECT row_to_json(rv) FROM report_verifications rv WHERE rv.order_item_id = toi.item_id LIMIT 1) as verification,
         (
           SELECT json_agg(json_build_object(
+            'parameter_id', dp.parameter_id,
+            'name', dp.name,
+            'unit', dp.unit,
+            'reference_range', dp.reference_range,
+            'ref_min_male', dp.ref_min_male,
+            'ref_max_male', dp.ref_max_male,
+            'ref_min_female', dp.ref_min_female,
+            'ref_max_female', dp.ref_max_female,
+            'ref_min_child', dp.ref_min_child,
+            'ref_max_child', dp.ref_max_child,
+            'row_type', dp.row_type
+          ) ORDER BY dp.display_order)
+          FROM diagnostic_parameters dp
+          WHERE dp.service_id = toi.service_id
+        ) as parameters,
+        (
+          SELECT json_agg(json_build_object(
             'result_parameter_id', lrp.result_parameter_id,
             'parameter_id', lrp.parameter_id,
             'name', lrp.parameter_name,
@@ -925,9 +960,11 @@ export const getPublicReport = async (itemId: string) => {
       FROM test_order_items toi
       JOIN diagnostic_services ds ON toi.service_id = ds.service_id
       JOIN diagnostic_categories c ON ds.category_id = c.category_id
-      WHERE toi.order_id = (SELECT order_id FROM test_order_items WHERE item_id = $1)
+      WHERE toi.order_id = (SELECT order_id FROM test_order_items WHERE item_id::text = $1 OR order_id::text = $1 LIMIT 1)
         AND toi.package_id = $2
     `, [itemId, item.package_id]);
+    packageItems = pkgItemsRes.rows;
+  }
     packageItems = pkgItemsRes.rows;
   }
 

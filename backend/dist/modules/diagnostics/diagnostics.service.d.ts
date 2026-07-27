@@ -47,5 +47,5 @@ export declare const addQcLog: (input: any, userId: string) => Promise<any>;
 export declare const updateOrderItemStatus: (itemId: string, status: string) => Promise<{
     success: boolean;
 }>;
-export declare const getPublicReport: (itemId: string) => Promise<any>;
+export declare const getPublicReport: (itemId: string) => Promise<null | undefined>;
 //# sourceMappingURL=diagnostics.service.d.ts.map

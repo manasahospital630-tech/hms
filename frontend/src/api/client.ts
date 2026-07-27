@@ -25,7 +25,14 @@ apiClient.interceptors.response.use(
     if (error.response?.status === 401) {
       localStorage.removeItem('hms_token');
       localStorage.removeItem('hms_user');
-      if (window.location.pathname !== '/login') {
+      const currentPath = window.location.pathname;
+      const isPublicPath = 
+        currentPath === '/login' ||
+        currentPath.startsWith('/verify') ||
+        currentPath.startsWith('/reports') ||
+        currentPath.startsWith('/public');
+
+      if (!isPublicPath) {
         window.location.href = '/login';
       }
     }

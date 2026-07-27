@@ -59,6 +59,9 @@ const AppRouter: React.FC = () => (
     <Route path="/login" element={<Login />} />
     <Route path="/unauthorized" element={<Unauthorized />} />
     <Route path="/verify/reports/:itemId" element={<PublicReportView />} />
+    <Route path="/verify/:itemId" element={<PublicReportView />} />
+    <Route path="/reports/:itemId" element={<PublicReportView />} />
+    <Route path="/public/reports/:itemId" element={<PublicReportView />} />
 
     <Route element={<RoleProtectedRoute permittedRoles={['Admin','Management','Doctor','Nurse','Receptionist','Pharmacist','Biller','Patient','Incharge']} />}>
       <Route element={<DashboardLayout />}>
