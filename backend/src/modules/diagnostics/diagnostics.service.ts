@@ -965,8 +965,6 @@ export const getPublicReport = async (itemId: string) => {
     `, [itemId, item.package_id]);
     packageItems = pkgItemsRes.rows;
   }
-    packageItems = pkgItemsRes.rows;
-  }
 
   const cleanId = (item.item_id || 'report').replace(/[^a-zA-Z0-9_-]/g, '_');
   const s3QrUrl = `https://pamobniywbuloarioxiu.supabase.co/storage/v1/object/public/logos/qr_${cleanId}.png`;
