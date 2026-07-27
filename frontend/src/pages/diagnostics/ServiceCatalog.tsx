@@ -1184,7 +1184,9 @@ export const ServiceCatalog: React.FC = () => {
         if (cMin || cMax) parts.push(`Child: ${cMin || 0}-${cMax || 0}`);
 
         if (parts.length > 0) {
-          param.referenceRange = parts.join(' | ');
+          if (!param.referenceRange || param.referenceRange.startsWith('M:') || param.referenceRange.startsWith('F:') || param.referenceRange.startsWith('Child:')) {
+            param.referenceRange = parts.join(' | ');
+          }
         }
       }
 
@@ -1220,24 +1222,42 @@ export const ServiceCatalog: React.FC = () => {
     setModalLoading(true);
     setModalError('');
 
-    const finalParams = (serviceForm.parameters || []).map((p: any) => ({
-      name: (p.name || '').trim(),
-      unit: p.unit !== undefined ? p.unit : '',
-      referenceRange: p.referenceRange !== undefined ? p.referenceRange : (p.reference_range !== undefined ? p.reference_range : ''),
-      inputType: p.inputType || p.input_type || 'Number',
-      dropdownOptions: p.dropdownOptions !== undefined ? p.dropdownOptions : (p.dropdown_options || ''),
-      minValue: p.minValue !== undefined && p.minValue !== '' && p.minValue !== null ? p.minValue : null,
-      maxValue: p.maxValue !== undefined && p.maxValue !== '' && p.maxValue !== null ? p.maxValue : null,
-      ageGroup: p.ageGroup || p.age_group || 'Universal',
-      gender: p.gender || 'Universal',
-      refMinMale: p.refMinMale !== undefined && p.refMinMale !== '' && p.refMinMale !== null ? p.refMinMale : null,
-      refMaxMale: p.refMaxMale !== undefined && p.refMaxMale !== '' && p.refMaxMale !== null ? p.refMaxMale : null,
-      refMinFemale: p.refMinFemale !== undefined && p.refMinFemale !== '' && p.refMinFemale !== null ? p.refMinFemale : null,
-      refMaxFemale: p.refMaxFemale !== undefined && p.refMaxFemale !== '' && p.refMaxFemale !== null ? p.refMaxFemale : null,
-      refMinChild: p.refMinChild !== undefined && p.refMinChild !== '' && p.refMinChild !== null ? p.refMinChild : null,
-      refMaxChild: p.refMaxChild !== undefined && p.refMaxChild !== '' && p.refMaxChild !== null ? p.refMaxChild : null,
-      rowType: p.rowType || p.row_type || 'parameter'
-    }));
+    const finalParams = (serviceForm.parameters || []).map((p: any) => {
+      let refRange = p.referenceRange !== undefined ? p.referenceRange.toString().trim() : (p.reference_range !== undefined ? p.reference_range.toString().trim() : '');
+      let mMin = p.refMinMale !== undefined && p.refMinMale !== '' && p.refMinMale !== null ? p.refMinMale.toString().trim() : null;
+      let mMax = p.refMaxMale !== undefined && p.refMaxMale !== '' && p.refMaxMale !== null ? p.refMaxMale.toString().trim() : null;
+      let fMin = p.refMinFemale !== undefined && p.refMinFemale !== '' && p.refMinFemale !== null ? p.refMinFemale.toString().trim() : null;
+      let fMax = p.refMaxFemale !== undefined && p.refMaxFemale !== '' && p.refMaxFemale !== null ? p.refMaxFemale.toString().trim() : null;
+      let cMin = p.refMinChild !== undefined && p.refMinChild !== '' && p.refMinChild !== null ? p.refMinChild.toString().trim() : null;
+      let cMax = p.refMaxChild !== undefined && p.refMaxChild !== '' && p.refMaxChild !== null ? p.refMaxChild.toString().trim() : null;
+
+      if ((mMin || mMax || fMin || fMax || cMin || cMax) && (!refRange || refRange.startsWith('M:') || refRange.startsWith('F:') || refRange.startsWith('Child:'))) {
+        const parts = [];
+        if (mMin || mMax) parts.push(`M: ${mMin || 0}-${mMax || 0}`);
+        if (fMin || fMax) parts.push(`F: ${fMin || 0}-${fMax || 0}`);
+        if (cMin || cMax) parts.push(`Child: ${cMin || 0}-${cMax || 0}`);
+        if (parts.length > 0) refRange = parts.join(' | ');
+      }
+
+      return {
+        name: (p.name || '').trim(),
+        unit: (p.unit || '').trim(),
+        referenceRange: refRange,
+        inputType: p.inputType || p.input_type || 'Number',
+        dropdownOptions: p.dropdownOptions !== undefined ? p.dropdownOptions : (p.dropdown_options || ''),
+        minValue: p.minValue !== undefined && p.minValue !== '' && p.minValue !== null ? p.minValue : null,
+        maxValue: p.maxValue !== undefined && p.maxValue !== '' && p.maxValue !== null ? p.maxValue : null,
+        ageGroup: p.ageGroup || p.age_group || 'Universal',
+        gender: p.gender || 'Universal',
+        refMinMale: mMin,
+        refMaxMale: mMax,
+        refMinFemale: fMin,
+        refMaxFemale: fMax,
+        refMinChild: cMin,
+        refMaxChild: cMax,
+        rowType: p.rowType || p.row_type || 'parameter'
+      };
+    });
 
     const payload = {
       name: serviceForm.name,
