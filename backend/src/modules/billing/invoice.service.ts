@@ -315,7 +315,7 @@ export const collectDue = async (invoiceId: string, input: CollectDueInput, curr
       SELECT i.*, p.first_name || ' ' || p.last_name as patient_name
       FROM invoices i
       LEFT JOIN patients p ON i.patient_id = p.patient_id
-      WHERE i.invoice_id = $1 FOR UPDATE
+      WHERE i.invoice_id = $1 FOR UPDATE OF i
     `, [invoiceId]);
 
     if (invRes.rows.length === 0) {
