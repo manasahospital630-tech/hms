@@ -1,6 +1,8 @@
 import { Response, NextFunction } from 'express';
 import { ProtectedRequest } from '../../middleware/rbacHandler';
 export declare const create: (req: ProtectedRequest, res: Response, next: NextFunction) => Promise<void>;
+export declare const collectDue: (req: ProtectedRequest, res: Response, next: NextFunction) => Promise<void>;
+export declare const getPaymentLogs: (req: ProtectedRequest, res: Response, next: NextFunction) => Promise<void>;
 export declare const getAll: (req: ProtectedRequest, res: Response, next: NextFunction) => Promise<void>;
 export declare const getById: (req: ProtectedRequest, res: Response, next: NextFunction) => Promise<void>;
 export declare const getPatientInvoices: (req: ProtectedRequest, res: Response, next: NextFunction) => Promise<void>;

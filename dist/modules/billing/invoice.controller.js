@@ -33,12 +33,13 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAnalytics = exports.updateStatus = exports.returnInvoice = exports.cancel = exports.recordPayment = exports.getPatientInvoices = exports.getById = exports.getAll = exports.create = void 0;
+exports.getAnalytics = exports.updateStatus = exports.returnInvoice = exports.cancel = exports.recordPayment = exports.getPatientInvoices = exports.getById = exports.getAll = exports.getPaymentLogs = exports.collectDue = exports.create = void 0;
 const responseHelper_1 = require("../../utils/responseHelper");
 const invoiceService = __importStar(require("./invoice.service"));
 const create = async (req, res, next) => {
     try {
-        const invoice = await invoiceService.createInvoice(req.body);
+        const user = req.identity || req.user;
+        const invoice = await invoiceService.createInvoice(req.body, user);
         (0, responseHelper_1.successResponse)(res, invoice, 'Invoice created.', 201);
     }
     catch (error) {
@@ -46,6 +47,27 @@ const create = async (req, res, next) => {
     }
 };
 exports.create = create;
+const collectDue = async (req, res, next) => {
+    try {
+        const user = req.identity || req.user;
+        const result = await invoiceService.collectDue(req.params.id, req.body, user);
+        (0, responseHelper_1.successResponse)(res, result, 'Payment collected successfully.');
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.collectDue = collectDue;
+const getPaymentLogs = async (req, res, next) => {
+    try {
+        const logs = await invoiceService.getInvoicePaymentLogs(req.params.id);
+        (0, responseHelper_1.successResponse)(res, logs);
+    }
+    catch (error) {
+        next(error);
+    }
+};
+exports.getPaymentLogs = getPaymentLogs;
 const getAll = async (req, res, next) => {
     try {
         const result = await invoiceService.getAllInvoices({

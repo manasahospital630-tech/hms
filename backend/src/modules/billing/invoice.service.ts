@@ -1,8 +1,8 @@
 import { query, getClient } from '../../config/database';
-import { CreateInvoiceInput, RecordPaymentInput } from './billing.schema';
+import { CreateInvoiceInput, RecordPaymentInput, CollectDueInput } from './billing.schema';
 import { AppError } from '../../middleware/errorHandler';
 
-export const createInvoice = async (input: CreateInvoiceInput) => {
+export const createInvoice = async (input: CreateInvoiceInput, currentUser?: any) => {
   const client = await getClient();
   try {
     await client.query('BEGIN');
@@ -10,13 +10,38 @@ export const createInvoice = async (input: CreateInvoiceInput) => {
     const totalAmount = subtotal - (input.discount || 0) + (input.tax || 0);
     const patientResponsibility = totalAmount - (input.insuranceCoverage || 0);
 
-    const amountPaid = input.paymentStatus === 'Paid' ? patientResponsibility : 0.00;
-    const status = input.paymentStatus === 'Paid' ? 'Paid' : 'Unpaid';
-    const paymentMethod = input.paymentStatus === 'Paid' ? (input.paymentMethod || 'Cash') : null;
+    // Calculate advance / paid vs due amount
+    let paidAmount = 0.00;
+    if (input.paidAmount !== undefined && input.paidAmount !== null) {
+      paidAmount = parseFloat(String(input.paidAmount));
+    } else if (input.amountPaid !== undefined && input.amountPaid !== null) {
+      paidAmount = parseFloat(String(input.amountPaid));
+    } else if (input.paymentStatus === 'Paid') {
+      paidAmount = patientResponsibility;
+    }
+
+    if (isNaN(paidAmount) || paidAmount < 0) paidAmount = 0.00;
+    if (paidAmount > patientResponsibility) paidAmount = patientResponsibility;
+
+    const dueAmount = Math.max(0.00, patientResponsibility - paidAmount);
+
+    let status = 'Due';
+    if (dueAmount <= 0.001 && (paidAmount > 0 || patientResponsibility === 0)) {
+      status = 'Paid';
+    } else if (paidAmount > 0 && dueAmount > 0) {
+      status = 'Partially Paid';
+    } else if (paidAmount === 0 && patientResponsibility > 0) {
+      status = 'Due';
+    }
+
+    const paymentMethod = input.paymentMethod || (paidAmount > 0 ? 'Cash' : null);
+    const collectorName = typeof currentUser === 'string' 
+      ? currentUser 
+      : (currentUser?.name || (currentUser?.first_name ? `${currentUser.first_name} ${currentUser.last_name || ''}`.trim() : 'System Staff'));
 
     const invoiceResult = await client.query(
-      `INSERT INTO invoices (patient_id, encounter_id, total_amount, discount, tax, insurance_coverage, patient_responsibility, amount_paid, status, payment_method, notes)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+      `INSERT INTO invoices (patient_id, encounter_id, total_amount, discount, tax, insurance_coverage, patient_responsibility, amount_paid, due_amount, status, payment_method, notes, created_by)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
       [
         input.patientId, 
         input.encounterId || null, 
@@ -25,13 +50,34 @@ export const createInvoice = async (input: CreateInvoiceInput) => {
         input.tax || 0, 
         input.insuranceCoverage || 0, 
         patientResponsibility,
-        amountPaid,
+        paidAmount,
+        dueAmount,
         status,
         paymentMethod,
-        input.notes || null
+        input.notes || null,
+        currentUser?.user_id || currentUser?.id || null
       ]
     );
     const invoice = invoiceResult.rows[0];
+
+    // Log initial payment into invoice_payment_logs if paidAmount > 0
+    if (paidAmount > 0) {
+      const pType = dueAmount <= 0.001 ? 'Full Payment' : 'Advance Payment';
+      await client.query(
+        `INSERT INTO invoice_payment_logs (invoice_id, amount_paid, payment_type, payment_mode, payment_timestamp, collected_by, remaining_due_after_txn, notes)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+        [
+          invoice.invoice_id,
+          paidAmount,
+          pType,
+          paymentMethod || 'Cash',
+          new Date(),
+          collectorName,
+          dueAmount,
+          input.notes || (dueAmount <= 0.001 ? 'Full Payment at Invoice Generation' : 'Advance Payment at Invoice Generation')
+        ]
+      );
+    }
 
     for (const item of input.items) {
       await client.query(
@@ -244,9 +290,119 @@ export const getInvoiceById = async (id: string) => {
   );
   if (result.rows.length === 0) throw new AppError('Invoice not found.', 404);
   const items = await query('SELECT * FROM invoice_items WHERE invoice_id = $1', [id]);
+  const logs = await query('SELECT * FROM invoice_payment_logs WHERE invoice_id = $1 ORDER BY payment_timestamp ASC', [id]);
+  
   const invoice = result.rows[0];
   invoice.items = items.rows;
+  invoice.payment_logs = logs.rows;
   return invoice;
+};
+
+export const getInvoicePaymentLogs = async (invoiceId: string) => {
+  const result = await query(
+    `SELECT * FROM invoice_payment_logs WHERE invoice_id = $1 ORDER BY payment_timestamp ASC`,
+    [invoiceId]
+  );
+  return result.rows;
+};
+
+export const collectDue = async (invoiceId: string, input: CollectDueInput, currentUser?: any) => {
+  const client = await getClient();
+  try {
+    await client.query('BEGIN');
+
+    const invRes = await client.query(`
+      SELECT i.*, p.first_name || ' ' || p.last_name as patient_name
+      FROM invoices i
+      LEFT JOIN patients p ON i.patient_id = p.patient_id
+      WHERE i.invoice_id = $1 FOR UPDATE
+    `, [invoiceId]);
+
+    if (invRes.rows.length === 0) {
+      throw new AppError('Invoice not found.', 404);
+    }
+
+    const invoice = invRes.rows[0];
+    const totalResp = parseFloat(invoice.patient_responsibility || invoice.total_amount || 0);
+    const prevPaid = parseFloat(invoice.amount_paid || 0);
+    const prevDue = parseFloat(invoice.due_amount !== null && invoice.due_amount !== undefined ? invoice.due_amount : Math.max(0, totalResp - prevPaid));
+
+    if (prevDue <= 0.001) {
+      throw new AppError('Invoice balance is already ₹0. No due amount remaining.', 400);
+    }
+
+    const collectAmount = parseFloat(String(input.collectAmount));
+    if (isNaN(collectAmount) || collectAmount <= 0) {
+      throw new AppError('Collect amount must be greater than ₹0.', 400);
+    }
+
+    if (collectAmount > prevDue + 0.01) {
+      throw new AppError(`Collect amount (₹${collectAmount.toFixed(2)}) cannot exceed remaining due amount (₹${prevDue.toFixed(2)}).`, 400);
+    }
+
+    const actualCollect = Math.min(collectAmount, prevDue);
+    const newPaidAmount = prevPaid + actualCollect;
+    const newDueAmount = Math.max(0.00, prevDue - actualCollect);
+    const newStatus = newDueAmount <= 0.001 ? 'Paid' : 'Partially Paid';
+    const pType = newDueAmount <= 0.001 ? 'Final Settlement' : 'Due Collection';
+
+    const pTimestamp = input.paymentTimestamp ? new Date(input.paymentTimestamp) : new Date();
+    const collectorName = typeof currentUser === 'string' 
+      ? currentUser 
+      : (currentUser?.name || (currentUser?.first_name ? `${currentUser.first_name} ${currentUser.last_name || ''}`.trim() : 'Staff Member'));
+    
+    let noteText = input.notes || '';
+    if (input.transactionRef) {
+      noteText = noteText ? `${noteText} (Ref: ${input.transactionRef})` : `Ref: ${input.transactionRef}`;
+    }
+    if (!noteText) {
+      noteText = newDueAmount <= 0.001 ? 'Final Settlement Collection' : 'Partial Due Collection';
+    }
+
+    // Update invoice
+    const updatedInvRes = await client.query(
+      `UPDATE invoices 
+       SET amount_paid = $1, due_amount = $2, status = $3, payment_method = $4 
+       WHERE invoice_id = $5 RETURNING *`,
+      [newPaidAmount, newDueAmount, newStatus, input.paymentMode, invoiceId]
+    );
+    const updatedInvoice = updatedInvRes.rows[0];
+
+    // Insert payment log
+    const logRes = await client.query(
+      `INSERT INTO invoice_payment_logs (
+        invoice_id, amount_paid, payment_type, payment_mode, payment_timestamp, collected_by, remaining_due_after_txn, notes
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
+      [
+        invoiceId,
+        actualCollect,
+        pType,
+        input.paymentMode,
+        pTimestamp,
+        collectorName,
+        newDueAmount,
+        noteText
+      ]
+    );
+
+    // If matching lab order exists, sync order payment status
+    if (newDueAmount <= 0.001) {
+      const orderNum = `BILL-LAB-${invoiceId.substring(0, 8).toUpperCase()}`;
+      await client.query(`UPDATE test_orders SET payment_status = 'Paid' WHERE order_number = $1`, [orderNum]);
+    }
+
+    await client.query('COMMIT');
+
+    return {
+      invoice: updatedInvoice,
+      paymentLog: logRes.rows[0]
+    };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
 };
 
 export const getAllInvoices = async (filters: { status?: string; limit?: number; offset?: number }) => {

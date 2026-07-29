@@ -46,6 +46,8 @@ router.get('/dashboard-stats', authenticate_1.authenticateJWT, ctrl.getAnalytics
 router.post('/invoices', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Biller', 'Admin', 'Incharge']), (0, validator_1.validate)(billing_schema_1.createInvoiceSchema), (0, auditLogger_1.auditLogger)('CREATE', 'Invoice'), ctrl.create);
 router.get('/invoices', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Biller', 'Admin', 'Incharge']), ctrl.getAll);
 router.get('/invoices/:id', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Biller', 'Admin', 'Patient', 'Pharmacist', 'Incharge']), ctrl.getById);
+router.get('/invoices/:id/payment-logs', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Biller', 'Admin', 'Patient', 'Pharmacist', 'Incharge']), ctrl.getPaymentLogs);
+router.post('/invoices/:id/collect-due', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Biller', 'Admin', 'Incharge']), (0, validator_1.validate)(billing_schema_1.collectDueSchema), (0, auditLogger_1.auditLogger)('COLLECT_DUE', 'Invoice'), ctrl.collectDue);
 router.get('/patients/:patientId/invoices', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Biller', 'Admin', 'Patient', 'Doctor', 'Incharge']), ctrl.getPatientInvoices);
 router.patch('/invoices/:id/payment', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Biller', 'Admin', 'Incharge']), (0, validator_1.validate)(billing_schema_1.recordPaymentSchema), (0, auditLogger_1.auditLogger)('PAYMENT', 'Invoice'), ctrl.recordPayment);
 router.post('/invoices/:id/cancel', authenticate_1.authenticateJWT, (0, rbacHandler_1.enforceRBAC)(['Biller', 'Admin', 'Incharge']), (0, auditLogger_1.auditLogger)('CANCEL', 'Invoice'), ctrl.cancel);

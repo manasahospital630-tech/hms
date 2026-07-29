@@ -1,6 +1,11 @@
-import { CreateInvoiceInput, RecordPaymentInput } from './billing.schema';
-export declare const createInvoice: (input: CreateInvoiceInput) => Promise<any>;
+import { CreateInvoiceInput, RecordPaymentInput, CollectDueInput } from './billing.schema';
+export declare const createInvoice: (input: CreateInvoiceInput, currentUser?: any) => Promise<any>;
 export declare const getInvoiceById: (id: string) => Promise<any>;
+export declare const getInvoicePaymentLogs: (invoiceId: string) => Promise<any[]>;
+export declare const collectDue: (invoiceId: string, input: CollectDueInput, currentUser?: any) => Promise<{
+    invoice: any;
+    paymentLog: any;
+}>;
 export declare const getAllInvoices: (filters: {
     status?: string;
     limit?: number;

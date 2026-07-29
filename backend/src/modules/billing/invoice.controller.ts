@@ -5,8 +5,24 @@ import * as invoiceService from './invoice.service';
 
 export const create = async (req: ProtectedRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
-    const invoice = await invoiceService.createInvoice(req.body);
+    const user = req.identity || (req as any).user;
+    const invoice = await invoiceService.createInvoice(req.body, user);
     successResponse(res, invoice, 'Invoice created.', 201);
+  } catch (error) { next(error); }
+};
+
+export const collectDue = async (req: ProtectedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const user = req.identity || (req as any).user;
+    const result = await invoiceService.collectDue(req.params.id as string, req.body, user);
+    successResponse(res, result, 'Payment collected successfully.');
+  } catch (error) { next(error); }
+};
+
+export const getPaymentLogs = async (req: ProtectedRequest, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    const logs = await invoiceService.getInvoicePaymentLogs(req.params.id as string);
+    successResponse(res, logs);
   } catch (error) { next(error); }
 };
 

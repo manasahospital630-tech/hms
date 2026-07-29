@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import * as ctrl from './invoice.controller';
 import { validate } from '../../middleware/validator';
-import { createInvoiceSchema, recordPaymentSchema } from './billing.schema';
+import { createInvoiceSchema, recordPaymentSchema, collectDueSchema } from './billing.schema';
 import { authenticateJWT } from '../../middleware/authenticate';
 import { enforceRBAC } from '../../middleware/rbacHandler';
 import { auditLogger } from '../../middleware/auditLogger';
@@ -13,6 +13,8 @@ router.get('/dashboard-stats', authenticateJWT, ctrl.getAnalytics);
 router.post('/invoices', authenticateJWT, enforceRBAC(['Biller', 'Admin', 'Incharge']), validate(createInvoiceSchema), auditLogger('CREATE', 'Invoice'), ctrl.create);
 router.get('/invoices', authenticateJWT, enforceRBAC(['Biller', 'Admin', 'Incharge']), ctrl.getAll);
 router.get('/invoices/:id', authenticateJWT, enforceRBAC(['Biller', 'Admin', 'Patient', 'Pharmacist', 'Incharge']), ctrl.getById);
+router.get('/invoices/:id/payment-logs', authenticateJWT, enforceRBAC(['Biller', 'Admin', 'Patient', 'Pharmacist', 'Incharge']), ctrl.getPaymentLogs);
+router.post('/invoices/:id/collect-due', authenticateJWT, enforceRBAC(['Biller', 'Admin', 'Incharge']), validate(collectDueSchema), auditLogger('COLLECT_DUE', 'Invoice'), ctrl.collectDue);
 router.get('/patients/:patientId/invoices', authenticateJWT, enforceRBAC(['Biller', 'Admin', 'Patient', 'Doctor', 'Incharge']), ctrl.getPatientInvoices);
 router.patch('/invoices/:id/payment', authenticateJWT, enforceRBAC(['Biller', 'Admin', 'Incharge']), validate(recordPaymentSchema), auditLogger('PAYMENT', 'Invoice'), ctrl.recordPayment);
 

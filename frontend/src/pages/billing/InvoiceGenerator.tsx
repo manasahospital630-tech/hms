@@ -36,6 +36,23 @@ const InvoiceGenerator: React.FC = () => {
   const [insurance, setInsurance] = useState('0');
   const [paymentMethod, setPaymentMethod] = useState('Cash');
   const [paymentStatus, setPaymentStatus] = useState('Paid');
+  const [advancePaidInput, setAdvancePaidInput] = useState<string>('');
+
+  // Collect Remaining Due Modal State
+  const [collectDueModalOpen, setCollectDueModalOpen] = useState(false);
+  const [selectedInvoiceForDue, setSelectedInvoiceForDue] = useState<any>(null);
+  const [collectAmountInput, setCollectAmountInput] = useState<string>('');
+  const [collectPaymentMode, setCollectPaymentMode] = useState<string>('Cash');
+  const [collectTimestamp, setCollectTimestamp] = useState<string>(() => {
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  });
+  const [collectRef, setCollectRef] = useState<string>('');
+  const [collectNotes, setCollectNotes] = useState<string>('');
+  const [collectLoading, setCollectLoading] = useState(false);
+  const [collectError, setCollectError] = useState('');
+
   const DEFAULT_DOCTORS = useMemo(() => [
     'Dr. Priya Nair (Dermatology) M.B.B.S, M.D.',
     'Dr. Alex Nguyen (General Medicine) M.D.',
@@ -61,6 +78,30 @@ const InvoiceGenerator: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState('');
+
+  // Calculations for Advance & Due Amounts
+  const subtotal = useMemo(() => items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0), [items]);
+  const total = useMemo(() => subtotal - (parseFloat(discount) || 0) + (parseFloat(tax) || 0), [subtotal, discount, tax]);
+  const patientOwes = useMemo(() => Math.max(0, total - (parseFloat(insurance) || 0)), [total, insurance]);
+
+  const advancePaidVal = useMemo(() => {
+    if (!advancePaidInput && advancePaidInput !== '0') {
+      return patientOwes;
+    }
+    const val = parseFloat(advancePaidInput);
+    if (isNaN(val) || val < 0) return 0;
+    return Math.min(patientOwes, val);
+  }, [advancePaidInput, patientOwes]);
+
+  const dueAmountVal = useMemo(() => {
+    return Math.max(0, patientOwes - advancePaidVal);
+  }, [patientOwes, advancePaidVal]);
+
+  const computedStatus = useMemo(() => {
+    if (dueAmountVal <= 0.001) return 'Paid';
+    if (advancePaidVal > 0 && dueAmountVal > 0) return 'Partially Paid';
+    return 'Due';
+  }, [advancePaidVal, dueAmountVal]);
 
   // Quick Patient Registration Modal State
   const [patientModalOpen, setPatientModalOpen] = useState(false);
@@ -162,10 +203,6 @@ const InvoiceGenerator: React.FC = () => {
   const [billStatusFilter, setBillStatusFilter] = useState<string>('ALL');
   const [listFromDate, setListFromDate] = useState<string>('');
   const [listToDate, setListToDate] = useState<string>('');
-
-  const subtotal = items.reduce((s, i) => s + i.quantity * i.unitPrice, 0);
-  const total = subtotal - Number(discount) + Number(tax);
-  const patientOwes = total - Number(insurance);
 
   const loadHospitalSettings = async () => {
     try {
@@ -808,15 +845,58 @@ const InvoiceGenerator: React.FC = () => {
                   </div>
                   <div class="calc-block">
                     <div class="calc-row receivable-row">
-                      <span class="calc-label">Amount Receivable</span>
-                      <span class="calc-val">${parseFloat(inv.patient_responsibility).toFixed(2)}</span>
+                      <span class="calc-label">Total Bill Amount</span>
+                      <span class="calc-val">₹${parseFloat(inv.patient_responsibility || inv.total_amount).toFixed(2)}</span>
                     </div>
                     <div class="calc-row received-row">
-                      <span class="calc-label">Amount Received</span>
-                      <span class="calc-val">${parseFloat(inv.amount_paid).toFixed(2)}</span>
+                      <span class="calc-label">Total Amount Paid</span>
+                      <span class="calc-val" style="color: #047857;">₹${parseFloat(inv.amount_paid || 0).toFixed(2)}</span>
+                    </div>
+                    <div class="calc-row" style="border-top: 1.5px solid #0f172a; margin-top: 4px; padding-top: 6px; font-weight: 800; font-size: 13px;">
+                      <span class="calc-label">Balance Due Amount</span>
+                      <span class="calc-val" style="color: ${parseFloat(inv.due_amount || 0) > 0 ? '#b91c1c' : '#047857'};">₹${parseFloat(inv.due_amount !== undefined && inv.due_amount !== null ? inv.due_amount : Math.max(0, parseFloat(inv.patient_responsibility) - parseFloat(inv.amount_paid))).toFixed(2)}</span>
                     </div>
                   </div>
                 </div>
+
+                ${inv.payment_logs && inv.payment_logs.length > 0 ? `
+                  <div style="margin-top: 24px; border-top: 2px dashed #cbd5e1; padding-top: 14px;">
+                    <div style="font-weight: 800; font-size: 11px; letter-spacing: 0.5px; text-transform: uppercase; color: #0f172a; margin-bottom: 8px; display: flex; justify-content: space-between;">
+                      <span>📜 INSTALLMENT PAYMENT AUDIT LOG</span>
+                      <span style="font-size: 10px; font-weight: 600; color: #475569;">(${inv.payment_logs.length} Installment${inv.payment_logs.length > 1 ? 's' : ''} Recorded)</span>
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                      <thead>
+                        <tr style="background: #f8fafc; border-top: 1px solid #0f172a; border-bottom: 1px solid #0f172a;">
+                          <th style="padding: 6px 8px; text-align: left;">Txn #</th>
+                          <th style="padding: 6px 8px; text-align: left;">Date & Time</th>
+                          <th style="padding: 6px 8px; text-align: left;">Payment Type</th>
+                          <th style="padding: 6px 8px; text-align: left;">Mode</th>
+                          <th style="padding: 6px 8px; text-align: right;">Amount Paid</th>
+                          <th style="padding: 6px 8px; text-align: right;">Remaining Due</th>
+                          <th style="padding: 6px 8px; text-align: left;">Collected By / Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        ${inv.payment_logs.map((log: any, idx: number) => {
+                          const logDate = new Date(log.payment_timestamp);
+                          const pDateStr = `${pad(logDate.getDate())}/${pad(logDate.getMonth() + 1)}/${logDate.getFullYear()} ${pad(logDate.getHours())}:${pad(logDate.getMinutes())}`;
+                          return `
+                            <tr style="border-bottom: 1px solid #e2e8f0;">
+                              <td style="padding: 6px 8px; font-weight: 700;">#${idx + 1}</td>
+                              <td style="padding: 6px 8px; font-weight: 600;">${pDateStr}</td>
+                              <td style="padding: 6px 8px; font-weight: 700; color: #1d4ed8;">${log.payment_type}</td>
+                              <td style="padding: 6px 8px; font-weight: 600;">${log.payment_mode}</td>
+                              <td style="padding: 6px 8px; text-align: right; font-weight: 800; color: #047857;">₹${parseFloat(log.amount_paid).toFixed(2)}</td>
+                              <td style="padding: 6px 8px; text-align: right; font-weight: 700; color: ${parseFloat(log.remaining_due_after_txn) > 0 ? '#b91c1c' : '#475569'};">₹${parseFloat(log.remaining_due_after_txn).toFixed(2)}</td>
+                              <td style="padding: 6px 8px; color: #475569;">${log.collected_by || 'Staff'} ${log.notes ? `(${log.notes})` : ''}</td>
+                            </tr>
+                          `;
+                        }).join('')}
+                      </tbody>
+                    </table>
+                  </div>
+                ` : ''}
 
                 <div class="footer-signature">
                   <div>Prepared By: <span class="prepared-by">${preparedBy}</span></div>
@@ -843,8 +923,11 @@ const InvoiceGenerator: React.FC = () => {
         discount: Number(discount),
         tax: Number(tax),
         insuranceCoverage: Number(insurance),
-        paymentMethod,
-        paymentStatus
+        paidAmount: advancePaidVal,
+        dueAmount: dueAmountVal,
+        paymentStatus: computedStatus,
+        paymentMethod: advancePaidVal > 0 ? paymentMethod : null,
+        notes: `Consultant: ${effectiveConsultantDoctor} | Ref: ${effectiveReferredBy}`
       });
       
       if (res.data.success) {
@@ -852,6 +935,7 @@ const InvoiceGenerator: React.FC = () => {
         setSuccess('Invoice created successfully! Initializing printout...');
         setItems([]);
         setPatient(null);
+        setAdvancePaidInput('');
         setTimeout(() => setSuccess(''), 3000);
         
         // Print the invoice directly
@@ -861,6 +945,68 @@ const InvoiceGenerator: React.FC = () => {
       alert(err.response?.data?.error || 'Failed to generate invoice');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleOpenCollectDueModal = (inv: any) => {
+    setSelectedInvoiceForDue(inv);
+    const totalResp = parseFloat(inv.patient_responsibility || inv.total_amount || 0);
+    const paid = parseFloat(inv.amount_paid || 0);
+    const due = parseFloat(inv.due_amount !== undefined && inv.due_amount !== null ? inv.due_amount : Math.max(0, totalResp - paid));
+    setCollectAmountInput(due.toFixed(2));
+    setCollectPaymentMode(inv.payment_method || 'Cash');
+    const now = new Date();
+    const pad = (n: number) => n.toString().padStart(2, '0');
+    setCollectTimestamp(`${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`);
+    setCollectRef('');
+    setCollectNotes('');
+    setCollectError('');
+    setCollectDueModalOpen(true);
+  };
+
+  const handleCollectDueSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedInvoiceForDue) return;
+    setCollectLoading(true);
+    setCollectError('');
+
+    try {
+      const amt = parseFloat(collectAmountInput);
+      if (isNaN(amt) || amt <= 0) {
+        setCollectError('Please enter a valid collection amount greater than ₹0.');
+        setCollectLoading(false);
+        return;
+      }
+
+      const totalResp = parseFloat(selectedInvoiceForDue.patient_responsibility || selectedInvoiceForDue.total_amount || 0);
+      const paid = parseFloat(selectedInvoiceForDue.amount_paid || 0);
+      const currentDue = parseFloat(selectedInvoiceForDue.due_amount !== undefined && selectedInvoiceForDue.due_amount !== null ? selectedInvoiceForDue.due_amount : Math.max(0, totalResp - paid));
+
+      if (amt > currentDue + 0.01) {
+        setCollectError(`Collection amount cannot exceed remaining due (₹${currentDue.toFixed(2)}).`);
+        setCollectLoading(false);
+        return;
+      }
+
+      const res = await api.post(`/billing/invoices/${selectedInvoiceForDue.invoice_id}/collect-due`, {
+        collectAmount: amt,
+        paymentMode: collectPaymentMode,
+        paymentTimestamp: collectTimestamp,
+        transactionRef: collectRef,
+        notes: collectNotes
+      });
+
+      if (res.data.success) {
+        setCollectDueModalOpen(false);
+        const invId = selectedInvoiceForDue.invoice_id;
+        setSelectedInvoiceForDue(null);
+        loadInvoices(); // Refresh list
+        handlePrintBill(invId); // Offer print with updated audit log
+      }
+    } catch (err: any) {
+      setCollectError(err.response?.data?.error || 'Failed to record due payment.');
+    } finally {
+      setCollectLoading(false);
     }
   };
 
@@ -1618,31 +1764,84 @@ const InvoiceGenerator: React.FC = () => {
           </div>
 
           <div className="card" style={{ background: 'var(--bg-card)', border: '1px solid var(--border-primary)', padding: '20px', borderRadius: '12px', marginBottom: '24px' }}>
-            <div className="form-section-title" style={{ fontWeight: 700, marginBottom: '12px' }}>Payment Settings</div>
-            <div style={{ display: 'grid', gridTemplateColumns: patient?.is_inpatient ? '1fr 1fr' : '1fr', gap: '16px' }}>
+            <div className="form-section-title" style={{ fontWeight: 700, marginBottom: '14px' }}>Payment & Upfront Advance Settings</div>
+            
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
+                  Total Bill Amount (Patient Owes)
+                </label>
+                <div style={{ fontSize: '16px', fontWeight: 800, color: 'var(--text-primary)', padding: '8px 12px', background: 'var(--bg-primary)', borderRadius: '6px', border: '1px solid var(--border-primary)' }}>
+                  {formatCurrency(patientOwes)}
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
+                  Paid Amount / Advance Paid (₹) *
+                </label>
+                <Input
+                  type="number"
+                  step="0.01"
+                  value={advancePaidInput}
+                  onChange={e => setAdvancePaidInput(e.target.value)}
+                  placeholder={`Full (₹${patientOwes.toFixed(0)}) or Partial Advance`}
+                  style={{ background: 'var(--bg-primary)', fontWeight: 700 }}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
+                  Calculated Balance Due (₹)
+                </label>
+                <div style={{ 
+                  fontSize: '16px', 
+                  fontWeight: 800, 
+                  color: dueAmountVal > 0 ? 'var(--accent-danger)' : 'var(--accent-success)', 
+                  padding: '8px 12px', 
+                  background: dueAmountVal > 0 ? 'rgba(244,63,94,0.06)' : 'rgba(16,185,129,0.06)', 
+                  borderRadius: '6px', 
+                  border: dueAmountVal > 0 ? '1px solid rgba(244,63,94,0.2)' : '1px solid rgba(16,185,129,0.2)' 
+                }}>
+                  {formatCurrency(dueAmountVal)}
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
               <Select 
                 label="Payment Method" 
                 value={paymentMethod} 
                 onChange={e => setPaymentMethod(e.target.value)} 
                 options={[
                   { value: 'Cash', label: 'Cash' },
-                  { value: 'Card', label: 'Card' },
-                  { value: 'UPI', label: 'UPI' },
-                  { value: 'Insurance', label: 'Insurance' },
-                  { value: 'Bank Transfer', label: 'Bank Transfer' }
+                  { value: 'Card', label: 'Credit / Debit Card' },
+                  { value: 'UPI', label: 'UPI / QR Code' },
+                  { value: 'Bank Transfer', label: 'Bank Transfer' },
+                  { value: 'Net Banking', label: 'Net Banking' }
                 ]} 
               />
-              {patient?.is_inpatient && (
-                <Select 
-                  label="Payment Status" 
-                  value={paymentStatus} 
-                  onChange={e => setPaymentStatus(e.target.value)} 
-                  options={[
-                    { value: 'Paid', label: 'Paid (Immediate Settlement)' },
-                    { value: 'Unpaid', label: 'Unpaid (On Account / Deferred)' }
-                  ]} 
-                />
-              )}
+
+              <div>
+                <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                  Auto Payment Status
+                </label>
+                <div style={{ paddingTop: '4px' }}>
+                  <span style={{ 
+                    fontSize: '12px', 
+                    padding: '6px 14px', 
+                    borderRadius: '50px', 
+                    fontWeight: 700,
+                    background: computedStatus === 'Paid' ? 'rgba(16,185,129,0.15)' : 
+                                computedStatus === 'Partially Paid' ? 'rgba(245,158,11,0.15)' : 'rgba(244,63,94,0.15)',
+                    color: computedStatus === 'Paid' ? 'var(--accent-success)' : 
+                           computedStatus === 'Partially Paid' ? 'var(--accent-warning)' : 'var(--accent-danger)'
+                  }}>
+                    {computedStatus === 'Paid' ? '✓ Paid (Full Settlement)' : 
+                     computedStatus === 'Partially Paid' ? '⚠️ Partially Paid (Advance Settled)' : '⏳ Due (Unpaid Balance)'}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -1784,100 +1983,247 @@ const InvoiceGenerator: React.FC = () => {
                     <th style={{ padding: '12px 16px' }}>Doctor</th>
                     <th style={{ padding: '12px 16px' }}>Total Amount</th>
                     <th style={{ padding: '12px 16px' }}>Amount Paid</th>
+                    <th style={{ padding: '12px 16px' }}>Due Amount</th>
                     <th style={{ padding: '12px 16px' }}>Date</th>
                     <th style={{ padding: '12px 16px' }}>Status</th>
                     <th style={{ padding: '12px 16px', textAlign: 'right' }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredInvoices.map((inv) => (
-                    <tr key={inv.invoice_id} style={{ borderBottom: '1px solid var(--border-primary)' }}>
-                      <td style={{ padding: '12px 16px', fontWeight: 600, fontSize: '13px', fontFamily: 'monospace' }}>
-                        {inv.invoice_id.substring(0, 8).toUpperCase()}
-                      </td>
-                      <td style={{ padding: '12px 16px', fontWeight: 600 }}>
-                        <div>{inv.patient_name}</div>
-                        {(inv.patient_phone || inv.patient_mrn) && (
-                          <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
-                            {inv.patient_phone ? `📱 ${inv.patient_phone}` : ''} {inv.patient_mrn ? `| MRN: ${inv.patient_mrn}` : ''}
+                  {filteredInvoices.map((inv) => {
+                    const totalAmt = parseFloat(inv.patient_responsibility || inv.total_amount || 0);
+                    const paidAmt = parseFloat(inv.amount_paid || 0);
+                    const dueAmt = parseFloat(inv.due_amount !== undefined && inv.due_amount !== null ? inv.due_amount : Math.max(0, totalAmt - paidAmt));
+                    const isDue = dueAmt > 0.001;
+
+                    return (
+                      <tr key={inv.invoice_id} style={{ borderBottom: '1px solid var(--border-primary)' }}>
+                        <td style={{ padding: '12px 16px', fontWeight: 600, fontSize: '13px', fontFamily: 'monospace' }}>
+                          {inv.invoice_id.substring(0, 8).toUpperCase()}
+                        </td>
+                        <td style={{ padding: '12px 16px', fontWeight: 600 }}>
+                          <div>{inv.patient_name}</div>
+                          {(inv.patient_phone || inv.patient_mrn) && (
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '2px' }}>
+                              {inv.patient_phone ? `📱 ${inv.patient_phone}` : ''} {inv.patient_mrn ? `| MRN: ${inv.patient_mrn}` : ''}
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                          {inv.doctor_name || 'Hospital Doctor'}
+                        </td>
+                        <td style={{ padding: '12px 16px', fontWeight: 700 }}>{formatCurrency(totalAmt)}</td>
+                        <td style={{ padding: '12px 16px', color: 'var(--accent-success)', fontWeight: 600 }}>{formatCurrency(paidAmt)}</td>
+                        <td style={{ padding: '12px 16px', color: isDue ? 'var(--accent-danger)' : 'var(--text-muted)', fontWeight: 700 }}>
+                          {formatCurrency(dueAmt)}
+                        </td>
+                        <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>
+                          {new Date(inv.created_at).toLocaleDateString()}
+                        </td>
+                        <td style={{ padding: '12px 16px' }}>
+                          <span style={{ 
+                            fontSize: '11px', padding: '2px 8px', borderRadius: '50px', fontWeight: 600,
+                            background: inv.status === 'Paid' ? 'rgba(16,185,129,0.15)' : 
+                                        inv.status === 'Partially Paid' || inv.status === 'PartiallyPaid' ? 'rgba(245,158,11,0.15)' :
+                                        inv.status === 'Cancelled' ? 'rgba(100,116,139,0.15)' : 'rgba(244,63,94,0.15)',
+                            color: inv.status === 'Paid' ? 'var(--accent-success)' : 
+                                   inv.status === 'Partially Paid' || inv.status === 'PartiallyPaid' ? 'var(--accent-warning)' :
+                                   inv.status === 'Cancelled' ? 'var(--text-muted)' : 'var(--accent-danger)'
+                          }}>
+                            {inv.status === 'PartiallyPaid' ? 'Partially Paid' : inv.status}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 16px', textAlign: 'right' }}>
+                          <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
+                            {isDue && inv.status !== 'Cancelled' && inv.status !== 'Returned' && (
+                              <button 
+                                onClick={() => handleOpenCollectDueModal(inv)} 
+                                style={{ 
+                                  background: '#1d4ed8', 
+                                  color: '#ffffff', 
+                                  border: 'none', 
+                                  padding: '4px 10px', 
+                                  borderRadius: '6px', 
+                                  cursor: 'pointer', 
+                                  fontWeight: 600, 
+                                  fontSize: '12px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                                title="Collect Remaining Bill"
+                              >
+                                <DollarSign size={13} /> Collect Due
+                              </button>
+                            )}
+                            <button 
+                              onClick={() => handlePrintBill(inv.invoice_id)} 
+                              style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}
+                              title="Print Invoice"
+                            >
+                              <Printer size={13} /> Print
+                            </button>
+                            {inv.status !== 'Paid' && inv.status !== 'Cancelled' && inv.status !== 'Returned' && (
+                              <button 
+                                onClick={() => handleCancelInvoice(inv.invoice_id)} 
+                                style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--accent-danger)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}
+                                title="Cancel Bill"
+                              >
+                                <Ban size={13} /> Cancel
+                              </button>
+                            )}
+                            {inv.status === 'Paid' && (
+                              <button 
+                                onClick={() => handleReturnInvoice(inv.invoice_id)} 
+                                style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--accent-warning)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}
+                                title="Return / Refund Bill"
+                              >
+                                <ArrowLeftRight size={13} /> Return
+                              </button>
+                            )}
                           </div>
-                        )}
-                      </td>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', color: 'var(--text-secondary)' }}>
-                        {inv.doctor_name || 'Hospital Doctor'}
-                      </td>
-                      <td style={{ padding: '12px 16px', fontWeight: 700 }}>{formatCurrency(parseFloat(inv.total_amount))}</td>
-                      <td style={{ padding: '12px 16px' }}>{formatCurrency(parseFloat(inv.amount_paid))}</td>
-                      <td style={{ padding: '12px 16px', color: 'var(--text-muted)' }}>
-                        {new Date(inv.created_at).toLocaleDateString()}
-                      </td>
-                      <td style={{ padding: '12px 16px' }}>
-                        <span style={{ 
-                          fontSize: '11px', padding: '2px 8px', borderRadius: '50px', fontWeight: 600,
-                          background: inv.status === 'Paid' ? 'rgba(16,185,129,0.15)' : 
-                                      inv.status === 'Cancelled' ? 'rgba(100,116,139,0.15)' : 
-                                      inv.status === 'Returned' ? 'rgba(245,158,11,0.15)' : 'rgba(244,63,94,0.15)',
-                          color: inv.status === 'Paid' ? 'var(--accent-success)' : 
-                                 inv.status === 'Cancelled' ? 'var(--text-muted)' : 
-                                 inv.status === 'Returned' ? 'var(--accent-warning)' : 'var(--accent-danger)'
-                        }}>
-                          {inv.status}
-                        </span>
-                      </td>
-                      <td style={{ padding: '12px 16px', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', alignItems: 'center' }}>
-                          <button 
-                            onClick={() => handlePrintBill(inv.invoice_id)} 
-                            style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}
-                            title="Print Invoice"
-                          >
-                            <Printer size={13} /> Print
-                          </button>
-                           {(inv.status === 'Unpaid' || inv.status === 'PartiallyPaid') && (
-                            <button 
-                              onClick={() => handleUpdateStatus(inv.invoice_id, 'Paid')} 
-                              style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--accent-success)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}
-                              title="Mark Paid via Cash"
-                            >
-                              <Check size={13} /> Collect Cash
-                            </button>
-                          )}
-                          {inv.status === 'Paid' && (inv.payment_method === 'Cash' || !inv.payment_method) && (
-                            <button 
-                              onClick={() => handleUpdateStatus(inv.invoice_id, 'Unpaid')} 
-                              style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--accent-danger)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}
-                              title="Mark Unpaid"
-                            >
-                              <XCircle size={13} /> Mark Unpaid
-                            </button>
-                          )}
-                          {inv.status !== 'Paid' && inv.status !== 'Cancelled' && inv.status !== 'Returned' && (
-                            <button 
-                              onClick={() => handleCancelInvoice(inv.invoice_id)} 
-                              style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--accent-danger)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}
-                              title="Cancel Bill"
-                            >
-                              <Ban size={13} /> Cancel
-                            </button>
-                          )}
-                          {inv.status === 'Paid' && (
-                            <button 
-                              onClick={() => handleReturnInvoice(inv.invoice_id)} 
-                              style={{ border: 'none', background: 'transparent', cursor: 'pointer', color: 'var(--accent-warning)', display: 'flex', alignItems: 'center', gap: '4px', fontSize: '12px' }}
-                              title="Return / Refund Bill"
-                            >
-                              <ArrowLeftRight size={13} /> Return
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
           )}
         </Card>
+      )}
+
+      {/* Collect Remaining Due Payment Modal */}
+      {collectDueModalOpen && selectedInvoiceForDue && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ background: 'var(--bg-secondary)', border: '1px solid var(--border-primary)', borderRadius: '12px', width: '100%', maxWidth: '520px', padding: '24px', position: 'relative', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.3)' }}>
+            <button onClick={() => setCollectDueModalOpen(false)} style={{ position: 'absolute', right: '16px', top: '16px', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+              <X size={20} />
+            </button>
+
+            <h2 style={{ fontSize: '18px', fontWeight: 700, margin: '0 0 16px 0', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <DollarSign size={20} color="var(--accent-primary)" /> Collect Remaining Due / Balance
+            </h2>
+
+            <form onSubmit={handleCollectDueSubmit}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                
+                {/* Invoice Summary Header Card */}
+                <div style={{ background: 'var(--bg-primary)', border: '1px solid var(--border-primary)', padding: '14px 16px', borderRadius: '10px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Invoice ID: <strong style={{ color: 'var(--text-primary)', fontFamily: 'monospace' }}>{selectedInvoiceForDue.invoice_id.substring(0, 8).toUpperCase()}</strong></span>
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Customer: <strong style={{ color: 'var(--text-primary)' }}>{selectedInvoiceForDue.patient_name}</strong></span>
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', paddingTop: '8px', borderTop: '1px dashed var(--border-primary)', fontSize: '13px' }}>
+                    <div>
+                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block' }}>Total Bill Amount</span>
+                      <strong style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{formatCurrency(parseFloat(selectedInvoiceForDue.patient_responsibility || selectedInvoiceForDue.total_amount))}</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block' }}>Previously Paid</span>
+                      <strong style={{ fontSize: '14px', color: 'var(--accent-success)' }}>{formatCurrency(parseFloat(selectedInvoiceForDue.amount_paid))}</strong>
+                    </div>
+                    <div>
+                      <span style={{ fontSize: '11px', color: 'var(--text-secondary)', display: 'block' }}>Current Balance Due</span>
+                      <strong style={{ fontSize: '14px', color: 'var(--accent-danger)' }}>
+                        {formatCurrency(parseFloat(selectedInvoiceForDue.due_amount !== undefined && selectedInvoiceForDue.due_amount !== null ? selectedInvoiceForDue.due_amount : (parseFloat(selectedInvoiceForDue.patient_responsibility || selectedInvoiceForDue.total_amount) - parseFloat(selectedInvoiceForDue.amount_paid))))}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+
+                {collectError && (
+                  <div style={{ color: 'var(--accent-danger)', background: 'rgba(244,63,94,0.06)', border: '1px solid rgba(244,63,94,0.2)', padding: '10px', borderRadius: '6px', fontSize: '13px' }}>
+                    ⚠️ {collectError}
+                  </div>
+                )}
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
+                      Amount Being Paid (₹) *
+                    </label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={collectAmountInput}
+                      onChange={e => setCollectAmountInput(e.target.value)}
+                      placeholder="Collection Amount"
+                      required
+                      style={{ background: 'var(--bg-primary)', fontWeight: 700 }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
+                      Payment Method *
+                    </label>
+                    <Select
+                      value={collectPaymentMode}
+                      onChange={e => setCollectPaymentMode(e.target.value)}
+                      options={[
+                        { value: 'Cash', label: 'Cash' },
+                        { value: 'UPI', label: 'UPI / QR Code' },
+                        { value: 'Card', label: 'Credit / Debit Card' },
+                        { value: 'Bank Transfer', label: 'Bank Transfer' },
+                        { value: 'Net Banking', label: 'Net Banking' }
+                      ]}
+                      style={{ background: 'var(--bg-primary)' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px' }}>
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
+                      Payment Date & Time *
+                    </label>
+                    <input
+                      type="datetime-local"
+                      className="input"
+                      value={collectTimestamp}
+                      onChange={e => setCollectTimestamp(e.target.value)}
+                      style={{ width: '100%', background: 'var(--bg-primary)', padding: '8px 12px', fontSize: '13px', borderRadius: '6px', border: '1px solid var(--border-primary)', color: 'var(--text-primary)' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-primary)', display: 'block', marginBottom: '4px' }}>
+                      Transaction Ref / Notes
+                    </label>
+                    <Input
+                      type="text"
+                      value={collectRef}
+                      onChange={e => setCollectRef(e.target.value)}
+                      placeholder="e.g. UPI Ref ID / Cheque No"
+                      style={{ background: 'var(--bg-primary)' }}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>
+                    Additional Remarks
+                  </label>
+                  <Input
+                    type="text"
+                    value={collectNotes}
+                    onChange={e => setCollectNotes(e.target.value)}
+                    placeholder="e.g. Settled balance at diagnostic report pickup"
+                    style={{ background: 'var(--bg-primary)' }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '12px', paddingTop: '14px', borderTop: '1px solid var(--border-primary)' }}>
+                  <Button variant="secondary" type="button" onClick={() => setCollectDueModalOpen(false)}>Cancel</Button>
+                  <Button variant="primary" type="submit" loading={collectLoading} icon={<Check size={16} />}>
+                    Confirm Payment Collection
+                  </Button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
 
       {/* Quick Patient Registration Modal */}
